@@ -203,7 +203,14 @@ jQuery(async function ($) {
             this.set_mask(false);
             this.pause();
             this.echo('Loading data files...');
-            await this.account.unlockAccount(password);
+            await this.account.unlockAccount(password, (loadedBytes, totalBytes) => {
+              let percent = (loadedBytes / totalBytes) * 100;
+              if (loadedBytes == totalBytes) {
+                this.echo(`Loading parameters...${percent.toFixed(1)} %`);
+              } else {
+                this.echo(`Loading parameters...Done!`);
+              }
+            });
             this.resume();
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
@@ -225,7 +232,14 @@ jQuery(async function ($) {
             }
 
             this.pause();
-            await this.account.init(seed, password);
+            await this.account.init(seed, password, (loadedBytes, totalBytes) => {
+              let percent = (loadedBytes / totalBytes) * 100;
+              if (loadedBytes == totalBytes) {
+                this.echo(`Loading parameters...${percent.toFixed(1)} %`);
+              } else {
+                this.echo(`Loading parameters...Done!`);
+              }
+            });
             this.resume();
           }
         } catch (e) {

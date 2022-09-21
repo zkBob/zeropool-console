@@ -14,6 +14,7 @@ import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 // @ts-ignore
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { Output } from 'libzkbob-rs-wasm-web';
+import { LoadingProgressCallback } from 'zkbob-client-js/lib/file-cache';
 //import { PoolLimits } from 'zkbob-client-js/lib/client';
 // const wasmPath = new URL('npm:libzeropool-rs-wasm-web/libzeropool_rs_wasm_bg.wasm', import.meta.url));
 // const workerPath = new URL('npm:zeropool-client-js/lib/worker.js', import.meta.url);
@@ -65,7 +66,11 @@ export default class Account {
         }
     }
 
-    public async init(mnemonic: string, password: string): Promise<void> {
+    public async init(
+        mnemonic: string,
+        password: string,
+        loadingCallback: LoadingProgressCallback | undefined = undefined
+    ): Promise<void> {
         const snarkParamsConfig = {
             transferParamsUrl: './assets/transfer_params.bin',
             treeParamsUrl: './assets/tree_params.bin',
@@ -73,7 +78,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker, snarkParams } = await init(wasmPath, workerPath, snarkParamsConfig);
+        const { worker, snarkParams } = await init(wasmPath, workerPath, snarkParamsConfig, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
@@ -110,9 +115,12 @@ export default class Account {
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
     }
 
-    public async unlockAccount(password: string) {
+    public async unlockAccount(
+        password: string,
+        loadingCallback: LoadingProgressCallback | undefined = undefined
+    ) {
         let seed = this.decryptSeed(password);
-        await this.init(seed, password);
+        await this.init(seed, password, loadingCallback);
     }
 
     public getSeed(password: string): string {
