@@ -205,10 +205,10 @@ jQuery(async function ($) {
             this.echo('Loading data files...');
             await this.account.unlockAccount(password, (loadedBytes, totalBytes) => {
               let percent = (loadedBytes / totalBytes) * 100;
-              if (loadedBytes == totalBytes) {
+              if (loadedBytes != totalBytes) {
                 this.echo(`Loading parameters...${percent.toFixed(1)} %`);
               } else {
-                this.echo(`Loading parameters...Done!`);
+                this.echo(`Loading parameters...Done! (${loadedBytes} bytes)`);
               }
             });
             this.resume();
