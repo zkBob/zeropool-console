@@ -202,13 +202,15 @@ jQuery(async function ($) {
             const password = await this.read('Enter password: ');
             this.set_mask(false);
             this.pause();
-            this.echo('Loading data files...');
+            //this.echo('Loading data files...');
+            this.echo(`Loading parameters...`);
+            let index = this.last_index();
             await this.account.unlockAccount(password, (loadedBytes, totalBytes) => {
               let percent = (loadedBytes / totalBytes) * 100;
               if (loadedBytes != totalBytes) {
-                this.echo(`Loading parameters...${percent.toFixed(1)} %`);
+                this.update(index, `Loading parameters...${percent.toFixed(1)} %`);
               } else {
-                this.echo(`Loading parameters...Done! (${loadedBytes} bytes)`);
+                this.update(index, `Loading parameters...Done! (${loadedBytes} bytes)`);
               }
             });
             this.resume();

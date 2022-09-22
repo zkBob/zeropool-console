@@ -15,9 +15,7 @@ import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { Output } from 'libzkbob-rs-wasm-web';
 import { LoadingProgressCallback } from 'zkbob-client-js/lib/file-cache';
-//import { PoolLimits } from 'zkbob-client-js/lib/client';
-// const wasmPath = new URL('npm:libzeropool-rs-wasm-web/libzeropool_rs_wasm_bg.wasm', import.meta.url));
-// const workerPath = new URL('npm:zeropool-client-js/lib/worker.js', import.meta.url);
+
 
 function isEvmBased(network: string): boolean {
     return ['ethereum', 'aurora', 'xdai', 'polygon'].includes(network);
