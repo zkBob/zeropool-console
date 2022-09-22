@@ -1,7 +1,7 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TxAmount, FeeAmount, TxType, PoolLimits } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TxAmount, FeeAmount, TxType, PoolLimits, InitLibCallback } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
@@ -14,7 +14,6 @@ import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 // @ts-ignore
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { Output } from 'libzkbob-rs-wasm-web';
-import { LoadingProgressCallback } from 'zkbob-client-js/lib/file-cache';
 
 
 function isEvmBased(network: string): boolean {
@@ -67,7 +66,7 @@ export default class Account {
     public async init(
         mnemonic: string,
         password: string,
-        loadingCallback: LoadingProgressCallback | undefined = undefined
+        loadingCallback: InitLibCallback | undefined = undefined
     ): Promise<void> {
         const snarkParamsConfig = {
             transferParamsUrl: './assets/transfer_params.bin',
@@ -76,7 +75,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker, snarkParams } = await init(wasmPath, workerPath, snarkParamsConfig, loadingCallback);
+        const { worker, snarkParams } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
@@ -115,7 +114,7 @@ export default class Account {
 
     public async unlockAccount(
         password: string,
-        loadingCallback: LoadingProgressCallback | undefined = undefined
+        loadingCallback: InitLibCallback | undefined = undefined
     ) {
         let seed = this.decryptSeed(password);
         await this.init(seed, password, loadingCallback);
