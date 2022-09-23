@@ -221,7 +221,8 @@ jQuery(async function ($) {
                 break;
 
               case InitState.Completed:
-                this.echo(`Library has been loaded successfully ✅`);
+                this.echo(`Library has been loaded successfully`);
+                //throw new Error('Debug pause');
                 break;
 
               case InitState.Failed:
