@@ -157,6 +157,7 @@ export async function getLimits(address: string | undefined) {
     this.echo(`[[;gray;]...pool limit:          ${this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;white;]Max available withdraw: ${this.account.shieldedToHuman(result.withdraw.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;gray;]...total day limit:     ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.available)} / ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;white;]Limits tier: ${result.tier}`);
     
 }
 
