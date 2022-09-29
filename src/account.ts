@@ -242,7 +242,7 @@ export default class Account {
             addr = await this.client.getAddress();
         }
 
-        return await this.zpClient.getLimits(TOKEN_ADDRESS, addr, true);
+        return await this.zpClient.getLimits(TOKEN_ADDRESS, addr, false);
     }
 
     public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
