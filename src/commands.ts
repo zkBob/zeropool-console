@@ -157,6 +157,7 @@ export async function getLimits(address: string | undefined) {
     this.echo(`[[;gray;]...pool limit:          ${this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;white;]Max available withdraw: ${this.account.shieldedToHuman(result.withdraw.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;gray;]...total day limit:     ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.available)} / ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;white;]Limits tier: ${result.tier}`);
     
 }
 
@@ -223,8 +224,8 @@ export async function transferShielded(to: string, amount: string, times: string
             const result = await this.account.transferShielded(to, this.account.humanToShielded(amount));
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
-                return `[job #${oneResult.jobId}] [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
-            }).join(`\n     `)}`);
+                return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+            }).join(`\n      `)}`);
             
         }
     };
@@ -259,8 +260,8 @@ export async function withdrawShielded(amount: string, address: string, times: s
         const result = await this.account.withdrawShielded(this.account.humanToShielded(amount), address);
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
-            return `[job #${oneResult.jobId}] [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
-        }).join(`\n     `)}`);
+            return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+        }).join(`\n      `)}`);
     }
 }
 

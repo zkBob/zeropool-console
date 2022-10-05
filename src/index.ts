@@ -8,13 +8,13 @@ import jQuery from 'jquery';
 import initTerminal from 'jquery.terminal';
 // import initAutocomplete from 'jquery.terminal/js/autocomplete_menu';
 import bip39 from 'bip39-light';
-//import {Version} from '../package.json';
 
 var pjson = require('../package.json');
 
 
 import Account from './account';
 import * as c from './commands';
+import { InitLibCallback, InitState, InitStatus } from 'zkbob-client-js';
 
 const PRIVATE_COMMANDS = [
   'set-seed',
@@ -197,13 +197,54 @@ jQuery(async function ($) {
           this.account = new Account(accountName);
           this.resume();
 
+          let initLibCallback: InitLibCallback = (status: InitStatus) => {
+            switch(status.state) {
+              case InitState.Started:
+                this.echo(`Loading client library...`);
+                break;
+
+              case InitState.DownloadingParams:
+                let percent = (status.download.loaded / status.download.total) * 100;
+                if (status.download.loaded < status.download.total) {
+                  this.update(-1, `Downloading parameters...${percent.toFixed(1)} %`);
+                } else {
+                  this.update(-1, `Downloading parameters...Done! (${status.download.total} bytes)`);
+                }
+                break;
+
+              case InitState.InitWorker:
+                this.echo(`Initializing objects...`);
+                break;
+              
+              case InitState.InitWasm:
+                this.echo(`Initializing wasm module...`);
+                break;
+
+              case InitState.Completed:
+                this.echo(`Library has been loaded successfully`);
+                //throw new Error('Debug pause');
+                break;
+
+              case InitState.Failed:
+                if (status.error !== undefined) {
+                  throw status.error;
+                } else {
+                  throw new Error('Cannot load library');
+                }
+                break;
+
+              default:
+                break;
+            } 
+          };
+
           if (this.account.isAccountPresent()) {
             this.set_mask(true);
             const password = await this.read('Enter password: ');
             this.set_mask(false);
+
             this.pause();
-            this.echo('Loading data files...');
-            await this.account.unlockAccount(password);
+            await this.account.unlockAccount(password, initLibCallback);
             this.resume();
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
@@ -225,7 +266,7 @@ jQuery(async function ($) {
             }
 
             this.pause();
-            await this.account.init(seed, password);
+            await this.account.init(seed, password, initLibCallback);
             this.resume();
           }
         } catch (e) {
