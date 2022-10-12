@@ -273,6 +273,23 @@ export async function getInternalState() {
     }
 }
 
+export async function getRoot() {
+    this.pause();
+    const localState = this.account.getLocalTreeState();
+    const relayerState = this.account.getRelayerTreeState();
+    const relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
+    const poolState = this.account.getPoolTreeState();
+    this.resume();
+
+    let promises = [localState, relayerState, relayerOptimisticState, poolState]
+    Promise.all(promises).then((states) => {
+        this.echo(`Local  Merkle   root: [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`)
+        this.echo(`Relayer regular root: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`)
+        this.echo(` --- optimistic root: [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`)
+        this.echo(`Pool  contract  root: [[;white;]${states[3].root.toString()} @${states[3].index.toString()}]`)
+    });    
+}
+
 export async function printHistory() {
     this.pause();
     const history: HistoryRecord[] = await this.account.getAllHistory();

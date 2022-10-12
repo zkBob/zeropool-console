@@ -48,6 +48,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'fee-estimate-withdraw': [c.estimateFeeWithdraw, '<amount>', 'estimate fee for withdraw requested amount of tokens'],
   'limits': [c.getLimits, '[address]', 'get maximum available deposit and withdrawal from the specified address'],
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
+  'root': [c.getRoot, '', 'print local and remote Merkle tree root'],
   //'clean-state': [c.cleanState, '', 'wipe internal state and history'],
   'clear': [c.clear, '', 'clear terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
