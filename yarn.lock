@@ -9623,7 +9623,7 @@ yargs@^13.3.2:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.1"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-0.8.0-f5906bf2-84e9-4592-8e6b-ef30318bf4a8-1665611651413/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
+    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-0.8.0-d4bdde23-31c0-499e-936a-e2b9c5225b32-1665643698133/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
     regenerator-runtime "^0.13.9"
     web3 "^1.7.0"
     web3-utils "^1.7.0"

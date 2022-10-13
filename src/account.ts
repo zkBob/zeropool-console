@@ -211,7 +211,7 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
-    public async getLocalTreeState(): Promise<TreeState> {
+    public getLocalTreeState(): TreeState {
         return this.zpClient.getLocalState(TOKEN_ADDRESS);
     }
 
