@@ -392,8 +392,8 @@ export default class Account {
 
     public async transferShieldedMultinote(to: string, amount: bigint, count: number): Promise<{jobId: string, txHashes: string[]}> {
         const notesNum = Math.floor(count);
-        if (notesNum > 127) {
-            throw Error('Sorry, multinote transfer currently supports max 127 notes');
+        if (notesNum > 126) {
+            throw Error('Sorry, repeated transfer currently supports max 126 times');
         }
 
         console.log('Waiting while state become ready...');
