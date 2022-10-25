@@ -1,7 +1,7 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TxAmount, FeeAmount, TxType, PoolLimits, InitLibCallback } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TxAmount, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
@@ -209,6 +209,22 @@ export default class Account {
 
     public async getInternalState(): Promise<any> {
         return this.zpClient.rawState(TOKEN_ADDRESS);
+    }
+
+    public getLocalTreeState(): TreeState {
+        return this.zpClient.getLocalState(TOKEN_ADDRESS);
+    }
+
+    public async getRelayerTreeState(): Promise<TreeState> {
+        return this.zpClient.getRelayerState(TOKEN_ADDRESS);
+    }
+
+    public async getRelayerOptimisticTreeState(): Promise<TreeState> {
+        return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
+    }
+
+    public async getPoolTreeState(): Promise<TreeState> {
+        return this.zpClient.getPoolState(TOKEN_ADDRESS);
     }
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {

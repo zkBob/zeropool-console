@@ -274,6 +274,28 @@ export async function getInternalState() {
     }
 }
 
+export async function getRoot() {
+    const localState = this.account.getLocalTreeState();
+    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
+
+    this.echo(`Requesting additional info...`);
+    this.pause();
+    const relayerState = this.account.getRelayerTreeState();
+    const relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
+    const poolState = this.account.getPoolTreeState();
+
+    let promises = [relayerState, relayerOptimisticState, poolState]
+    Promise.all(promises).then((states) => {
+        this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
+        this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
+        this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+    }).catch((reason) => {
+        this.error(`Cannot fetch additional info: ${reason}`);
+    }).finally(() => {
+        this.resume();
+    });    
+}
+
 export async function printHistory() {
     this.pause();
     const history: HistoryRecord[] = await this.account.getAllHistory();
