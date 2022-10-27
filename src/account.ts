@@ -1,7 +1,7 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
@@ -226,6 +226,22 @@ export default class Account {
 
     public async getPoolTreeState(): Promise<TreeState> {
         return this.zpClient.getPoolState(TOKEN_ADDRESS);
+    }
+
+    public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
+        return this.zpClient.getEphemeralAddress(TOKEN_ADDRESS, index);
+    }
+
+    public async getNonusedEphemeralIndex(): Promise<number> {
+        return this.zpClient.getNonusedEphemeralIndex(TOKEN_ADDRESS);
+    }
+
+    public async getUsedEphemeralAddresses(): Promise<EphemeralAddress[]> {
+        return this.zpClient.getUsedEphemeralAddresses(TOKEN_ADDRESS);
+    }
+
+    public async getEphemeralAddressPrivateKey(index: number): Promise<string> {
+        return this.zpClient.getEphemeralAddressPrivateKey(TOKEN_ADDRESS, index);
     }
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {

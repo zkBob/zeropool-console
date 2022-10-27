@@ -1,6 +1,6 @@
 import Account from './account';
 import bip39 from 'bip39-light';
-import { HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { deriveSpendingKey, verifyShieldedAddress, bufToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
@@ -372,6 +372,51 @@ export async function getRoot() {
     }).finally(() => {
         this.resume();
     });    
+}
+
+export async function getEphemeral(index: string) {
+    this.pause();
+    let idx;
+    if (index === undefined) {
+        this.echo(`Getting first unused ephemeral address...`);
+        idx = await this.account.getNonusedEphemeralIndex();
+    } else {
+        idx = Number(index);
+    }
+
+    let addr: EphemeralAddress = await this.account.getEphemeralAddress(idx);
+
+    this.echo(`Index: [[;white;]${addr.index}]`);
+    this.echo(`   Address:        [[;white;]${addr.address}]`);
+    this.echo(`   Nonce:          [[;white;]${addr.nonce}]`);
+    this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+    this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.nativeSymbol()}]`);
+
+    this.resume();
+}
+
+export async function getEphemeralUsed() {
+    this.pause();
+
+    let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
+
+    for (let oneAddr of usedAddr) {
+        this.echo(`Index: [[;white;]${oneAddr.index}]`);
+        this.echo(`   Address:        [[;white;]${oneAddr.address}]`);
+        this.echo(`   Nonce:          [[;white;]${oneAddr.nonce}]`);
+        this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(oneAddr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+        this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(oneAddr.tokenBalance)} ${this.account.nativeSymbol()}]`);
+    }
+
+    this.resume();
+}
+
+export async function getEphemeralPrivKey(index: string) {
+    this.pause();
+    let idx = Number(index);
+    let priv: string = await this.account.getEphemeralAddressPrivateKey(idx);
+    this.echo(`Private key @${idx}: [[;white;]${priv}]`);
+    this.resume();
 }
 
 export async function printHistory() {
