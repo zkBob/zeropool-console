@@ -149,8 +149,8 @@ export default class Account {
         return await this.client.getAddress();
     }
 
-    public genShieldedAddress(): string {
-        return this.zpClient.generateAddress(TOKEN_ADDRESS);
+    public async genShieldedAddress(): Promise<string> {
+        return await this.zpClient.generateAddress(TOKEN_ADDRESS);
     }
 
     public async getShieldedBalances(updateState: boolean = true): Promise<[bigint, bigint, bigint]> {
@@ -425,6 +425,10 @@ export default class Account {
 
             throw Error('State is not ready for transact');
         }
+    }
+
+    public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
+        return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
     private decryptSeed(password: string): string {
