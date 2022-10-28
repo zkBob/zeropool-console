@@ -1,7 +1,7 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TxAmount, FeeAmount, TxType, PoolLimits, InitLibCallback } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
@@ -14,6 +14,7 @@ import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 // @ts-ignore
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { Output } from 'libzkbob-rs-wasm-web';
+import { TransferRequest } from 'zkbob-client-js/lib/client';
 
 
 function isEvmBased(network: string): boolean {
@@ -211,6 +212,22 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
+    public getLocalTreeState(): TreeState {
+        return this.zpClient.getLocalState(TOKEN_ADDRESS);
+    }
+
+    public async getRelayerTreeState(): Promise<TreeState> {
+        return this.zpClient.getRelayerState(TOKEN_ADDRESS);
+    }
+
+    public async getRelayerOptimisticTreeState(): Promise<TreeState> {
+        return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
+    }
+
+    public async getPoolTreeState(): Promise<TreeState> {
+        return this.zpClient.getPoolState(TOKEN_ADDRESS);
+    }
+
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
     }
@@ -232,8 +249,11 @@ export default class Account {
         await this.client.transfer(to, amount.toString());
     }
 
-    public async getTxParts(amount: bigint, fee: bigint): Promise<Array<TxAmount>> {
-        return await this.zpClient.getTransactionParts(TOKEN_ADDRESS, amount, fee, false);
+    public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
+        const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
+            return { destination: `dest-${index}`, amountGwei: oneAmount};
+        });
+        return await this.zpClient.getTransactionParts(TOKEN_ADDRESS, transfers, fee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -253,8 +273,8 @@ export default class Account {
         return await this.zpClient.atomicTxFee(TOKEN_ADDRESS);
     }
 
-    public async estimateFee(amount: bigint, txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
-        return await this.zpClient.feeEstimate(TOKEN_ADDRESS, amount, txType, updateState);
+    public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
+        return await this.zpClient.feeEstimate(TOKEN_ADDRESS, amounts, txType, updateState);
     }
 
     public getTransactionUrl(txHash: string): string {
@@ -270,7 +290,7 @@ export default class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amount, TxType.Deposit, false));
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Deposit, false));
 
             if (isEvmBased(NETWORK)) {
                 const totalApproveAmount = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
@@ -337,7 +357,7 @@ export default class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amount, TxType.BridgeDeposit, false));
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.BridgeDeposit, false));
 
             console.log('Making deposit...');
             let jobId;
@@ -356,44 +376,18 @@ export default class Account {
         }
     }
 
-    public async transferShielded(to: string, amount: bigint): Promise<{jobId: string, txHash: string}[]> {
+    public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
         console.log('Waiting while state become ready...');
         const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amount, TxType.Transfer, false));
+            const amounts = transfers.map((oneTransfer) => oneTransfer.amountGwei);
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amounts, TxType.Transfer, false));
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.zpClient.transferMulti(TOKEN_ADDRESS, to, amount, txFee.totalPerTx);
+            const jobIds: string[] = await this.zpClient.transferMulti(TOKEN_ADDRESS, transfers, txFee.totalPerTx);
             console.log('Please wait relayer complete the job%s %s...', jobIds.length > 0 ? 's' : '', jobIds.join(', '));
 
             return await this.zpClient.waitJobsCompleted(TOKEN_ADDRESS, jobIds);
-        } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
-
-            throw Error('State is not ready for transact');
-        }
-    }
-
-    public async transferShieldedMultinote(to: string, amount: bigint, count: number): Promise<{jobId: string, txHashes: string[]}> {
-        const notesNum = Math.floor(count);
-        if (notesNum > 126) {
-            throw Error('Sorry, repeated transfer currently supports max 126 times');
-        }
-
-        console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
-        if (ready) {
-            const txFee = (await this.zpClient.atomicTxFee(TOKEN_ADDRESS));
-            
-            let outputs: Output[] = [];
-            for (let i = 0; i < notesNum; i++) {
-                outputs.push({to, amount: amount.toString()})
-            }
-            console.log('Making transfer with ${notesNum} notes...');
-            const jobId = await this.zpClient.transferSingle(TOKEN_ADDRESS, outputs, txFee);
-            console.log('Please wait relayer complete the job %s...', jobId);
-
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -419,7 +413,7 @@ export default class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amount, TxType.Transfer, false));
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Transfer, false));
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.zpClient.withdrawMulti(TOKEN_ADDRESS, address, amount, txFee.totalPerTx);
