@@ -390,7 +390,7 @@ export async function getEphemeral(index: string) {
     this.echo(`   Address:        [[;white;]${addr.address}]`);
     this.echo(`   Nonce:          [[;white;]${addr.nonce}]`);
     this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-    this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
 
     this.resume();
 }
@@ -405,7 +405,7 @@ export async function getEphemeralUsed() {
         this.echo(`   Address:        [[;white;]${oneAddr.address}]`);
         this.echo(`   Nonce:          [[;white;]${oneAddr.nonce}]`);
         this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(oneAddr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-        this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(oneAddr.tokenBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(oneAddr.nativeBalance)} ${this.account.nativeSymbol()}]`);
     }
 
     this.resume();
