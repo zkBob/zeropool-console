@@ -37,6 +37,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'transfer': [c.transfer, ' <to> <amount>', 'transfer unshielded tokens to the native account'],
   'deposit-shielded': [c.depositShielded, '<amount> [times]', 'shield some tokens [via approving allowance]'],
   'deposit-shielded-permittable': [c.depositShieldedPermittable, '<amount> [times]', 'shield some tokens [via permit]'],
+  'deposit-shielded-permittable-ephemeral': [c.depositShieldedPermittableEphemeral, '<amount> index', 'shield some tokens from the internal ephemeral address [via permit]'],
   'transfer-shielded': [c.transferShielded, '<shielded address> <amount> [times | +]', 'move shielded tokens to the another zkBob address (inside a pool)'],
   'transfer-shielded-multinote': [c.transferShieldedMultinote, '<shielded address> <amount> <count> [times]', 'send a set of (notes) to the single address'],
   'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if addres is ommited)'],

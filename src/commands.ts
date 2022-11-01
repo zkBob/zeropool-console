@@ -247,6 +247,28 @@ export async function depositShieldedPermittable(amount: string, times: string) 
     }
 }
 
+export async function depositShieldedPermittableEphemeral(amount: string, index: string) {
+    let ephemeralIndex = index !== undefined ? Number(index) : 0;
+
+    this.echo(`Getting ephemeral acount info...`);
+    this.pause();
+    let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
+    this.update(-1, `Ephemeral address ${ephemeralAddress.address} has ${this.account.shieldedToHuman(ephemeralAddress.tokenBalance)} ${TOKEN_SYMBOL}`);
+
+    const requestedAmount = this.account.humanToShielded(amount);
+
+    if(ephemeralAddress.tokenBalance < requestedAmount) {
+        throw new Error(`Not enought balance in ephemeral address`);
+    }
+
+
+    const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
+    this.resume();
+    this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
+            return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
+        }).join(`, `)}`);
+}
+
 export async function transferShielded(to: string, amount: string, times: string) {
     if (verifyShieldedAddress(to) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
@@ -387,10 +409,11 @@ export async function getEphemeral(index: string) {
     let addr: EphemeralAddress = await this.account.getEphemeralAddress(idx);
 
     this.echo(`Index: [[;white;]${addr.index}]`);
-    this.echo(`   Address:        [[;white;]${addr.address}]`);
-    this.echo(`   Nonce:          [[;white;]${addr.nonce}]`);
-    this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-    this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Address:            [[;white;]${addr.address}]`);
+    this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.additional.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Transfers (in/out): [[;white;]${addr.additional.inTokenTxCnt}]/[[;white;]${addr.additional.outTokenTxCnt}]`);
+    this.echo(`  Nonce:              [[;white;]${addr.additional.nonce}]`);
 
     this.resume();
 }
@@ -400,12 +423,13 @@ export async function getEphemeralUsed() {
 
     let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
 
-    for (let oneAddr of usedAddr) {
-        this.echo(`Index: [[;white;]${oneAddr.index}]`);
-        this.echo(`   Address:        [[;white;]${oneAddr.address}]`);
-        this.echo(`   Nonce:          [[;white;]${oneAddr.nonce}]`);
-        this.echo(`   Token balance:  [[;white;]${this.account.shieldedToHuman(oneAddr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-        this.echo(`   Native balance: [[;white;]${this.account.shieldedToHuman(oneAddr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    for (let addr of usedAddr) {
+        this.echo(`Index: [[;white;]${addr.index}]`);
+        this.echo(`  Address:            [[;white;]${addr.address}]`);
+        this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.additional.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Transfers (in/out): [[;white;]${addr.additional.inTokenTxCnt}]/[[;white;]${addr.additional.outTokenTxCnt}]`);
+        this.echo(`  Nonce:              [[;white;]${addr.additional.nonce}]`);
     }
 
     this.resume();

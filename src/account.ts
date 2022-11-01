@@ -326,7 +326,7 @@ export default class Account {
         }
     }
 
-    private async createPermittableDepositDataV2(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
+    private async createPermittableDepositData(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
         const tokenName = await this.client.getTokenName(tokenAddress);
         const chainId = await this.client.getChainId();
         const nonce = await this.client.getTokenNonce(tokenAddress);
@@ -377,10 +377,37 @@ export default class Account {
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittableV2(TOKEN_ADDRESS, amount, async (deadline, value, salt) => {
-                const dataToSign = await this.createPermittableDepositDataV2(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
+            jobId = await this.zpClient.depositPermittable(TOKEN_ADDRESS, amount, async (deadline, value, salt) => {
+                const dataToSign = await this.createPermittableDepositData(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
+
+            console.log('Please wait relayer complete the job %s...', jobId);
+
+            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+        } else {
+            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+
+            throw Error('State is not ready for transact');
+        }
+    }
+
+    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHashes: string[]}> {
+        let myAddress = null;
+        if (isEvmBased(NETWORK)) {
+            myAddress = await this.client.getAddress();
+        } else {
+            throw Error('Permittable token deposit is supported on the EVM networks only');
+        }
+        
+        console.log('Waiting while state become ready...');
+        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        if (ready) {
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.BridgeDeposit, false));
+
+            console.log('Making deposit...');
+            let jobId;
+            jobId = await this.zpClient.depositPermittableEphemeral(TOKEN_ADDRESS, amount, index, txFee.totalPerTx);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
