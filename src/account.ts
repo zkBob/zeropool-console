@@ -4,7 +4,7 @@ import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropoo
 import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
-import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
@@ -13,12 +13,11 @@ import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 // @ts-ignore
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
-import { Output } from 'libzkbob-rs-wasm-web';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 
 
 function isEvmBased(network: string): boolean {
-    return ['ethereum', 'aurora', 'xdai', 'polygon'].includes(network);
+    return ['ethereum', 'aurora', 'xdai', 'polygon', 'sepolia', 'goerli'].includes(network);
 }
 
 function isSubstrateBased(network: string): boolean {
@@ -94,7 +93,11 @@ export default class Account {
         }
 
         const networkType = NETWORK as NetworkType;
-        const sk = deriveSpendingKey(mnemonic, networkType);
+        if (networkType === undefined) {
+            throw new Error(`Network ${NETWORK} is unsupported by client library`);
+        }
+
+        const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
         this.zpClient = await ZkBobClient.create({
             sk,
@@ -136,11 +139,15 @@ export default class Account {
     public nativeSymbol(): string {
         switch(NETWORK) {
             case 'ethereum': return 'ETH';
-            case 'aurora': return 'AURORA';
             case 'xdai': return 'XDAI';
+            case 'aurora': return 'AURORA';
+            case 'near': return 'NEAR';
+            case 'waves': return 'WAVES';
             case 'polkadot': return 'DOT';
             case 'kusama': return 'KSM';
             case 'polygon': return 'MATIC';
+            case 'sepolia': return 'ETH';
+            case 'goerli': return 'ETH';
             default: return '';
         }
     }
