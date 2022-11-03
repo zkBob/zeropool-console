@@ -211,8 +211,8 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
-    public getLocalTreeState(): TreeState {
-        return this.zpClient.getLocalState(TOKEN_ADDRESS);
+    public async getLocalTreeState(): Promise<TreeState> {
+        return await this.zpClient.getLocalState(TOKEN_ADDRESS);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {

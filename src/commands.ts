@@ -352,7 +352,7 @@ export async function getInternalState() {
 }
 
 export async function getRoot() {
-    const localState = this.account.getLocalTreeState();
+    const localState = await this.account.getLocalTreeState();
     this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
 
     this.echo(`Requesting additional info...`);
