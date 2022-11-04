@@ -239,7 +239,11 @@ export async function depositShieldedPermittable(amount: string, times: string) 
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded deposit with permittable token${cntStr}...`);
         this.pause();
+
+        // Due to the fact that the console is a test tool, we doesn't check address balance here
+        // we should get ability to test relayer's behaviour
         const result = await this.account.depositShieldedPermittable(this.account.humanToShielded(amount));
+
         this.resume();
         this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
                 return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
@@ -255,19 +259,13 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
     this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${TOKEN_SYMBOL}`);
 
-    const requestedAmount = this.account.humanToShielded(amount);
-
-    if(ephemeralAddress.tokenBalance < requestedAmount) {
-        this.resume();
-        this.error(`Not enought balance on ephemeral address`);
-    } else {
-        this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
-        const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
-        this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
-    }
+    // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
+    this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
+    const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
+    this.resume();
+    this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
+            return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
+        }).join(`, `)}`);
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
