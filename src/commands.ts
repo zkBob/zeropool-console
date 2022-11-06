@@ -454,7 +454,7 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
             record.actions.length == 1 &&
             record.actions[0].isLoopback
         ) {
-            toAddress = '🔁MYSELF';
+            toAddress = 'MYSELF';
         }
 
         if (record.type == HistoryTransactionType.Deposit) {
@@ -464,7 +464,7 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         } else if (record.type == HistoryTransactionType.TransferOut) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
-            mainPart = `${statusMark}WITHDRAWED ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
+            mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
         } else if (record.type == HistoryTransactionType.TransferLoopback) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO MYSELF`;
         } else {
