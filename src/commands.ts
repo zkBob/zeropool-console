@@ -1,8 +1,7 @@
-import Account from './account';
 import bip39 from 'bip39-light';
 import { HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
-import { deriveSpendingKey, verifyShieldedAddress, bufToHex } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKey, bufToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
@@ -34,8 +33,8 @@ export async function getAddress() {
     this.echo(`[[;gray;]Address: ${address}]`);
 }
 
-export function genShieldedAddress() {
-    const address = this.account.genShieldedAddress();
+export async function genShieldedAddress() {
+    const address = await this.account.genShieldedAddress();
     this.echo(`[[;gray;]${address}]`);
 }
 
@@ -248,7 +247,7 @@ export async function depositShieldedPermittable(amount: string, times: string) 
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
-    if (verifyShieldedAddress(to) === false) {
+    if ((await this.account.verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let txCnt = 1;
@@ -266,7 +265,7 @@ export async function transferShielded(to: string, amount: string, times: string
                     this.error('Please use the following format: \'shielded_address amount\'');
                     continue;
                 }
-                if (verifyShieldedAddress(components[0]) === false) {
+                if ((await this.account.verifyShieldedAddress(components[0])) === false) {
                     this.error(`Shielded address ${components[0]} is invalid. Please check it!`);
                     continue;
                 }
@@ -301,7 +300,7 @@ export async function transferShielded(to: string, amount: string, times: string
 }
 
 export async function transferShieldedMultinote(to: string, amount: string, count: string, times: string) {
-    if (verifyShieldedAddress(to) === false) {
+    if ((await this.account.verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let notesCnt = Number(count);
@@ -353,7 +352,7 @@ export async function getInternalState() {
 }
 
 export async function getRoot() {
-    const localState = this.account.getLocalTreeState();
+    const localState = await this.account.getLocalTreeState();
     this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
 
     this.echo(`Requesting additional info...`);
