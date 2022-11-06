@@ -75,7 +75,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker, snarkParams } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
+        const { worker } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
@@ -102,7 +102,6 @@ export default class Account {
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
-            snarkParams,
             tokens: {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
@@ -156,8 +155,8 @@ export default class Account {
         return await this.client.getAddress();
     }
 
-    public genShieldedAddress(): string {
-        return this.zpClient.generateAddress(TOKEN_ADDRESS);
+    public async genShieldedAddress(): Promise<string> {
+        return await this.zpClient.generateAddress(TOKEN_ADDRESS);
     }
 
     public async getShieldedBalances(updateState: boolean = true): Promise<[bigint, bigint, bigint]> {
@@ -219,8 +218,8 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
-    public getLocalTreeState(): TreeState {
-        return this.zpClient.getLocalState(TOKEN_ADDRESS);
+    public async getLocalTreeState(): Promise<TreeState> {
+        return await this.zpClient.getLocalState(TOKEN_ADDRESS);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {
@@ -475,6 +474,10 @@ export default class Account {
 
             throw Error('State is not ready for transact');
         }
+    }
+
+    public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
+        return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
     private decryptSeed(password: string): string {
