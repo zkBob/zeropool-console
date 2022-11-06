@@ -42,10 +42,10 @@ export async function genShieldedAddress() {
 }
 
 export async function shieldedAddressInfo(shieldedAddress: string) {
-    const isValid = verifyShieldedAddress(shieldedAddress);
+    const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
     this.echo(`Verifying checksum: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
     if(isValid) {
-        const isMy = this.account.isMyAddress(shieldedAddress);
+        const isMy = await this.account.isMyAddress(shieldedAddress);
         this.echo(`Is it my address:   ${isMy ? '[[;green;]YES]' : '[[;white;]NO]'}`)
 
         let decoded: Uint8Array  = bs58.decode(shieldedAddress);
