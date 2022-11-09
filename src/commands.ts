@@ -225,9 +225,7 @@ export async function depositShielded(amount: string, times: string) {
         this.pause();
         const result = await this.account.depositShielded(this.account.humanToShielded(amount));
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 
@@ -240,9 +238,7 @@ export async function depositShieldedPermittable(amount: string, times: string) 
         this.pause();
         const result = await this.account.depositShieldedPermittable(this.account.humanToShielded(amount));
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 

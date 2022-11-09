@@ -280,7 +280,7 @@ export default class Account {
         return this.client.getTransactionUrl(txHash);
     }
 
-    public async depositShielded(amount: bigint): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let fromAddress = null;
         if (isSubstrateBased(NETWORK)) {
             fromAddress = await this.client.getPublicKey();
@@ -299,9 +299,9 @@ export default class Account {
 
             console.log('Making deposit...');
             const jobId = await this.zpClient.deposit(TOKEN_ADDRESS, amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job %s...', jobId);
+            console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId)) };
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -345,7 +345,7 @@ export default class Account {
         return data;
     }
 
-    public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
         if (isEvmBased(NETWORK)) {
             myAddress = await this.client.getAddress();
@@ -365,9 +365,9 @@ export default class Account {
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
 
-            console.log('Please wait relayer complete the job %s...', jobId);
+            console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -384,9 +384,9 @@ export default class Account {
             
             console.log('Making transfer...');
             const jobIds: string[] = await this.zpClient.transferMulti(TOKEN_ADDRESS, transfers, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job%s %s...', jobIds.length > 0 ? 's' : '', jobIds.join(', '));
+            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsCompleted(TOKEN_ADDRESS, jobIds);
+            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -416,9 +416,9 @@ export default class Account {
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.zpClient.withdrawMulti(TOKEN_ADDRESS, address, amount, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job%s %s...', jobIds.length > 0 ? 's' : '', jobIds.join(', '));
+            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsCompleted(TOKEN_ADDRESS, jobIds);
+            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
