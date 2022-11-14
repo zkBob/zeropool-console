@@ -246,6 +246,14 @@ export default class Account {
         return this.zpClient.getUsedEphemeralAddresses(TOKEN_ADDRESS);
     }
 
+    public async getEphemeralAddressInTxCount(index: number): Promise<number> {
+        return this.zpClient.getEphemeralAddressInTxCount(TOKEN_ADDRESS, index);
+    }
+
+    public async getEphemeralAddressOutTxCount(index: number): Promise<number> {
+        return this.zpClient.getEphemeralAddressOutTxCount(TOKEN_ADDRESS, index);
+    }
+
     public async getEphemeralAddressPrivateKey(index: number): Promise<string> {
         return this.zpClient.getEphemeralAddressPrivateKey(TOKEN_ADDRESS, index);
     }

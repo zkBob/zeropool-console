@@ -404,14 +404,19 @@ export async function getEphemeral(index: string) {
         idx = Number(index);
     }
 
-    let addr: EphemeralAddress = await this.account.getEphemeralAddress(idx);
+    const [addr, inTxCnt, outTxCnt] = await Promise.all([
+        this.account.getEphemeralAddress(idx),
+        this.account.getEphemeralAddressInTxCount(idx),
+        this.account.getEphemeralAddressOutTxCount(idx),
+    ]);
 
     this.echo(`Index: [[;white;]${addr.index}]`);
     this.echo(`  Address:            [[;white;]${addr.address}]`);
     this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.additional.nativeBalance)} ${this.account.nativeSymbol()}]`);
-    this.echo(`  Transfers (in/out): [[;white;]${addr.additional.inTokenTxCnt}]/[[;white;]${addr.additional.outTokenTxCnt}]`);
-    this.echo(`  Nonce:              [[;white;]${addr.additional.nonce}]`);
+    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+    this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+    this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
 
     this.resume();
 }
@@ -422,12 +427,18 @@ export async function getEphemeralUsed() {
     let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
 
     for (let addr of usedAddr) {
+        const [inTxCnt, outTxCnt] = await Promise.all([
+            this.account.getEphemeralAddressInTxCount(addr.index),
+            this.account.getEphemeralAddressOutTxCount(addr.index),
+        ]);
+
         this.echo(`Index: [[;white;]${addr.index}]`);
         this.echo(`  Address:            [[;white;]${addr.address}]`);
         this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.additional.nativeBalance)} ${this.account.nativeSymbol()}]`);
-        this.echo(`  Transfers (in/out): [[;white;]${addr.additional.inTokenTxCnt}]/[[;white;]${addr.additional.outTokenTxCnt}]`);
-        this.echo(`  Nonce:              [[;white;]${addr.additional.nonce}]`);
+        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+        this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+        this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
     }
 
     this.resume();
