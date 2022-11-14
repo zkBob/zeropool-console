@@ -1,5 +1,5 @@
 import bip39 from 'bip39-light';
-import { HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { deriveSpendingKey, bufToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
@@ -246,9 +246,7 @@ export async function depositShielded(amount: string, times: string) {
         this.pause();
         const result = await this.account.depositShielded(this.account.humanToShielded(amount));
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 
@@ -259,12 +257,31 @@ export async function depositShieldedPermittable(amount: string, times: string) 
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded deposit with permittable token${cntStr}...`);
         this.pause();
+
+        // Due to the fact that the console is a test tool, we doesn't check address balance here
+        // we should get ability to test relayer's behaviour
         const result = await this.account.depositShieldedPermittable(this.account.humanToShielded(amount));
+
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
+}
+
+export async function depositShieldedPermittableEphemeral(amount: string, index: string) {
+    let ephemeralIndex = index !== undefined ? Number(index) : 0;
+
+    this.echo(`Getting ephemeral acount info...`);
+    this.pause();
+    let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
+    this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${TOKEN_SYMBOL}`);
+
+    // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
+    this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
+    const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
+    this.resume();
+    this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
+            return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
+        }).join(`, `)}`);
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
@@ -392,6 +409,64 @@ export async function getRoot() {
     }).finally(() => {
         this.resume();
     });    
+}
+
+export async function getEphemeral(index: string) {
+    this.pause();
+    let idx;
+    if (index === undefined) {
+        this.echo(`Getting first unused ephemeral address...`);
+        idx = await this.account.getNonusedEphemeralIndex();
+    } else {
+        idx = Number(index);
+    }
+
+    const [addr, inTxCnt, outTxCnt] = await Promise.all([
+        this.account.getEphemeralAddress(idx),
+        this.account.getEphemeralAddressInTxCount(idx),
+        this.account.getEphemeralAddressOutTxCount(idx),
+    ]);
+
+    this.echo(`Index: [[;white;]${addr.index}]`);
+    this.echo(`  Address:            [[;white;]${addr.address}]`);
+    this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+    this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+    this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
+
+    this.resume();
+}
+
+export async function getEphemeralUsed() {
+    this.pause();
+
+    let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
+
+    for (let addr of usedAddr) {
+        const [inTxCnt, outTxCnt] = await Promise.all([
+            this.account.getEphemeralAddressInTxCount(addr.index),
+            this.account.getEphemeralAddressOutTxCount(addr.index),
+        ]);
+
+        this.echo(`Index: [[;white;]${addr.index}]`);
+        this.echo(`  Address:            [[;white;]${addr.address}]`);
+        this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+        this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+        this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
+    }
+
+    this.resume();
+}
+
+export async function getEphemeralPrivKey(index: string) {
+    this.pause();
+    let idx = Number(index);
+    let priv: string = await this.account.getEphemeralAddressPrivateKey(idx);
+    this.echo(`Private key @${idx}: [[;white;]${priv}]`);
+    this.resume();
 }
 
 export async function printHistory() {

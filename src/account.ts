@@ -1,10 +1,10 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
-import { deriveSpendingKey } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
@@ -13,12 +13,11 @@ import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
 // @ts-ignore
 import workerPath from 'zkbob-client-js/lib/worker.js?asset';
-import { Output } from 'libzkbob-rs-wasm-web';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 
 
 function isEvmBased(network: string): boolean {
-    return ['ethereum', 'aurora', 'xdai', 'polygon'].includes(network);
+    return ['ethereum', 'aurora', 'xdai', 'polygon', 'sepolia', 'goerli'].includes(network);
 }
 
 function isSubstrateBased(network: string): boolean {
@@ -94,7 +93,11 @@ export default class Account {
         }
 
         const networkType = NETWORK as NetworkType;
-        const sk = deriveSpendingKey(mnemonic, networkType);
+        if (networkType === undefined) {
+            throw new Error(`Network ${NETWORK} is unsupported by client library`);
+        }
+
+        const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
         this.zpClient = await ZkBobClient.create({
             sk,
@@ -135,11 +138,15 @@ export default class Account {
     public nativeSymbol(): string {
         switch(NETWORK) {
             case 'ethereum': return 'ETH';
-            case 'aurora': return 'AURORA';
             case 'xdai': return 'XDAI';
+            case 'aurora': return 'AURORA';
+            case 'near': return 'NEAR';
+            case 'waves': return 'WAVES';
             case 'polkadot': return 'DOT';
             case 'kusama': return 'KSM';
             case 'polygon': return 'MATIC';
+            case 'sepolia': return 'ETH';
+            case 'goerli': return 'ETH';
             default: return '';
         }
     }
@@ -231,6 +238,30 @@ export default class Account {
         return this.zpClient.getPoolState(TOKEN_ADDRESS);
     }
 
+    public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
+        return this.zpClient.getEphemeralAddress(TOKEN_ADDRESS, index);
+    }
+
+    public async getNonusedEphemeralIndex(): Promise<number> {
+        return this.zpClient.getNonusedEphemeralIndex(TOKEN_ADDRESS);
+    }
+
+    public async getUsedEphemeralAddresses(): Promise<EphemeralAddress[]> {
+        return this.zpClient.getUsedEphemeralAddresses(TOKEN_ADDRESS);
+    }
+
+    public async getEphemeralAddressInTxCount(index: number): Promise<number> {
+        return this.zpClient.getEphemeralAddressInTxCount(TOKEN_ADDRESS, index);
+    }
+
+    public async getEphemeralAddressOutTxCount(index: number): Promise<number> {
+        return this.zpClient.getEphemeralAddressOutTxCount(TOKEN_ADDRESS, index);
+    }
+
+    public async getEphemeralAddressPrivateKey(index: number): Promise<string> {
+        return this.zpClient.getEphemeralAddressPrivateKey(TOKEN_ADDRESS, index);
+    }
+
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
     }
@@ -284,7 +315,7 @@ export default class Account {
         return this.client.getTransactionUrl(txHash);
     }
 
-    public async depositShielded(amount: bigint): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let fromAddress = null;
         if (isSubstrateBased(NETWORK)) {
             fromAddress = await this.client.getPublicKey();
@@ -303,9 +334,9 @@ export default class Account {
 
             console.log('Making deposit...');
             const jobId = await this.zpClient.deposit(TOKEN_ADDRESS, amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job %s...', jobId);
+            console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId)) };
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -313,7 +344,7 @@ export default class Account {
         }
     }
 
-    private async createPermittableDepositDataV2(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
+    private async createPermittableDepositData(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
         const tokenName = await this.client.getTokenName(tokenAddress);
         const chainId = await this.client.getChainId();
         const nonce = await this.client.getTokenNonce(tokenAddress);
@@ -349,7 +380,7 @@ export default class Account {
         return data;
     }
 
-    public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
         if (isEvmBased(NETWORK)) {
             myAddress = await this.client.getAddress();
@@ -364,10 +395,37 @@ export default class Account {
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittableV2(TOKEN_ADDRESS, amount, async (deadline, value, salt) => {
-                const dataToSign = await this.createPermittableDepositDataV2(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
+            jobId = await this.zpClient.depositPermittable(TOKEN_ADDRESS, amount, async (deadline, value, salt) => {
+                const dataToSign = await this.createPermittableDepositData(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
+
+            console.log('Please wait relayer provide txHash for job %s...', jobId);
+
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
+        } else {
+            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+
+            throw Error('State is not ready for transact');
+        }
+    }
+
+    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHashes: string[]}> {
+        let myAddress = null;
+        if (isEvmBased(NETWORK)) {
+            myAddress = await this.client.getAddress();
+        } else {
+            throw Error('Permittable token deposit is supported on the EVM networks only');
+        }
+        
+        console.log('Waiting while state become ready...');
+        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        if (ready) {
+            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.BridgeDeposit, false));
+
+            console.log('Making deposit...');
+            let jobId;
+            jobId = await this.zpClient.depositPermittableEphemeral(TOKEN_ADDRESS, amount, index, txFee.totalPerTx);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
@@ -388,9 +446,9 @@ export default class Account {
             
             console.log('Making transfer...');
             const jobIds: string[] = await this.zpClient.transferMulti(TOKEN_ADDRESS, transfers, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job%s %s...', jobIds.length > 0 ? 's' : '', jobIds.join(', '));
+            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsCompleted(TOKEN_ADDRESS, jobIds);
+            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -420,9 +478,9 @@ export default class Account {
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.zpClient.withdrawMulti(TOKEN_ADDRESS, address, amount, txFee.totalPerTx);
-            console.log('Please wait relayer complete the job%s %s...', jobIds.length > 0 ? 's' : '', jobIds.join(', '));
+            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsCompleted(TOKEN_ADDRESS, jobIds);
+            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
