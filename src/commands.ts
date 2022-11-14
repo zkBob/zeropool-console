@@ -6,6 +6,9 @@ import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 
+const bs58 = require('bs58');
+
+
 
 export async function setSeed(seed: string, password: string) {
     await this.account.login(seed, password);
@@ -36,6 +39,24 @@ export async function getAddress() {
 export async function genShieldedAddress() {
     const address = await this.account.genShieldedAddress();
     this.echo(`[[;gray;]${address}]`);
+}
+
+export async function shieldedAddressInfo(shieldedAddress: string) {
+    const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
+    this.echo(`Verifying checksum: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
+    if(isValid) {
+        const isMy = await this.account.isMyAddress(shieldedAddress);
+        this.echo(`Is it my address:   ${isMy ? '[[;green;]YES]' : '[[;white;]NO]'}`)
+
+        let decoded: Uint8Array  = bs58.decode(shieldedAddress);
+        let diversifier = decoded.slice(0, 10).reverse();
+        let Gd = decoded.slice(10, -4).reverse();
+        let chksm = decoded.slice(-4)
+        this.echo(`Bytes:       [[;white;]${decoded.length}]`);
+        this.echo(`Diversifier: [[;white;]${bufToHex(diversifier)}]`);
+        this.echo(`Gd.x         [[;white;]${bufToHex(Gd)}]`);
+        this.echo(`Checksum:    [[;white;]${bufToHex(chksm)}]`);
+    }
 }
 
 export async function getBalance() {
@@ -459,11 +480,11 @@ export async function printHistory() {
         this.echo(`${humanReadable(tx, denominator)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
 
         if (tx.actions.length > 1) {
-            let directions = new Map<string, {amount: bigint, notesCnt: number}>();
+            let directions = new Map<string, {amount: bigint, notesCnt: number, isLoopback}>();
             for (const moving of tx.actions) {
                 let existingDirection = directions.get(moving.to);
                 if (existingDirection === undefined) {
-                    existingDirection = {amount: BigInt(0), notesCnt: 0};
+                    existingDirection = {amount: BigInt(0), notesCnt: 0, isLoopback: moving.isLoopback};
                 }
                 existingDirection.amount += moving.amount;
                 existingDirection.notesCnt++;
@@ -476,7 +497,11 @@ export async function printHistory() {
                 if (value.notesCnt > 1) {
                     notesCntDescription = ` [${value.notesCnt} notes were used]`;
                 }
-                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${key}${notesCntDescription}`);
+                let destDescr = `${key}${notesCntDescription}`;
+                if (value.isLoopback) {
+                    destDescr = `🔁MYSELF${notesCntDescription}`;
+                }
+                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${destDescr}`);
             }
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
@@ -499,6 +524,12 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         let toAddress = record.actions[0].to;
         if (record.actions.length > 1) {
             toAddress = `${record.actions.length} notes`;
+        } else if (
+            record.type == HistoryTransactionType.TransferOut &&
+            record.actions.length == 1 &&
+            record.actions[0].isLoopback
+        ) {
+            toAddress = 'MYSELF';
         }
 
         if (record.type == HistoryTransactionType.Deposit) {
@@ -508,7 +539,7 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         } else if (record.type == HistoryTransactionType.TransferOut) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
-            mainPart = `${statusMark}WITHDRAWED ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
+            mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
         } else if (record.type == HistoryTransactionType.TransferLoopback) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO MYSELF`;
         } else {

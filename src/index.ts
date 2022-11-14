@@ -29,6 +29,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'get-sk': [c.getSk, '<password>', 'get zkBob account spending key'],
   'get-address': [c.getAddress, '', 'get your native address'],
   'gen-shielded-address': [c.genShieldedAddress, '', 'generate a new zkBob shielded address'],
+  'shielded-address-info': [c.shieldedAddressInfo, '<shielded address>', 'Get all available info from the shielded address'],
   'get-balance': [c.getBalance, '', 'fetch and print native account balance'],
   'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
   'max-transfer': [c.getMaxAvailableTransfer, '', 'get max available token mount for outcoming transaction'],
