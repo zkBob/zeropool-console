@@ -99,17 +99,17 @@ export async function mint(amount: string) {
 
 export async function transfer(to: string, amount: string) {
     this.pause();
-    this.echo(`Transfer ${this.account.nativeSymbol()}... `);
+    this.echo(`Transfering ${this.account.nativeSymbol()}... `);
     const txHash = await this.account.transfer(to, this.account.humanToWei(amount));
-    this.update(-1, `Transfer ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
 
 export async function transferToken(to: string, amount: string) {
     this.pause();
-    this.echo(`Transfer ${TOKEN_SYMBOL}... `);
+    this.echo(`Transfering ${TOKEN_SYMBOL}... `);
     const txHash = await this.account.transferToken(to, this.account.humanToWei(amount));
-    this.update(-1, `Transfer ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.update(-1, `Transfering ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
 

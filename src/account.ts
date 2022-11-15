@@ -336,7 +336,7 @@ export default class Account {
                 if (totalApproveAmount > currentAllowance) {
                     totalApproveAmount -= currentAllowance;
                     console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-                    await this.client.approve(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+                    await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
                 } else {
                     console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
                 }
