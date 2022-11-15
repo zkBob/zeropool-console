@@ -414,7 +414,7 @@ export default class Account {
         }
     }
 
-    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
         if (isEvmBased(NETWORK)) {
             myAddress = await this.client.getAddress();
@@ -433,7 +433,7 @@ export default class Account {
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 

@@ -283,9 +283,7 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
     const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
     this.resume();
-    this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-            return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-        }).join(`, `)}`);
+    this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
@@ -496,6 +494,7 @@ export async function printHistory() {
             }
 
 
+            const prep = tx.type == HistoryTransactionType.TransferIn ? 'ON' : 'TO';
             for (let [key, value] of directions) {
                 let notesCntDescription = '';
                 if (value.notesCnt > 1) {
@@ -503,9 +502,9 @@ export async function printHistory() {
                 }
                 let destDescr = `${key}${notesCntDescription}`;
                 if (value.isLoopback) {
-                    destDescr = `🔁MYSELF${notesCntDescription}`;
+                    destDescr = `MYSELF${notesCntDescription}`;
                 }
-                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${destDescr}`);
+                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${prep} ${destDescr}`);
             }
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
