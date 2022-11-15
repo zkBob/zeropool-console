@@ -90,15 +90,27 @@ export async function getTokenBalance() {
 }
 
 export async function mint(amount: string) {
-    return this.account.mint(this.account.humanToWei(amount));
+    this.pause();
+    this.echo('Minting tokens... ');
+    const txHash = await this.account.mint(this.account.humanToWei(amount));
+    this.update(-1, `Minting tokens... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
 }
 
 export async function transfer(to: string, amount: string) {
-    await this.account.transfer(to, this.account.humanToWei(amount));
+    this.pause();
+    this.echo(`Transfer ${this.account.nativeSymbol()}... `);
+    const txHash = await this.account.transfer(to, this.account.humanToWei(amount));
+    this.update(-1, `Transfer ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
 }
 
 export async function transferToken(to: string, amount: string) {
-    await this.account.transferToken(to, this.account.humanToWei(amount));
+    this.pause();
+    this.echo(`Transfer ${TOKEN_SYMBOL}... `);
+    const txHash = await this.account.transferToken(to, this.account.humanToWei(amount));
+    this.update(-1, `Transfer ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
 }
 
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
