@@ -2843,13 +2843,13 @@ caseless@~0.12.0:
   integrity sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==
 
 chai@^4.2.0:
-  version "4.3.6"
-  resolved "https://registry.yarnpkg.com/chai/-/chai-4.3.6.tgz#ffe4ba2d9fa9d6680cc0b370adae709ec9011e9c"
-  integrity sha512-bbcp3YfHCUzMOvKqsztczerVgBKSsEijCySNlHHbX3VG1nskvqjz5Rfso1gGwD6w6oOV3eI60pKuMOV5MV7p3Q==
+  version "4.3.7"
+  resolved "https://registry.yarnpkg.com/chai/-/chai-4.3.7.tgz#ec63f6df01829088e8bf55fca839bcd464a8ec51"
+  integrity sha512-HLnAzZ2iupm25PlN0xFreAlBA5zaBSv3og0DdeGA4Ar6h6rJ3A0rolRUKJhSF2V10GZKDgWF/VmAEsNWjCRB+A==
   dependencies:
     assertion-error "^1.1.0"
     check-error "^1.0.2"
-    deep-eql "^3.0.1"
+    deep-eql "^4.1.2"
     get-func-name "^2.0.0"
     loupe "^2.3.1"
     pathval "^1.1.1"
@@ -3451,10 +3451,10 @@ decompress-response@^6.0.0:
   dependencies:
     mimic-response "^3.1.0"
 
-deep-eql@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/deep-eql/-/deep-eql-3.0.1.tgz#dfc9404400ad1c8fe023e7da1df1c147c4b444df"
-  integrity sha512-+QeIQyN5ZuO+3Uk5DYh6/1eKO0m0YmJFGNmFHGACpf1ClL1nmlV/p4gNgbl2pJGxgXb4faqo6UE+M5ACEMyVcw==
+deep-eql@^4.1.2:
+  version "4.1.2"
+  resolved "https://registry.yarnpkg.com/deep-eql/-/deep-eql-4.1.2.tgz#270ceb902f87724077e6f6449aed81463f42fc1c"
+  integrity sha512-gT18+YW4CcW/DBNTwAmqTtkJh7f9qqScu2qFVlx7kCoeY9tlBu9cUcr7+I+Z/noG8INehS3xQgLpTtd/QUTn4w==
   dependencies:
     type-detect "^4.0.0"
 
@@ -5246,9 +5246,9 @@ http2-wrapper@^1.0.0-beta.5.2:
     resolve-alpn "^1.0.0"
 
 http2-wrapper@^2.1.10:
-  version "2.1.11"
-  resolved "https://registry.yarnpkg.com/http2-wrapper/-/http2-wrapper-2.1.11.tgz#d7c980c7ffb85be3859b6a96c800b2951ae257ef"
-  integrity sha512-aNAk5JzLturWEUiuhAN73Jcbq96R7rTitAoXV54FYMatvihnpD2+6PUgU4ce3D/m5VDbw+F5CsyKSF176ptitQ==
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/http2-wrapper/-/http2-wrapper-2.2.0.tgz#b80ad199d216b7d3680195077bd7b9060fa9d7f3"
+  integrity sha512-kZB0wxMo0sh1PehyjJUWRFEd99KC5TLjZ2cULC4f9iqJBAmKQQXEICjxl5iPJRwP40dpeHFqqhm7tYCvODpqpQ==
   dependencies:
     quick-lru "^5.1.1"
     resolve-alpn "^1.2.0"
@@ -6117,9 +6117,9 @@ long@^4.0.0:
   integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
 
 loupe@^2.3.1:
-  version "2.3.4"
-  resolved "https://registry.yarnpkg.com/loupe/-/loupe-2.3.4.tgz#7e0b9bffc76f148f9be769cb1321d3dcf3cb25f3"
-  integrity sha512-OvKfgCC2Ndby6aSTREl5aCCPTNIzlDfQZvZxNUrBrihDhL3xcrYegTblhmEiCrg2kKQz4XsFIaemE5BF4ybSaQ==
+  version "2.3.6"
+  resolved "https://registry.yarnpkg.com/loupe/-/loupe-2.3.6.tgz#76e4af498103c532d1ecc9be102036a21f787b53"
+  integrity sha512-RaPMZKiMy8/JruncMU5Bt6na1eftNoo++R4Y+N2FrxkDVTrGvcyzFTsaGif4QTeKESheMGegbhw6iUAq+5A8zA==
   dependencies:
     get-func-name "^2.0.0"
 
@@ -9370,7 +9370,7 @@ web3-utils@1.8.1, web3-utils@^1.3.6:
     randombytes "^2.1.0"
     utf8 "3.0.0"
 
-web3@1.8.0, web3@^1.0.0-beta.55, web3@^1.7.1:
+web3@1.8.0, web3@^1.7.1:
   version "1.8.0"
   resolved "https://registry.yarnpkg.com/web3/-/web3-1.8.0.tgz#3ca5f0b32de6a1f626407740411219035b5fde64"
   integrity sha512-sldr9stK/SALSJTgI/8qpnDuBJNMGjVR84hJ+AcdQ+MLBGLMGsCDNubCoyO6qgk1/Y9SQ7ignegOI/7BPLoiDA==
@@ -9383,7 +9383,7 @@ web3@1.8.0, web3@^1.0.0-beta.55, web3@^1.7.1:
     web3-shh "1.8.0"
     web3-utils "1.8.0"
 
-web3@^1.3.1:
+web3@^1.0.0-beta.55, web3@^1.3.1:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/web3/-/web3-1.8.1.tgz#8ea67215ef5f3a6f6d3381800b527242ea22885a"
   integrity sha512-tAqFsQhGv340C9OgRJIuoScN7f7wa1tUvsnnDUMt9YE6J4gcm7TV2Uwv+KERnzvV+xgdeuULYpsioRRNKrUvoQ==
@@ -9774,8 +9774,9 @@ yargs@^13.3.2:
     y18n "^4.0.0"
     yargs-parser "^13.1.2"
 
-"zeropool-support-js@file:../zeropool-support-js":
-  version "0.5.4"
+"zeropool-support-js@https://github.com/zkBob/zeropool-support-js#0.6.0":
+  version "0.6.0"
+  resolved "https://github.com/zkBob/zeropool-support-js#3c3d16318defab0116b37db4c968c1b902cc0d5a"
   dependencies:
     "@ethereumjs/tx" "^3.2.1"
     "@polkadot/api" "^7.11.1"
@@ -9795,8 +9796,10 @@ yargs@^13.3.2:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-"zkbob-client-js@file:../zkbob-client-js":
-  version "1.0.0"
+zkbob-client-js@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-1.1.0.tgz#8bc861543566ed6444ad04938030bf17f7206bf7"
+  integrity sha512-bKDRUyemGnINWTEcM6IKOCk8+ZvR1UUo/zvNeOm49Xcj/qVtZgsgWDVuhpMJEu96kWTyZrR6mM1gAovtWmSFbA==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@metamask/eth-sig-util" "5.0.0"
