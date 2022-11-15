@@ -97,6 +97,10 @@ export async function transfer(to: string, amount: string) {
     await this.account.transfer(to, this.account.humanToWei(amount));
 }
 
+export async function transferToken(to: string, amount: string) {
+    await this.account.transferToken(to, this.account.humanToWei(amount));
+}
+
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
     let amounts: bigint[] = [];
     amounts.push(this.account.humanToShielded(amount));

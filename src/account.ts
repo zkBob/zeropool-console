@@ -283,6 +283,10 @@ export default class Account {
         await this.client.transfer(to, amount.toString());
     }
 
+    public async transferToken(to: string, amount: bigint): Promise<void> {
+        await this.client.transferToken(TOKEN_ADDRESS, to, amount.toString());
+    }
+
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
