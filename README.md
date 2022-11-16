@@ -34,3 +34,83 @@ Suppose you already done local running and set appropriated parameters and setti
 
 2. Build the prouction pack and push your container to the Docker Hub: `./scripts/publish-docker`
 
+
+# Using console
+
+## Account maintenance
+
+`get-seed <password>` print the seed phrase for the current account (current password needed)
+
+`get-sk <password>` get zkBob account spending key (current password needed,
+  
+## L1-level commands
+
+`get-addres` get the linked account address. This address derived from account mnemonic phrase
+
+`get-balance` get the linked account balance (native coins)
+
+`get-token-balance` get the linked account balance (tokens)
+
+`testnet-mint <amount>` mint some unshielded tokens (available on testnets only)
+
+`transfer <to> <amount>` transfer native coins to the destination L1 address
+
+`transfer-token <to> <amount>` transfer tokens to the destination L1 address
+
+## L2-level commands
+
+`gen-shielded-address` generate a new zkBob shielded address
+
+`get-shielded-balance` get calculated private balance (with optimistic balance)
+
+`deposit-shielded <amount> [times]` deposit some tokens into zk-account (approving allowance scheme which require native coins presenting on the balance to cover token approve transaction fee). Specify `times` numeric value to repeat the operation several times
+
+`deposit-shielded-permittable <amount> [times]` deposit some tokens into zk-account (permit scheme, no native coins needed). Specify `times` numeric value to repeat the operation several times
+
+`deposit-shielded-permittable-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
+
+`transfer-shielded <shielded address> <amount> [times | +]` move shielded tokens to the another zkBob account (inside a pool). You can specify `times` numeric value to repeat the operation several times ***OR*** enter the multitransfer mode with adding `+` sign at the end of the command
+
+`withdraw-shielded <amount> [address] [times]` withdraw shielded tokens from the zk accouint to the native address (to the your account if address is ommited). Specify `times` numeric value to repeat the operation several times
+
+`history` print all transactions related to your account
+
+## Transactions configuration
+
+`max-transfer` calculate maximum available token amount for outcoming transaction (transfer or withdrawal)
+
+`tx-amounts <amount> [fee] [+]`, get transfer\withdrawal configuration for specified amount ant fee per transaction. Type `+` sign at the end of the command to enter the multitransfer mode
+
+`fee-estimate-deposit <amount>` estimate fee for depositing requested amount of tokens
+
+`fee-estimate-transfer <amount> [amount2 amount3 ...]' estimate fee for transfering requested amount of tokens. Add additional token amounts (the only space accepted as a separator) to estimate fee for multitransfer mode
+
+`fee-estimate-withdraw <amount>` estimate fee for withdrawing requested amount of tokens
+
+`limits [address]` get pool contract limits for the specified address (linked account address will be used by default)
+
+## Service commands
+
+`shielded-address-info <shielded address>` get all available info for the shielded address
+
+`internal-state` print your account and incoming notes (internal representation, for debug purposes only)
+
+`root` print local and remote Merkle tree root (local and remote roots should be tha same for same indicies)
+
+`get-ephemeral-address [index]` get the concrete ephemeral address or show first unused one
+
+`get-ephemeral-used` show all used ephemeral addresses
+
+`get-ephemeral-address-privkey <index>` get private key for concrete ephemeral address
+
+`clear` clear the terminal
+
+`reset` log out from the current account
+
+`version` print console version
+
+`environment` print environment variables
+
+`help` display CLI commands list
+
+`tutorial` print usage example

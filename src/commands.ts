@@ -1,11 +1,13 @@
-import Account from './account';
 import bip39 from 'bip39-light';
-import { HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
-import { deriveSpendingKey, verifyShieldedAddress, bufToHex } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKey, bufToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
+
+const bs58 = require('bs58');
+
 
 
 export async function setSeed(seed: string, password: string) {
@@ -34,9 +36,27 @@ export async function getAddress() {
     this.echo(`[[;gray;]Address: ${address}]`);
 }
 
-export function genShieldedAddress() {
-    const address = this.account.genShieldedAddress();
+export async function genShieldedAddress() {
+    const address = await this.account.genShieldedAddress();
     this.echo(`[[;gray;]${address}]`);
+}
+
+export async function shieldedAddressInfo(shieldedAddress: string) {
+    const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
+    this.echo(`Verifying checksum: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
+    if(isValid) {
+        const isMy = await this.account.isMyAddress(shieldedAddress);
+        this.echo(`Is it my address:   ${isMy ? '[[;green;]YES]' : '[[;white;]NO]'}`)
+
+        let decoded: Uint8Array  = bs58.decode(shieldedAddress);
+        let diversifier = decoded.slice(0, 10).reverse();
+        let Gd = decoded.slice(10, -4).reverse();
+        let chksm = decoded.slice(-4)
+        this.echo(`Bytes:       [[;white;]${decoded.length}]`);
+        this.echo(`Diversifier: [[;white;]${bufToHex(diversifier)}]`);
+        this.echo(`Gd.x         [[;white;]${bufToHex(Gd)}]`);
+        this.echo(`Checksum:    [[;white;]${bufToHex(chksm)}]`);
+    }
 }
 
 export async function getBalance() {
@@ -70,11 +90,27 @@ export async function getTokenBalance() {
 }
 
 export async function mint(amount: string) {
-    return this.account.mint(this.account.humanToWei(amount));
+    this.pause();
+    this.echo('Minting tokens... ');
+    const txHash = await this.account.mint(this.account.humanToWei(amount));
+    this.update(-1, `Minting tokens... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
 }
 
 export async function transfer(to: string, amount: string) {
-    await this.account.transfer(to, this.account.humanToWei(amount));
+    this.pause();
+    this.echo(`Transfering ${this.account.nativeSymbol()}... `);
+    const txHash = await this.account.transfer(to, this.account.humanToWei(amount));
+    this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
+}
+
+export async function transferToken(to: string, amount: string) {
+    this.pause();
+    this.echo(`Transfering ${TOKEN_SYMBOL}... `);
+    const txHash = await this.account.transferToken(to, this.account.humanToWei(amount));
+    this.update(-1, `Transfering ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
 }
 
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
@@ -226,9 +262,7 @@ export async function depositShielded(amount: string, times: string) {
         this.pause();
         const result = await this.account.depositShielded(this.account.humanToShielded(amount));
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 
@@ -239,16 +273,33 @@ export async function depositShieldedPermittable(amount: string, times: string) 
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded deposit with permittable token${cntStr}...`);
         this.pause();
+
+        // Due to the fact that the console is a test tool, we doesn't check address balance here
+        // we should get ability to test relayer's behaviour
         const result = await this.account.depositShieldedPermittable(this.account.humanToShielded(amount));
+
         this.resume();
-        this.echo(`Done [job #${result.jobId}]: ${result.txHashes.map((txHash: string) => {
-                return `[[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`;
-            }).join(`, `)}`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 
+export async function depositShieldedPermittableEphemeral(amount: string, index: string) {
+    let ephemeralIndex = index !== undefined ? Number(index) : 0;
+
+    this.echo(`Getting ephemeral acount info...`);
+    this.pause();
+    let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
+    this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${TOKEN_SYMBOL}`);
+
+    // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
+    this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
+    const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
+    this.resume();
+    this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+}
+
 export async function transferShielded(to: string, amount: string, times: string) {
-    if (verifyShieldedAddress(to) === false) {
+    if ((await this.account.verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let txCnt = 1;
@@ -266,7 +317,7 @@ export async function transferShielded(to: string, amount: string, times: string
                     this.error('Please use the following format: \'shielded_address amount\'');
                     continue;
                 }
-                if (verifyShieldedAddress(components[0]) === false) {
+                if ((await this.account.verifyShieldedAddress(components[0])) === false) {
                     this.error(`Shielded address ${components[0]} is invalid. Please check it!`);
                     continue;
                 }
@@ -301,7 +352,7 @@ export async function transferShielded(to: string, amount: string, times: string
 }
 
 export async function transferShieldedMultinote(to: string, amount: string, count: string, times: string) {
-    if (verifyShieldedAddress(to) === false) {
+    if ((await this.account.verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let notesCnt = Number(count);
@@ -353,7 +404,7 @@ export async function getInternalState() {
 }
 
 export async function getRoot() {
-    const localState = this.account.getLocalTreeState();
+    const localState = await this.account.getLocalTreeState();
     this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
 
     this.echo(`Requesting additional info...`);
@@ -374,6 +425,64 @@ export async function getRoot() {
     });    
 }
 
+export async function getEphemeral(index: string) {
+    this.pause();
+    let idx;
+    if (index === undefined) {
+        this.echo(`Getting first unused ephemeral address...`);
+        idx = await this.account.getNonusedEphemeralIndex();
+    } else {
+        idx = Number(index);
+    }
+
+    const [addr, inTxCnt, outTxCnt] = await Promise.all([
+        this.account.getEphemeralAddress(idx),
+        this.account.getEphemeralAddressInTxCount(idx),
+        this.account.getEphemeralAddressOutTxCount(idx),
+    ]);
+
+    this.echo(`Index: [[;white;]${addr.index}]`);
+    this.echo(`  Address:            [[;white;]${addr.address}]`);
+    this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+    this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+    this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
+
+    this.resume();
+}
+
+export async function getEphemeralUsed() {
+    this.pause();
+
+    let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
+
+    for (let addr of usedAddr) {
+        const [inTxCnt, outTxCnt] = await Promise.all([
+            this.account.getEphemeralAddressInTxCount(addr.index),
+            this.account.getEphemeralAddressOutTxCount(addr.index),
+        ]);
+
+        this.echo(`Index: [[;white;]${addr.index}]`);
+        this.echo(`  Address:            [[;white;]${addr.address}]`);
+        this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
+        this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
+        this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
+    }
+
+    this.resume();
+}
+
+export async function getEphemeralPrivKey(index: string) {
+    this.pause();
+    let idx = Number(index);
+    let priv: string = await this.account.getEphemeralAddressPrivateKey(idx);
+    this.echo(`Private key @${idx}: [[;white;]${priv}]`);
+    this.resume();
+}
+
 export async function printHistory() {
     this.pause();
     const history: HistoryRecord[] = await this.account.getAllHistory();
@@ -385,11 +494,11 @@ export async function printHistory() {
         this.echo(`${humanReadable(tx, denominator)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
 
         if (tx.actions.length > 1) {
-            let directions = new Map<string, {amount: bigint, notesCnt: number}>();
+            let directions = new Map<string, {amount: bigint, notesCnt: number, isLoopback}>();
             for (const moving of tx.actions) {
                 let existingDirection = directions.get(moving.to);
                 if (existingDirection === undefined) {
-                    existingDirection = {amount: BigInt(0), notesCnt: 0};
+                    existingDirection = {amount: BigInt(0), notesCnt: 0, isLoopback: moving.isLoopback};
                 }
                 existingDirection.amount += moving.amount;
                 existingDirection.notesCnt++;
@@ -397,12 +506,17 @@ export async function printHistory() {
             }
 
 
+            const prep = tx.type == HistoryTransactionType.TransferIn ? 'ON' : 'TO';
             for (let [key, value] of directions) {
                 let notesCntDescription = '';
                 if (value.notesCnt > 1) {
                     notesCntDescription = ` [${value.notesCnt} notes were used]`;
                 }
-                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${key}${notesCntDescription}`);
+                let destDescr = `${key}${notesCntDescription}`;
+                if (value.isLoopback) {
+                    destDescr = `MYSELF${notesCntDescription}`;
+                }
+                this.echo(`                                  ${Number(value.amount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${prep} ${destDescr}`);
             }
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
@@ -425,6 +539,12 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         let toAddress = record.actions[0].to;
         if (record.actions.length > 1) {
             toAddress = `${record.actions.length} notes`;
+        } else if (
+            record.type == HistoryTransactionType.TransferOut &&
+            record.actions.length == 1 &&
+            record.actions[0].isLoopback
+        ) {
+            toAddress = 'MYSELF';
         }
 
         if (record.type == HistoryTransactionType.Deposit) {
@@ -434,7 +554,7 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         } else if (record.type == HistoryTransactionType.TransferOut) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
-            mainPart = `${statusMark}WITHDRAWED ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
+            mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
         } else if (record.type == HistoryTransactionType.TransferLoopback) {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO MYSELF`;
         } else {

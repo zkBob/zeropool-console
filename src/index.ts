@@ -23,33 +23,39 @@ const PRIVATE_COMMANDS = [
 ];
 
 const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
-  'set-seed': [c.setSeed, '<seed phrase> <password>', 'replace the seed phrase for the current account'],
+  //'set-seed': [c.setSeed, '<seed phrase> <password>', 'replace the seed phrase for the current account'],
   'get-seed': [c.getSeed, '<password>', 'print the seed phrase for the current account'],
-  'gen-seed': [c.genSeed, '', 'generate and print a new seed phrase'],
+  //'gen-seed': [c.genSeed, '', 'generate and print a new seed phrase'],
   'get-sk': [c.getSk, '<password>', 'get zkBob account spending key'],
   'get-address': [c.getAddress, '', 'get your native address'],
-  'gen-shielded-address': [c.genShieldedAddress, '', 'generate a new zkBob shielded address'],
   'get-balance': [c.getBalance, '', 'fetch and print native account balance'],
-  'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
-  'max-transfer': [c.getMaxAvailableTransfer, '', 'get max available token mount for outcoming transaction'],
   'get-token-balance': [c.getTokenBalance, '', 'get token balance (unshielded)'],
   'testnet-mint': [c.mint, ' <amount>', 'mint some unshielded tokens'],
-  'transfer': [c.transfer, ' <to> <amount>', 'transfer unshielded tokens to the native account'],
+  'transfer': [c.transfer, ' <to> <amount>', ' transfer native coins to the destination'],
+  'transfer-token': [c.transferToken, ' <to> <amount>', 'transfer unshielded tokens to the destination account'],
+  'gen-shielded-address': [c.genShieldedAddress, '', 'generate a new zkBob shielded address'],
+  'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
   'deposit-shielded': [c.depositShielded, '<amount> [times]', 'shield some tokens [via approving allowance]'],
   'deposit-shielded-permittable': [c.depositShieldedPermittable, '<amount> [times]', 'shield some tokens [via permit]'],
+  'deposit-shielded-permittable-ephemeral': [c.depositShieldedPermittableEphemeral, '<amount> <index>', 'shield some tokens from the internal ephemeral address [via permit]'],
   'transfer-shielded': [c.transferShielded, '<shielded address> <amount> [times | +]', 'move shielded tokens to the another zkBob address (inside a pool)'],
   'transfer-shielded-multinote': [c.transferShieldedMultinote, '<shielded address> <amount> <count> [times]', 'send a set of (notes) to the single address'],
-  'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if addres is ommited)'],
+  'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if the address is ommited)'],
   'history': [c.printHistory, '', 'print all transactions related to your account'],
+  'max-transfer': [c.getMaxAvailableTransfer, '', 'get max available token amount for outcoming transaction'],
   'tx-amounts': [c.getTxParts, '<amount> [fee] [+]', 'get transfer component transactions'],
-  'fee-estimate-deposit': [c.estimateFeeDeposit, '<amount>', 'estimate fee for deposit requested amount of tokens'],
-  'fee-estimate-transfer': [c.estimateFeeTransfer, '<amount> [amount2 amount3 ...]', 'estimate fee for transfer requested amount of tokens'],
-  'fee-estimate-withdraw': [c.estimateFeeWithdraw, '<amount>', 'estimate fee for withdraw requested amount of tokens'],
+  'fee-estimate-deposit': [c.estimateFeeDeposit, '<amount>', 'estimate fee for depositing requested amount of tokens'],
+  'fee-estimate-transfer': [c.estimateFeeTransfer, '<amount> [amount2 amount3 ...]', 'estimate fee for transfering requested amount of tokens'],
+  'fee-estimate-withdraw': [c.estimateFeeWithdraw, '<amount>', 'estimate fee for withdrawing requested amount of tokens'],
   'limits': [c.getLimits, '[address]', 'get maximum available deposit and withdrawal from the specified address'],
+  'shielded-address-info': [c.shieldedAddressInfo, '<shielded address>', 'get all available info for the shielded address'],
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
   'root': [c.getRoot, '', 'print local and remote Merkle tree root'],
+  'get-ephemeral-address': [c.getEphemeral, '[index]', 'get the concrete ephemeral address or show first unused one'],
+  'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
+  'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
   //'clean-state': [c.cleanState, '', 'wipe internal state and history'],
-  'clear': [c.clear, '', 'clear terminal'],
+  'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'version': [
     function () {
@@ -95,59 +101,52 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
     '',
     'print help message'
   ],
-  'intro': [
+  'tutorial': [
     function () {
       const message = String.raw`
-<h3>
-  Welcome to the zkBob console for ${NETWORK}.
-</h3>
-
 <p>
-  Before using any of the listed command make sure you have<br>
-  enough balance to pay for gas. You may use the 'transfer' command<br>
-  to transfer native coin if needed.
+NOTE: You don't need native coins for the most of the commands<br>
+(excepting minting tokens and making deposit via approve)<br>
 </p>
 
 <p>
   <h4>Usage example:</h4>
-  <div class="comment">// Check your balance.</div>
-  <div class="command-example">get-balance</div>
-  <div class="comment">// If you don't have any native tokens you have two choices:</div>
-  <div class="comment">//   1. Use the current network's faucet to get some.</div>
-  <div class="comment">//   2. Transfer from a different account.</div>
-  <div class="comment">// If you want to transfer from a different account you'll need to know.</div>
-  <div class="comment">// one of the addresses for your current account:</div>
+  <br>
+  <div class="comment">// Get your native address to transfer few tokens here</div>
+  <div class="comment">// e.g. you can ask someone transfer a few tokens for you</div>
+  <div class="comment">// or deposit native coins to mint test tokens</div>
   <div class="command-example">get-address</div>
-  <div class="comment">// Mint 5 * 10^18 tokens for the account with index 0.</div>
-  <div class="command-example">testnet-mint 5000000000000000000</div>
-  <div class="comment">// Deposit 2 * 10^18 of those tokens to the pool.</div>
-  <div class="command-example">deposit-shielded-permittable 2000000000000000000</div>
-  <div class="comment">// Generate a new shielded address.</div>
+  <br>
+  <div class="comment">// Mint 10 tokens for the account</div>
+  <div class="comment">// (you need native coins to cover the relayer's fee)</div>
+  <div class="command-example">testnet-mint ^10</div>
+  <br>
+  <div class="comment">// Make sure your token balance was deposited</div>
+  <div class="command-example">get-token-balance</div>
+  <br>
+  <div class="comment">// Deposit 5 of those tokens to the pool</div>
+  <div class="command-example">deposit-shielded-permittable ^5</div>
+  <br>
+  <div class="comment">// Generate a new shielded address</div>
   <div class="command-example">gen-shielded-address</div>
-  <div class="comment">// Transfer 1 * 10^18 of deposited tokens the specified address.</div>
-  <div class="command-example">transfer-shielded "shielded address here" 1000000000000000000</div>
-  <div class="comment">// Withdraw the remaining 2 * 10^18 from the pool.</div>
-  <div class="command-example">withdraw-shielded 2000000000000000000 [optional_external_address]</div>
+  <br>
+  <div class="comment">// Transfer 3 of deposited tokens the specified address</div>
+  <div class="command-example">transfer-shielded "destination shielded address" ^3</div>
+  <br>
+  <div class="comment">// Withdraw ^1 from the pool</div>
+  <div class="command-example">withdraw-shielded ^1 [optional_external_address]</div>
+  <br>
   <div class="comment">// Check your shielded balance</div>
   <div class="command-example">get-shielded-balance</div>
-  <div class="comment">// Print account history</div>
+  <br>
+  <div class="comment">// Print transactions history</div>
   <div class="command-example">history</div>
-</p>
-
-<p>
-  Amounts are interpreted as Wei by default<br>
-  If you want to specify human-readable decimal value pls add ^ prefix<br>
-  e.g.: ^1.234 = 1234000000000000000, ^5 = 5000000000000000000
-</p>
-
-<p>
-Enter 'help' for more info on available commands.
 </p>
 `;
       this.echo(message, { raw: true });
     },
     '',
-    'print introduction message'
+    'print usage example'
   ]
 };
 
@@ -278,7 +277,16 @@ jQuery(async function ($) {
 
       this.clear();
       this.echo(GREETING);
-      COMMANDS['intro'][0].apply(this);
+      this.echo(`Welcome to the zkBob console for ${NETWORK}`);
+      this.echo('');
+      this.echo('Amounts are interpreted as Wei by default');
+      this.echo('If you want to specify human-readable decimal value pls add [[;white;]^] prefix');
+      this.echo('e.g.: ^1.234 = 1234000000000000000, ^5 = 5000000000000000000');
+      this.echo('');
+      this.echo('Enter [[;white;]help] for more info on available commands');
+      this.echo('Enter [[;white;]tutorial] to display usage example');
+      this.echo('');
+      //COMMANDS['intro'][0].apply(this);
     },
     prompt: function () {
       if (this.account) {
