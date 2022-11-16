@@ -1,6 +1,6 @@
 {
   "name": "zkbob-console",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "license": "MIT",
   "author": "Dmitry Vdovin <voidxnull@gmail.com>",
   "homepage": "https://github.com/zkBob/zkbob-console",
@@ -34,8 +34,8 @@
     "stream-http": "^3.1.1",
     "tslib": "^2.3.1",
     "web3": "^1.7.1",
-    "zeropool-support-js": "https://github.com/zkBob/zeropool-support-js#0.5.4",
-    "zkbob-client-js": "file:../zkbob-client-js"
+    "zeropool-support-js": "https://github.com/zkBob/zeropool-support-js#0.6.0",
+    "zkbob-client-js": "1.1.0"
   },
   "devDependencies": {
     "@parcel/compressor-gzip": "^2.0.1",

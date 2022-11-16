@@ -284,12 +284,16 @@ export default class Account {
         return await this.client.getTokenBalance(TOKEN_ADDRESS);
     }
 
-    public async mint(amount: bigint): Promise<void> {
-        await this.client.mint(MINTER_ADDRESS, amount.toString());
+    public async mint(amount: bigint): Promise<string> {
+        return await this.client.mint(MINTER_ADDRESS, amount.toString());
     }
 
-    public async transfer(to: string, amount: bigint): Promise<void> {
-        await this.client.transfer(to, amount.toString());
+    public async transfer(to: string, amount: bigint): Promise<string> {
+        return await this.client.transfer(to, amount.toString());
+    }
+
+    public async transferToken(to: string, amount: bigint): Promise<string> {
+        return await this.client.transferToken(TOKEN_ADDRESS, to, amount.toString());
     }
 
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
@@ -336,9 +340,15 @@ export default class Account {
             const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Deposit, false));
 
             if (isEvmBased(NETWORK)) {
-                const totalApproveAmount = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
-                console.log('Approving allowance the Pool (%s) to spend our tokens (%s)', CONTRACT_ADDRESS, totalApproveAmount.toString());
-                await this.client.approve(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+                let totalApproveAmount = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
+                const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
+                if (totalApproveAmount > currentAllowance) {
+                    totalApproveAmount -= currentAllowance;
+                    console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
+                    await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+                } else {
+                    console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+                }
             }
 
             console.log('Making deposit...');
@@ -419,7 +429,7 @@ export default class Account {
         }
     }
 
-    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHashes: string[]}> {
+    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
         if (isEvmBased(NETWORK)) {
             myAddress = await this.client.getAddress();
@@ -438,7 +448,7 @@ export default class Account {
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
-            return {jobId, txHashes: (await this.zpClient.waitJobCompleted(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
