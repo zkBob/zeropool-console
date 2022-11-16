@@ -50,6 +50,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'limits': [c.getLimits, '[address]', 'get maximum available deposit and withdrawal from the specified address'],
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
   'root': [c.getRoot, '', 'print local and remote Merkle tree root'],
+  'sync-stat': [c.getStateSyncStatistic, '', 'print available state synchronization statistics from the library'],
   'get-ephemeral-address': [c.getEphemeral, '[index]', 'get the concrete ephemeral address or show first unused one'],
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'Show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, 'index', 'get private key for concrete ephemeral address'],

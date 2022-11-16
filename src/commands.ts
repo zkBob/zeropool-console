@@ -411,6 +411,31 @@ export async function getRoot() {
     });    
 }
 
+export async function getStateSyncStatistic() {
+    this.pause();
+    const fullSyncStat = this.account.getStatFullSync();
+    const avgTimePerTx = this.account.getAverageTimePerTx();
+
+    if (fullSyncStat !== undefined) {
+        this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.totalTime.toFixed(1)} msec/tx]`);
+        this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
+        this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
+        this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
+
+    } else {
+        this.echo(`Full state: [[;white;]N/A]`);
+    }
+
+    if (avgTimePerTx !== undefined) {
+        this.echo(`Average sync speed: [[;white;]${avgTimePerTx} msec/tx]`);
+    } else {
+        this.echo(`Average sync speed: [[;white;]N/A]`);
+    }
+
+    this.resume();
+}
+
 export async function getEphemeral(index: string) {
     this.pause();
     let idx;
