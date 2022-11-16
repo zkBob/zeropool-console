@@ -427,12 +427,12 @@ export async function getRoot() {
 
 export async function getStateSyncStatistic() {
     this.pause();
-    const fullSyncStat = this.account.getStatFullSync();
-    const avgTimePerTx = this.account.getAverageTimePerTx();
+    const fullSyncStat = await this.account.getStatFullSync();
+    const avgTimePerTx = await this.account.getAverageTimePerTx();
 
     if (fullSyncStat !== undefined) {
         this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
-        this.echo(`  average speed:      [[;white;]${fullSyncStat.totalTime.toFixed(1)} msec/tx]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(1)} msec/tx]`);
         this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
         this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
         this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
@@ -442,7 +442,7 @@ export async function getStateSyncStatistic() {
     }
 
     if (avgTimePerTx !== undefined) {
-        this.echo(`Average sync speed: [[;white;]${avgTimePerTx} msec/tx]`);
+        this.echo(`Average sync speed: [[;white;]${avgTimePerTx.toFixed(1)} msec/tx]`);
     } else {
         this.echo(`Average sync speed: [[;white;]N/A]`);
     }
