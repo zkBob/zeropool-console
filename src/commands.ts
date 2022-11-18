@@ -36,9 +36,14 @@ export async function getAddress() {
     this.echo(`[[;gray;]Address: ${address}]`);
 }
 
-export async function genShieldedAddress() {
-    const address = await this.account.genShieldedAddress();
-    this.echo(`[[;gray;]${address}]`);
+export async function genShieldedAddress(number: string) {
+    let addressNum = number !== undefined ? Number(number) : 1;
+    this.pause();
+    for (let i = 0; i < addressNum; i++) {
+        const address = await this.account.genShieldedAddress();
+        this.echo(`[[;gray;]${address}]`);
+    }
+    this.resume();
 }
 
 export async function shieldedAddressInfo(shieldedAddress: string) {
