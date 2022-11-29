@@ -99,6 +99,8 @@ export default class Account {
 
         const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
+
+        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -106,6 +108,7 @@ export default class Account {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
                     relayerUrl: RELAYER_URL,
+                    coldStorageConfig: bulkConfigUrl,
                 }
             },
             networkName: NETWORK,
