@@ -108,7 +108,7 @@ export default class Account {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
                     relayerUrl: RELAYER_URL,
-                    coldStorageConfig: bulkConfigUrl,
+                    coldStorageConfigPath: bulkConfigUrl,
                 }
             },
             networkName: NETWORK,
