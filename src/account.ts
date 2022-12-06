@@ -1,7 +1,10 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord,
+        TransferConfig, FeeAmount, TxType,
+        PoolLimits, InitLibCallback,
+        TreeState, EphemeralAddress, TreeNode } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
@@ -66,6 +69,7 @@ export default class Account {
     public async init(
         mnemonic: string,
         password: string,
+        isNewAcc: boolean,
         loadingCallback: InitLibCallback | undefined = undefined
     ): Promise<void> {
         const snarkParamsConfig = {
@@ -110,6 +114,7 @@ export default class Account {
             },
             networkName: NETWORK,
             network,
+            birthindex: isNewAcc ? -1 : undefined,
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
@@ -120,7 +125,7 @@ export default class Account {
         loadingCallback: InitLibCallback | undefined = undefined
     ) {
         let seed = this.decryptSeed(password);
-        await this.init(seed, password, loadingCallback);
+        await this.init(seed, password, false, loadingCallback);
     }
 
     public getSeed(password: string): string {
@@ -222,8 +227,8 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
-    public async getLocalTreeState(): Promise<TreeState> {
-        return await this.zpClient.getLocalState(TOKEN_ADDRESS);
+    public async getLocalTreeState(index?: bigint): Promise<TreeState> {
+        return await this.zpClient.getLocalState(TOKEN_ADDRESS, index);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {
@@ -234,8 +239,12 @@ export default class Account {
         return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
     }
 
-    public async getPoolTreeState(): Promise<TreeState> {
-        return this.zpClient.getPoolState(TOKEN_ADDRESS);
+    public async getPoolTreeState(index?: bigint): Promise<TreeState> {
+        return this.zpClient.getPoolState(TOKEN_ADDRESS, index);
+    }
+
+    public async getTreeLeftSiblings(index: bigint): Promise<TreeNode[]> {
+        return await this.zpClient.getLeftSiblings(TOKEN_ADDRESS, index);
     }
 
     public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {

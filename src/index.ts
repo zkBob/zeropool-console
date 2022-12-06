@@ -50,7 +50,8 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'limits': [c.getLimits, '[address]', 'get maximum available deposit and withdrawal from the specified address'],
   'shielded-address-info': [c.shieldedAddressInfo, '<shielded address>', 'get all available info for the shielded address'],
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
-  'root': [c.getRoot, '', 'print local and remote Merkle tree root'],
+  'root': [c.getRoot, '[index]', 'print the latest local and remote Merkle tree root, or retrieve just local one at the specified index'],
+  'siblings': [c.getLeftSiblings, '<index>', 'get left siblings at specified index (partial tree support)'],
   'get-ephemeral-address': [c.getEphemeral, '[index]', 'get the concrete ephemeral address or show first unused one'],
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
@@ -248,9 +249,11 @@ jQuery(async function ($) {
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
 
+            let isNewAccount = false;
             if (seed.trim().length == 0) {
               seed = bip39.generateMnemonic();
               this.echo(`New mnemonic: ${seed}`);
+              isNewAccount = true;
             } else if (!bip39.validateMnemonic(seed)) {
               throw new Error('Invalid seed phrase');
             }
@@ -265,7 +268,7 @@ jQuery(async function ($) {
             }
 
             this.pause();
-            await this.account.init(seed, password, initLibCallback);
+            await this.account.init(seed, password, isNewAccount, initLibCallback);
             this.resume();
           }
         } catch (e) {

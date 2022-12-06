@@ -1,7 +1,7 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
-import { deriveSpendingKey, bufToHex } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
@@ -403,26 +403,91 @@ export async function getInternalState() {
     }
 }
 
-export async function getRoot() {
-    const localState = await this.account.getLocalTreeState();
+export async function getRoot(index: string) {
+    let idx: bigint | undefined = undefined;
+    if (index !== undefined) {
+        try {
+            idx = BigInt(index);
+        } catch (err) {
+            this.error(`Cannot convert \'${idx} to the number`);
+            return;
+        }
+    }
+
+    let localState;
+    try {
+        localState = await this.account.getLocalTreeState(idx);
+    } catch (err) {
+        this.error(`Cannot retrieve local root at index ${idx.toString()}: ${err}`);
+        return;
+    }
+
     this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
 
     this.echo(`Requesting additional info...`);
     this.pause();
     const relayerState = this.account.getRelayerTreeState();
-    const relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
-    const poolState = this.account.getPoolTreeState();
+    let relayerOptimisticState;
+    if (idx === undefined) {
+        relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
+    }
+    const poolState = this.account.getPoolTreeState(idx);
 
     let promises = [relayerState, relayerOptimisticState, poolState]
     Promise.all(promises).then((states) => {
-        this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
-        this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
-        this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        if (relayerOptimisticState !== undefined) {
+            this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
+            this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
+            this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        } else {
+            this.update(-1, `Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        }
     }).catch((reason) => {
         this.error(`Cannot fetch additional info: ${reason}`);
     }).finally(() => {
         this.resume();
-    });    
+    });
+}
+
+export async function getLeftSiblings(index: string) {
+    let idx: bigint | undefined = undefined;
+    try {
+        idx = BigInt(index);
+    } catch (err) {
+        this.error(`Cannot convert \'${idx}\' to the bigint`);
+        return;
+    }
+
+    this.pause();
+
+    let siblings;
+    try {
+        siblings = await this.account.getTreeLeftSiblings(idx);
+    } catch (err) {
+        this.error(`Cannot get siblings: ${err}`);
+        return;
+    }
+    
+    this.echo(' height | index       | value');
+    this.echo('-------------------------------------------------------------------------------------------------------');
+    siblings.forEach(aNode => {
+        const height = `${aNode.height}`.padEnd(7);
+        const index = `${aNode.index}`.padEnd(12);
+        this.echo(`[[;white;] ${height}]|[[;white;] ${index}]| ${aNode.value}`);
+    });
+
+    let relayerResponse = `[\n`;
+    siblings.forEach((aNode, index) => {
+        const hexNode = nodeToHex(aNode).slice(2);
+        relayerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
+    });
+    relayerResponse += `]`
+
+    this.echo('[[;white;]Relayer response format:]');
+    this.echo(`${relayerResponse}`);
+
+    this.resume();
+
 }
 
 export async function getEphemeral(index: string) {
