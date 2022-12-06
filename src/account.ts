@@ -114,7 +114,7 @@ export default class Account {
             },
             networkName: NETWORK,
             network,
-            birthindex: isNewAcc ? -1 : undefined,
+            birthindex: isNewAcc ? -1 : undefined,  //278016
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
@@ -237,6 +237,10 @@ export default class Account {
 
     public async getRelayerOptimisticTreeState(): Promise<TreeState> {
         return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
+    }
+
+    public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
+        return this.zpClient.getTreeStartIndex(TOKEN_ADDRESS);
     }
 
     public async getPoolTreeState(index?: bigint): Promise<TreeState> {

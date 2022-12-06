@@ -415,6 +415,7 @@ export async function getRoot(index: string) {
     }
 
     let localState;
+    let localTreeStartIndex = await this.account.getLocalTreeStartIndex();
     try {
         localState = await this.account.getLocalTreeState(idx);
     } catch (err) {
@@ -422,7 +423,16 @@ export async function getRoot(index: string) {
         return;
     }
 
-    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
+    let treeDescr = '';
+    if (localTreeStartIndex !== undefined) {
+        if (localTreeStartIndex > 0) {
+            treeDescr = ` [tree filled from index ${localTreeStartIndex.toString()}]`;
+        } else {
+            treeDescr = ' [full tree]';
+        }
+    }
+
+    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
 
     this.echo(`Requesting additional info...`);
     this.pause();

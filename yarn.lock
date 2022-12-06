@@ -9820,7 +9820,7 @@ yargs@^13.3.2:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-1.1.0-b7335bbc-992e-4ced-9a2b-6b2a39c484d2-1670284219332/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
+    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-1.1.0-2ed8487a-16f3-43fd-b0aa-60c294dfe43d-1670350304273/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
     regenerator-runtime "^0.13.9"
     web3 "1.8.0"
     web3-utils "1.8.0"
