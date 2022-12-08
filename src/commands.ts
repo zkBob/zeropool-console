@@ -511,9 +511,11 @@ export async function rollback(index: string) {
 
     this.pause();
     const newNextIndex = await this.account.rollback(idx);
-    this.echo(`New index: [[;white;]${newNextIndex}]`);
+    this.echo(`New index:  [[;white;]${newNextIndex}]`);
     const newState: TreeState = await this.account.getLocalTreeState();
-    this.echo(`New root:  [[;white;]${newState.root} @ ${newState.index}]`);
+    this.echo(`New root:   [[;white;]${newState.root} @ ${newState.index}]`);
+    const poolState: TreeState = await this.account.getPoolTreeState(newNextIndex);
+    this.echo(`Pool root:  [[;white;]${poolState.root} @ ${poolState.index}]`);
     this.resume();
 }
 
