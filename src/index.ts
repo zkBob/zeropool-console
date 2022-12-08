@@ -52,10 +52,12 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
   'root': [c.getRoot, '[index]', 'print the latest local and remote Merkle tree root, or retrieve just local one at the specified index'],
   'siblings': [c.getLeftSiblings, '<index>', 'get left siblings at specified index (partial tree support)'],
+  'rollback': [c.rollback, '<index>', 'rollback the user\'s state to the specified index'],
+  'sync-state': [c.syncState, '', 'force synchronize user\'s state'],
   'get-ephemeral-address': [c.getEphemeral, '[index]', 'get the concrete ephemeral address or show first unused one'],
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
-  //'clean-state': [c.cleanState, '', 'wipe internal state and history'],
+  'wipe-state': [c.cleanState, '', 'wipe internal state and history'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'version': [

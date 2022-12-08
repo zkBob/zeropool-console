@@ -4,7 +4,7 @@ import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
-import { TransferRequest } from 'zkbob-client-js/lib/client';
+import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 
 const bs58 = require('bs58');
 
@@ -499,6 +499,37 @@ export async function getLeftSiblings(index: string) {
     this.resume();
 
 }
+
+export async function rollback(index: string) {
+    let idx: bigint | undefined = undefined;
+    try {
+        idx = BigInt(index);
+    } catch (err) {
+        this.error(`Cannot convert \'${idx}\' to the bigint`);
+        return;
+    }
+
+    this.pause();
+    const newNextIndex = await this.account.rollback(idx);
+    this.echo(`New index: [[;white;]${newNextIndex}]`);
+    const newState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`New root:  [[;white;]${newState.root} @ ${newState.index}]`);
+    this.resume();
+}
+
+export async function syncState() {
+    this.pause();
+    const curState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`Starting sync from index: [[;white;]${curState.index}]`);
+
+    const isReadyToTransact = await this.account.syncState();
+
+    const newState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`Finished sync at index:   [[;white;]${newState.index}]`);
+    this.echo(`Client ready to transact:  ${isReadyToTransact ? '[[;green;]YES]' : '[[;red;]NO]'}`);
+    this.resume();
+}
+
 
 export async function getEphemeral(index: string) {
     this.pause();

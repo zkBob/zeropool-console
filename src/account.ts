@@ -279,6 +279,14 @@ export default class Account {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
     }
 
+    public async rollback(index: bigint): Promise<bigint> {
+        return this.zpClient.rollbackState(TOKEN_ADDRESS, index);
+    }
+
+    public async syncState(): Promise<boolean> {
+        return this.zpClient.updateState(TOKEN_ADDRESS);
+    }
+
     public async cleanInternalState(): Promise<void> {
         return this.zpClient.cleanState(TOKEN_ADDRESS);
     }
