@@ -75,7 +75,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
+        const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
