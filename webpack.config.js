@@ -60,7 +60,7 @@ module.exports = {
         new CopyPlugin({
             patterns: [
                 { from: 'src/env.js' },
-                { from: 'node_modules/zkbob-client-js/lib/[0-9]+.js', to: "[name][ext]" }
+                { from: 'node_modules/zkbob-client-js/lib/*.worker.js', to: "[name][ext]" }
             ],
         }),
         new HtmlWebpackPlugin({
