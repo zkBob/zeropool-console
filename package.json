@@ -26,7 +26,7 @@
     "crypto-js": "^4.1.1",
     "https-browserify": "^1.0.0",
     "jquery": "^3.5.1",
-    "jquery.terminal": "^2.18.3",
+    "jquery.terminal": "2.34.0",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
@@ -35,7 +35,7 @@
     "tslib": "^2.3.1",
     "web3": "^1.7.1",
     "zeropool-support-js": "https://github.com/zkBob/zeropool-support-js#0.6.0",
-    "zkbob-client-js": "1.1.0"
+    "zkbob-client-js": "file:../zkbob-client-js"
   },
   "devDependencies": {
     "@parcel/compressor-gzip": "^2.0.1",

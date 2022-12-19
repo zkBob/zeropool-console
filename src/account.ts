@@ -9,10 +9,6 @@ import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 
-// @ts-ignore
-import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
-// @ts-ignore
-import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 
 
@@ -75,7 +71,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
+        const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {

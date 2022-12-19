@@ -59,8 +59,7 @@ module.exports = {
         new CleanWebpackPlugin(),
         new CopyPlugin({
             patterns: [
-                { from: 'src/env.js' },
-                { from: 'node_modules/zkbob-client-js/lib/*.worker.js', to: "[name][ext]" }
+                { from: 'src/env.js' }
             ],
         }),
         new HtmlWebpackPlugin({
