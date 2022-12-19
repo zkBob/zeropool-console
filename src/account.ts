@@ -1,7 +1,8 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType,
+          PoolLimits, InitLibCallback, TreeState, EphemeralAddress, SyncStat } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
@@ -95,6 +96,8 @@ export default class Account {
 
         const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
+
+        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -102,6 +105,7 @@ export default class Account {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
                     relayerUrl: RELAYER_URL,
+                    coldStorageConfigPath: bulkConfigUrl,
                 }
             },
             networkName: NETWORK,
@@ -232,6 +236,14 @@ export default class Account {
 
     public async getPoolTreeState(): Promise<TreeState> {
         return this.zpClient.getPoolState(TOKEN_ADDRESS);
+    }
+
+    public async getStatFullSync(): Promise<SyncStat | undefined> {
+        return this.zpClient.getStatFullSync();
+    }
+
+    public async getAverageTimePerTx(): Promise<number | undefined> {
+        return this.zpClient.getAverageTimePerTx();
     }
 
     public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
