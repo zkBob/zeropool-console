@@ -36,9 +36,14 @@ export async function getAddress() {
     this.echo(`[[;gray;]Address: ${address}]`);
 }
 
-export async function genShieldedAddress() {
-    const address = await this.account.genShieldedAddress();
-    this.echo(`[[;gray;]${address}]`);
+export async function genShieldedAddress(number: string) {
+    let addressNum = number !== undefined ? Number(number) : 1;
+    this.pause();
+    for (let i = 0; i < addressNum; i++) {
+        const address = await this.account.genShieldedAddress();
+        this.echo(`[[;gray;]${address}]`);
+    }
+    this.resume();
 }
 
 export async function shieldedAddressInfo(shieldedAddress: string) {
@@ -532,6 +537,30 @@ export async function syncState() {
     this.resume();
 }
 
+export async function getStateSyncStatistic() {
+    this.pause();
+    const fullSyncStat = await this.account.getStatFullSync();
+    const avgTimePerTx = await this.account.getAverageTimePerTx();
+
+    if (fullSyncStat !== undefined) {
+        this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(1)} msec/tx]`);
+        this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
+        this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
+        this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
+
+    } else {
+        this.echo(`Full state: [[;white;]N/A]`);
+    }
+
+    if (avgTimePerTx !== undefined) {
+        this.echo(`Average sync speed: [[;white;]${avgTimePerTx.toFixed(1)} msec/tx]`);
+    } else {
+        this.echo(`Average sync speed: [[;white;]N/A]`);
+    }
+
+    this.resume();
+}
 
 export async function getEphemeral(index: string) {
     this.pause();
