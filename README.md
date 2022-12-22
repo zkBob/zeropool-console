@@ -95,13 +95,23 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `internal-state` print your account and incoming notes (internal representation, for debug purposes only)
 
-`root` print local and remote Merkle tree root (local and remote roots should be tha same for same indicies)
+`root [index]` print local and remote Merkle tree root or retrieve just local one at the specified index (local and remote roots should be tha same for same indicies)
+
+`siblings <index>` get left siblings at specified index (partial tree support). The index should be multiple of 128 and less than current index
+ 
+`rollback <index>` rollback the user's state to the specified index (the index should be multiple of 128 and less than current index)
+
+`sync` force synchronize user's state
+    
+`sync-stat` print available state synchronization statistics from the library
 
 `get-ephemeral-address [index]` get the concrete ephemeral address or show first unused one
 
 `get-ephemeral-used` show all used ephemeral addresses
 
 `get-ephemeral-address-privkey <index>` get private key for concrete ephemeral address
+
+`wipe-state` wipe internal state and history
 
 `clear` clear the terminal
 
