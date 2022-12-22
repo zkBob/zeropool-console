@@ -1,7 +1,11 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord, TransferConfig, FeeAmount, TxType, PoolLimits, InitLibCallback, TreeState, EphemeralAddress } from 'zkbob-client-js';
+import { init, ZkBobClient, HistoryRecord,
+        TransferConfig, FeeAmount, TxType,
+        PoolLimits, InitLibCallback,
+        TreeState, EphemeralAddress, SyncStat, TreeNode
+        } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
@@ -9,10 +13,6 @@ import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 
-// @ts-ignore
-import wasmPath from 'libzkbob-rs-wasm-web/libzkbob_rs_wasm_bg.wasm';
-// @ts-ignore
-import workerPath from 'zkbob-client-js/lib/worker.js?asset';
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 
 
@@ -66,6 +66,7 @@ export default class Account {
     public async init(
         mnemonic: string,
         password: string,
+        isNewAcc: boolean,
         loadingCallback: InitLibCallback | undefined = undefined
     ): Promise<void> {
         const snarkParamsConfig = {
@@ -75,7 +76,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker } = await init(wasmPath, workerPath, snarkParamsConfig, RELAYER_URL, loadingCallback);
+        const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
@@ -99,6 +100,8 @@ export default class Account {
 
         const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
+
+        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -106,10 +109,12 @@ export default class Account {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
                     relayerUrl: RELAYER_URL,
+                    coldStorageConfigPath: bulkConfigUrl,
                 }
             },
             networkName: NETWORK,
             network,
+            birthindex: isNewAcc ? -1 : undefined,  //278016
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
@@ -120,7 +125,7 @@ export default class Account {
         loadingCallback: InitLibCallback | undefined = undefined
     ) {
         let seed = this.decryptSeed(password);
-        await this.init(seed, password, loadingCallback);
+        await this.init(seed, password, false, loadingCallback);
     }
 
     public getSeed(password: string): string {
@@ -222,8 +227,8 @@ export default class Account {
         return this.zpClient.rawState(TOKEN_ADDRESS);
     }
 
-    public async getLocalTreeState(): Promise<TreeState> {
-        return await this.zpClient.getLocalState(TOKEN_ADDRESS);
+    public async getLocalTreeState(index?: bigint): Promise<TreeState> {
+        return await this.zpClient.getLocalState(TOKEN_ADDRESS, index);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {
@@ -234,8 +239,24 @@ export default class Account {
         return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
     }
 
-    public async getPoolTreeState(): Promise<TreeState> {
-        return this.zpClient.getPoolState(TOKEN_ADDRESS);
+    public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
+        return this.zpClient.getTreeStartIndex(TOKEN_ADDRESS);
+    }
+
+    public async getPoolTreeState(index?: bigint): Promise<TreeState> {
+        return this.zpClient.getPoolState(TOKEN_ADDRESS, index);
+    }
+
+    public async getTreeLeftSiblings(index: bigint): Promise<TreeNode[]> {
+        return await this.zpClient.getLeftSiblings(TOKEN_ADDRESS, index);
+    }
+
+    public async getStatFullSync(): Promise<SyncStat | undefined> {
+        return this.zpClient.getStatFullSync();
+    }
+
+    public async getAverageTimePerTx(): Promise<number | undefined> {
+        return this.zpClient.getAverageTimePerTx();
     }
 
     public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
@@ -264,6 +285,14 @@ export default class Account {
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
+    }
+
+    public async rollback(index: bigint): Promise<bigint> {
+        return this.zpClient.rollbackState(TOKEN_ADDRESS, index);
+    }
+
+    public async syncState(): Promise<boolean> {
+        return this.zpClient.updateState(TOKEN_ADDRESS);
     }
 
     public async cleanInternalState(): Promise<void> {

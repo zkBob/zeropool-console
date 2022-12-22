@@ -1,10 +1,10 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
-import { deriveSpendingKey, bufToHex } from 'zkbob-client-js/lib/utils';
+import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
-import { TransferRequest } from 'zkbob-client-js/lib/client';
+import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 
 const bs58 = require('bs58');
 
@@ -36,9 +36,14 @@ export async function getAddress() {
     this.echo(`[[;gray;]Address: ${address}]`);
 }
 
-export async function genShieldedAddress() {
-    const address = await this.account.genShieldedAddress();
-    this.echo(`[[;gray;]${address}]`);
+export async function genShieldedAddress(number: string) {
+    let addressNum = number !== undefined ? Number(number) : 1;
+    this.pause();
+    for (let i = 0; i < addressNum; i++) {
+        const address = await this.account.genShieldedAddress();
+        this.echo(`[[;gray;]${address}]`);
+    }
+    this.resume();
 }
 
 export async function shieldedAddressInfo(shieldedAddress: string) {
@@ -403,26 +408,158 @@ export async function getInternalState() {
     }
 }
 
-export async function getRoot() {
-    const localState = await this.account.getLocalTreeState();
-    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]`)
+export async function getRoot(index: string) {
+    let idx: bigint | undefined = undefined;
+    if (index !== undefined) {
+        try {
+            idx = BigInt(index);
+        } catch (err) {
+            this.error(`Cannot convert \'${idx} to the number`);
+            return;
+        }
+    }
+
+    let localState;
+    let localTreeStartIndex = await this.account.getLocalTreeStartIndex();
+    try {
+        localState = await this.account.getLocalTreeState(idx);
+    } catch (err) {
+        this.error(`Cannot retrieve local root at index ${idx.toString()}: ${err}`);
+        return;
+    }
+
+    let treeDescr = '';
+    if (localTreeStartIndex !== undefined) {
+        if (localTreeStartIndex > 0) {
+            treeDescr = ` [tree filled from index ${localTreeStartIndex.toString()}]`;
+        } else {
+            treeDescr = ' [full tree]';
+        }
+    }
+
+    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
 
     this.echo(`Requesting additional info...`);
     this.pause();
     const relayerState = this.account.getRelayerTreeState();
-    const relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
-    const poolState = this.account.getPoolTreeState();
+    let relayerOptimisticState;
+    if (idx === undefined) {
+        relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
+    }
+    const poolState = this.account.getPoolTreeState(idx);
 
     let promises = [relayerState, relayerOptimisticState, poolState]
     Promise.all(promises).then((states) => {
-        this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
-        this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
-        this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        if (relayerOptimisticState !== undefined) {
+            this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
+            this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
+            this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        } else {
+            this.update(-1, `Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+        }
     }).catch((reason) => {
         this.error(`Cannot fetch additional info: ${reason}`);
     }).finally(() => {
         this.resume();
-    });    
+    });
+}
+
+export async function getLeftSiblings(index: string) {
+    let idx: bigint | undefined = undefined;
+    try {
+        idx = BigInt(index);
+    } catch (err) {
+        this.error(`Cannot convert \'${idx}\' to the bigint`);
+        return;
+    }
+
+    this.pause();
+
+    let siblings;
+    try {
+        siblings = await this.account.getTreeLeftSiblings(idx);
+    } catch (err) {
+        this.error(`Cannot get siblings: ${err}`);
+        return;
+    }
+    
+    this.echo(' height | index       | value');
+    this.echo('-------------------------------------------------------------------------------------------------------');
+    siblings.forEach(aNode => {
+        const height = `${aNode.height}`.padEnd(7);
+        const index = `${aNode.index}`.padEnd(12);
+        this.echo(`[[;white;] ${height}]|[[;white;] ${index}]| ${aNode.value}`);
+    });
+
+    let relayerResponse = `[\n`;
+    siblings.forEach((aNode, index) => {
+        const hexNode = nodeToHex(aNode).slice(2);
+        relayerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
+    });
+    relayerResponse += `]`
+
+    this.echo('[[;white;]Relayer response format:]');
+    this.echo(`${relayerResponse}`);
+
+    this.resume();
+
+}
+
+export async function rollback(index: string) {
+    let idx: bigint | undefined = undefined;
+    try {
+        idx = BigInt(index);
+    } catch (err) {
+        this.error(`Cannot convert \'${idx}\' to the bigint`);
+        return;
+    }
+
+    this.pause();
+    const newNextIndex = await this.account.rollback(idx);
+    this.echo(`New index:  [[;white;]${newNextIndex}]`);
+    const newState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`New root:   [[;white;]${newState.root} @ ${newState.index}]`);
+    const poolState: TreeState = await this.account.getPoolTreeState(newNextIndex);
+    this.echo(`Pool root:  [[;white;]${poolState.root} @ ${poolState.index}]`);
+    this.resume();
+}
+
+export async function syncState() {
+    this.pause();
+    const curState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`Starting sync from index: [[;white;]${curState.index}]`);
+
+    const isReadyToTransact = await this.account.syncState();
+
+    const newState: TreeState = await this.account.getLocalTreeState();
+    this.echo(`Finished sync at index:   [[;white;]${newState.index}]`);
+    this.echo(`Client ready to transact:  ${isReadyToTransact ? '[[;green;]YES]' : '[[;red;]NO]'}`);
+    this.resume();
+}
+
+export async function getStateSyncStatistic() {
+    this.pause();
+    const fullSyncStat = await this.account.getStatFullSync();
+    const avgTimePerTx = await this.account.getAverageTimePerTx();
+
+    if (fullSyncStat !== undefined) {
+        this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(1)} msec/tx]`);
+        this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
+        this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
+        this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
+
+    } else {
+        this.echo(`Full state: [[;white;]N/A]`);
+    }
+
+    if (avgTimePerTx !== undefined) {
+        this.echo(`Average sync speed: [[;white;]${avgTimePerTx.toFixed(1)} msec/tx]`);
+    } else {
+        this.echo(`Average sync speed: [[;white;]N/A]`);
+    }
+
+    this.resume();
 }
 
 export async function getEphemeral(index: string) {

@@ -33,7 +33,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'testnet-mint': [c.mint, ' <amount>', 'mint some unshielded tokens'],
   'transfer': [c.transfer, ' <to> <amount>', ' transfer native coins to the destination'],
   'transfer-token': [c.transferToken, ' <to> <amount>', 'transfer unshielded tokens to the destination account'],
-  'gen-shielded-address': [c.genShieldedAddress, '', 'generate a new zkBob shielded address'],
+  'gen-shielded-address': [c.genShieldedAddress, '[number]', 'generate a new zkBob shielded address (or several addressed)'],
   'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
   'deposit-shielded': [c.depositShielded, '<amount> [times]', 'shield some tokens [via approving allowance]'],
   'deposit-shielded-permittable': [c.depositShieldedPermittable, '<amount> [times]', 'shield some tokens [via permit]'],
@@ -50,11 +50,15 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'limits': [c.getLimits, '[address]', 'get maximum available deposit and withdrawal from the specified address'],
   'shielded-address-info': [c.shieldedAddressInfo, '<shielded address>', 'get all available info for the shielded address'],
   'internal-state': [c.getInternalState, '', 'print your account and incoming notes'],
-  'root': [c.getRoot, '', 'print local and remote Merkle tree root'],
+  'root': [c.getRoot, '[index]', 'print the latest local and remote Merkle tree root, or retrieve just local one at the specified index'],
+  'siblings': [c.getLeftSiblings, '<index>', 'get left siblings at specified index (partial tree support)'],
+  'rollback': [c.rollback, '<index>', 'rollback the user\'s state to the specified index'],
+  'sync': [c.syncState, '', 'force synchronize user\'s state'],
+  'sync-stat': [c.getStateSyncStatistic, '', 'print available state synchronization statistics from the library'],
   'get-ephemeral-address': [c.getEphemeral, '[index]', 'get the concrete ephemeral address or show first unused one'],
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
-  //'clean-state': [c.cleanState, '', 'wipe internal state and history'],
+  'wipe-state': [c.cleanState, '', 'wipe internal state and history'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'version': [
@@ -248,9 +252,11 @@ jQuery(async function ($) {
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
 
+            let isNewAccount = false;
             if (seed.trim().length == 0) {
               seed = bip39.generateMnemonic();
               this.echo(`New mnemonic: ${seed}`);
+              isNewAccount = true;
             } else if (!bip39.validateMnemonic(seed)) {
               throw new Error('Invalid seed phrase');
             }
@@ -265,7 +271,7 @@ jQuery(async function ($) {
             }
 
             this.pause();
-            await this.account.init(seed, password, initLibCallback);
+            await this.account.init(seed, password, isNewAccount, initLibCallback);
             this.resume();
           }
         } catch (e) {
