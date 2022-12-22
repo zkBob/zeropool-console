@@ -60,6 +60,7 @@ export default class Account {
             TRANSACTION_URL = process.env.TRANSACTION_URL;
             TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
             SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
+            DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
         }
     }
 
@@ -102,6 +103,12 @@ export default class Account {
         this.client = client;
 
         const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
+
+        let delegatedProverUrl = undefined;
+        if (DELEGATED_PROVER_URL) {
+            delegatedProverUrl = DELEGATED_PROVER_URL;
+        }
+
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -111,6 +118,7 @@ export default class Account {
                     relayerUrl: RELAYER_URL,
                     coldStorageConfigPath: bulkConfigUrl,
                     birthindex: isNewAcc ? -1 : undefined,
+                    delegatedProverUrl: delegatedProverUrl,
                 }
             },
             networkName: NETWORK,

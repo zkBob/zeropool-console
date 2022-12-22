@@ -76,6 +76,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
       this.echo(`Pool:    ${CONTRACT_ADDRESS}`);
       this.echo(`Token:   ${TOKEN_ADDRESS}`);
       this.echo(`Minter:  ${MINTER_ADDRESS}`);
+      this.echo(`Prover:  ${DELEGATED_PROVER_URL}`)
     },
     '',
     'get environment constants'

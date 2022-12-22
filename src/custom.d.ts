@@ -15,3 +15,4 @@ declare var CONTRACT_ADDRESS: string;
 declare var TRANSACTION_URL: string;
 declare var TOKEN_SYMBOL: string;
 declare var SHIELDED_TOKEN_SYMBOL: string;
+declare var DELEGATED_PROVER_URL: string;
