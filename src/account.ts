@@ -110,11 +110,11 @@ export default class Account {
                     poolAddress: CONTRACT_ADDRESS,
                     relayerUrl: RELAYER_URL,
                     coldStorageConfigPath: bulkConfigUrl,
+                    birthindex: isNewAcc ? -1 : undefined,
                 }
             },
             networkName: NETWORK,
             network,
-            birthindex: isNewAcc ? -1 : undefined,  //278016
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
