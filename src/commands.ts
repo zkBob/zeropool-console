@@ -239,11 +239,11 @@ export async function getLimits(address: string | undefined) {
 
     this.echo(`[[;white;]Max available deposit:  ${this.account.shieldedToHuman(result.deposit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;gray;]...single operation:    ${this.account.shieldedToHuman(result.deposit.components.singleOperation)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...address day limit:   ${this.account.shieldedToHuman(result.deposit.components.daylyForAddress.available)} / ${this.account.shieldedToHuman(result.deposit.components.daylyForAddress.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...total day limit:     ${this.account.shieldedToHuman(result.deposit.components.daylyForAll.available)} / ${this.account.shieldedToHuman(result.deposit.components.daylyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...address daily limit: ${this.account.shieldedToHuman(result.deposit.components.dailyForAddress.available)} / ${this.account.shieldedToHuman(result.deposit.components.dailyForAddress.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${this.account.shieldedToHuman(result.deposit.components.dailyForAll.available)} / ${this.account.shieldedToHuman(result.deposit.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;gray;]...pool limit:          ${this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;white;]Max available withdraw: ${this.account.shieldedToHuman(result.withdraw.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...total day limit:     ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.available)} / ${this.account.shieldedToHuman(result.withdraw.components.daylyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
     
 }
