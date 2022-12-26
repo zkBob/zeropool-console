@@ -104,7 +104,7 @@ export default class Account {
 
         const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
 
-        let delegatedProverUrl = undefined;
+        let delegatedProverUrl: string | undefined = undefined;
         if (DELEGATED_PROVER_URL) {
             delegatedProverUrl = DELEGATED_PROVER_URL;
         }
@@ -118,6 +118,7 @@ export default class Account {
                     relayerUrl: RELAYER_URL,
                     coldStorageConfigPath: bulkConfigUrl,
                     birthindex: isNewAcc ? -1 : undefined,
+                    delegatedProverEnabled: false,
                     delegatedProverUrl: delegatedProverUrl,
                 }
             },
@@ -537,6 +538,14 @@ export default class Account {
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
+    }
+
+    public setDelegatedProverEnabled(enabled: boolean) {
+        this.zpClient.setDelegatedProverEnabled(TOKEN_ADDRESS, enabled);
+    }
+
+    public getDelegatedProverEnabled(): boolean {
+        return this.zpClient.getDelegatedProverEnabled(TOKEN_ADDRESS);
     }
 
     private decryptSeed(password: string): string {

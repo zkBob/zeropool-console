@@ -59,6 +59,9 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
   'wipe-state': [c.cleanState, '', 'wipe internal state and history'],
+  'enable-delegated-prover': [c.enableDelegatedProver, '', 'enable delegated prover usage'],
+  'disable-delegated-prover': [c.disableDelegatedProver, '', 'disable delegated prover usage'],
+  'prover-info': [c.getProverInfo, '', 'print info about the used prover'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'version': [

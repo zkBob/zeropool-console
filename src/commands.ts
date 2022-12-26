@@ -620,6 +620,35 @@ export async function getEphemeralPrivKey(index: string) {
     this.resume();
 }
 
+export async function enableDelegatedProver() {
+    this.pause();
+    this.account.setDelegatedProverEnabled(true);
+    this.echo(`Delegated prover enabled`);
+    this.resume();
+}
+
+export async function disableDelegatedProver() {
+    this.pause();
+    this.account.setDelegatedProverEnabled(false);
+    this.echo(`Delegated prover disabled`);
+    this.resume();
+}
+
+export async function getProverInfo() {
+    this.pause();
+    const delegatedProverEnabled = this.account.getDelegatedProverEnabled();
+    const delegatedProverUrl = DELEGATED_PROVER_URL;
+    if (delegatedProverEnabled) {
+        if (delegatedProverUrl) {
+            this.echo(`Delegated Prover: ${delegatedProverUrl}`);
+        } else {
+            this.echo(`Delegated Prover: delegated prover url not provided`);
+        }
+    } else {
+        this.echo(`Local Prover`);
+    }
+}
+
 export async function printHistory() {
     this.pause();
     const history: HistoryRecord[] = await this.account.getAllHistory();
