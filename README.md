@@ -113,6 +113,12 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `wipe-state` wipe internal state and history
 
+`enable-delegated-prover` enable delegated prover usage
+
+`disable-delegated-prover` disable delegated prover usage
+
+`prover-info` print info about the used prover
+
 `clear` clear the terminal
 
 `reset` log out from the current account
