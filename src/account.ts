@@ -104,11 +104,6 @@ export default class Account {
 
         const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
 
-        let delegatedProverUrl: string | undefined = undefined;
-        if (DELEGATED_PROVER_URL) {
-            delegatedProverUrl = DELEGATED_PROVER_URL;
-        }
-
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -119,7 +114,7 @@ export default class Account {
                     coldStorageConfigPath: bulkConfigUrl,
                     birthindex: isNewAcc ? -1 : undefined,
                     delegatedProverEnabled: false,
-                    delegatedProverUrl: delegatedProverUrl,
+                    delegatedProverUrl: DELEGATED_PROVER_URL,
                 }
             },
             networkName: NETWORK,
