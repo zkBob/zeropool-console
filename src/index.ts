@@ -61,6 +61,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'wipe-state': [c.cleanState, '', 'wipe internal state and history'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
+  'ssupport-id': [c.getSupportId, '', 'get the client support id'],
   'version': [
     function () {
       this.echo(`zkBob console version ${pjson.version}`);
