@@ -117,6 +117,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `reset` log out from the current account
 
+`support-id` print current support id (changed on each library initialization)
+
 `version` print console version
 
 `environment` print environment variables
