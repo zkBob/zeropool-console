@@ -210,26 +210,12 @@ jQuery(async function ($) {
                 this.echo(`Loading client library...`);
                 break;
 
-              case InitState.DownloadingParams:
-                let percent = (status.download.loaded / status.download.total) * 100;
-                if (status.download.loaded < status.download.total) {
-                  this.update(-1, `Downloading parameters...${percent.toFixed(1)} %`);
-                } else {
-                  this.update(-1, `Downloading parameters...Done! (${status.download.total} bytes)`);
-                }
-                break;
-
               case InitState.InitWorker:
                 this.echo(`Initializing objects...`);
                 break;
               
-              case InitState.InitWasm:
-                this.echo(`Initializing wasm module...`);
-                break;
-
               case InitState.Completed:
                 this.echo(`Library has been loaded successfully`);
-                //throw new Error('Debug pause');
                 break;
 
               case InitState.Failed:
