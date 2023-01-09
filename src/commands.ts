@@ -5,6 +5,7 @@ import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/util
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
+import { ProverMode } from 'zkbob-client-js/lib/config';
 
 const bs58 = require('bs58');
 
@@ -620,33 +621,37 @@ export async function getEphemeralPrivKey(index: string) {
     this.resume();
 }
 
-export async function enableDelegatedProver() {
+export async function setProverMode(mode: ProverMode) {
     this.pause();
-    this.account.setDelegatedProverEnabled(true);
-    this.echo(`Delegated prover enabled`);
-    this.resume();
-}
-
-export async function disableDelegatedProver() {
-    this.pause();
-    this.account.setDelegatedProverEnabled(false);
-    this.echo(`Delegated prover disabled`);
+    this.account.setProverMode(mode);
+    this.echo(`Prover mode: ${this.account.getProverMode()}`);
     this.resume();
 }
 
 export async function getProverInfo() {
     this.pause();
-    const delegatedProverEnabled = this.account.getDelegatedProverEnabled();
+    const proverMode = this.account.getProverMode();
     const delegatedProverUrl = DELEGATED_PROVER_URL;
-    if (delegatedProverEnabled) {
-        if (delegatedProverUrl) {
-            this.echo(`Delegated Prover: ${delegatedProverUrl}`);
-        } else {
-            this.echo(`Delegated Prover: delegated prover url not provided`);
-        }
-    } else {
-        this.echo(`Local Prover`);
+    switch(proverMode) {
+        case ProverMode.Local:
+            this.echo(`Local Prover`);
+            break;
+        case ProverMode.Delegated:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover: delegated prover url not provided`);
+            }
+            break;
+        case ProverMode.DelegatedWithFallback:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover with fallback: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
+            }
+            break;
     }
+    this.resume();
 }
 
 export async function printHistory() {

@@ -113,9 +113,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `wipe-state` wipe internal state and history
 
-`enable-delegated-prover` enable delegated prover usage
-
-`disable-delegated-prover` disable delegated prover usage
+`set-prover-mode <mode>` set prover mode
 
 `prover-info` print info about the used prover
 

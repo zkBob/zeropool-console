@@ -14,6 +14,7 @@ import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 
 import { TransferRequest } from 'zkbob-client-js/lib/client';
+import { ProverMode } from 'zkbob-client-js/lib/config';
 
 
 function isEvmBased(network: string): boolean {
@@ -113,7 +114,7 @@ export default class Account {
                     relayerUrl: RELAYER_URL,
                     coldStorageConfigPath: bulkConfigUrl,
                     birthindex: isNewAcc ? -1 : undefined,
-                    delegatedProverEnabled: false,
+                    proverMode: ProverMode.Local,
                     delegatedProverUrl: DELEGATED_PROVER_URL,
                 }
             },
@@ -535,12 +536,12 @@ export default class Account {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
-    public setDelegatedProverEnabled(enabled: boolean) {
-        this.zpClient.setDelegatedProverEnabled(TOKEN_ADDRESS, enabled);
+    public setProverMode(mode: ProverMode) {
+        this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
     }
 
-    public getDelegatedProverEnabled(): boolean {
-        return this.zpClient.getDelegatedProverEnabled(TOKEN_ADDRESS);
+    public getProverMode(): ProverMode {
+        return this.zpClient.getProverMode(TOKEN_ADDRESS);
     }
 
     private decryptSeed(password: string): string {
