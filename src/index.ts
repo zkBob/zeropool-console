@@ -62,12 +62,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
-  'version': [
-    function () {
-      this.echo(`zkBob console version ${pjson.version}`);
-    },
-    '',
-    'get console version'
+  'version': [ c.getVersion, '', 'get console and relayer versions'
   ],
   'environment': [
     function () {

@@ -119,7 +119,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `support-id` print current support id (changed on each library initialization)
 
-`version` print console version
+`version` print console and relayer versions
 
 `environment` print environment variables
 

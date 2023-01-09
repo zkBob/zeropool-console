@@ -6,6 +6,8 @@ import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 
+var pjson = require('../package.json');
+
 const bs58 = require('bs58');
 
 
@@ -729,5 +731,20 @@ export function reset() {
 export function getSupportId() {
     this.pause();
     this.echo(`Current Support ID:  [[;white;]${this.account.supportId}]`);
+    this.resume();
+}
+
+export async function getVersion() {
+    this.pause();
+    this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
+    this.echo(`Current relayer version: ...fetching...`);
+    
+    try {
+        const ver = await this.account.relayerVersion();
+        this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
+    } catch (err) {
+        this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
+    }
+    
     this.resume();
 }
