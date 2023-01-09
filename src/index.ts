@@ -63,6 +63,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'prover-info': [c.getProverInfo, '', 'print info about the used prover'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
+  'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [
     function () {
       this.echo(`zkBob console version ${pjson.version}`);
