@@ -113,7 +113,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `wipe-state` wipe internal state and history
 
-`set-prover-mode <mode>` set prover mode
+`set-prover-mode <mode>` set prover mode (possible modes: Local, Delegated, DelegatedWithFallback)
 
 `prover-info` print info about the used prover
 

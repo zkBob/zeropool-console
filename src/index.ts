@@ -59,7 +59,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'get-ephemeral-used': [c.getEphemeralUsed, '', 'show used ephemeral addresses'],
   'get-ephemeral-address-privkey': [c.getEphemeralPrivKey, '<index>', 'get private key for concrete ephemeral address'],
   'wipe-state': [c.cleanState, '', 'wipe internal state and history'],
-  'set-prover-mode': [c.setProverMode, '<mode>', 'set prover mode'],
+  'set-prover-mode': [c.setProverMode, '<mode>', 'set prover mode (possible modes: Local, Delegated, DelegatedWithFallback)'],
   'prover-info': [c.getProverInfo, '', 'print info about the used prover'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
