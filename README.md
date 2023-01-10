@@ -113,13 +113,17 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `wipe-state` wipe internal state and history
 
+`set-prover-mode <mode>` set prover mode (possible modes: Local, Delegated, DelegatedWithFallback)
+
+`prover-info` print info about the used prover
+
 `clear` clear the terminal
 
 `reset` log out from the current account
 
 `support-id` print current support id (changed on each library initialization)
 
-`version` print console version
+`version` print console and relayer versions
 
 `environment` print environment variables
 

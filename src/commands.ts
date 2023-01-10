@@ -5,6 +5,9 @@ import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/util
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
+import { ProverMode } from 'zkbob-client-js/lib/config';
+
+var pjson = require('../package.json');
 
 const bs58 = require('bs58');
 
@@ -620,6 +623,39 @@ export async function getEphemeralPrivKey(index: string) {
     this.resume();
 }
 
+export async function setProverMode(mode: ProverMode) {
+    this.pause();
+    this.account.setProverMode(mode);
+    this.echo(`Prover mode: ${this.account.getProverMode()}`);
+    this.resume();
+}
+
+export async function getProverInfo() {
+    this.pause();
+    const proverMode = this.account.getProverMode();
+    const delegatedProverUrl = DELEGATED_PROVER_URL;
+    switch(proverMode) {
+        case ProverMode.Local:
+            this.echo(`Local Prover`);
+            break;
+        case ProverMode.Delegated:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover: delegated prover url not provided`);
+            }
+            break;
+        case ProverMode.DelegatedWithFallback:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover with fallback: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
+            }
+            break;
+    }
+    this.resume();
+}
+
 export async function printHistory() {
     this.pause();
     const history: HistoryRecord[] = await this.account.getAllHistory();
@@ -729,5 +765,20 @@ export function reset() {
 export function getSupportId() {
     this.pause();
     this.echo(`Current Support ID:  [[;white;]${this.account.supportId}]`);
+    this.resume();
+}
+
+export async function getVersion() {
+    this.pause();
+    this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
+    this.echo(`Current relayer version: ...fetching...`);
+    
+    try {
+        const ver = await this.account.relayerVersion();
+        this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
+    } catch (err) {
+        this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
+    }
+    
     this.resume();
 }
