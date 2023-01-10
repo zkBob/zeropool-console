@@ -181,8 +181,13 @@ jQuery(async function ($) {
     greetings: GREETING,
     checkArity: false,
     processArguments: false,
-    wordAutocomplete: false,
-    completion: Object.keys(COMMANDS),
+    completion: function(_, callback) {
+      if (this.get_command().match(/^set-prover-mode /)) {
+        callback(['Local', 'Delegated', 'DelegatedWithFallback']);
+      } else if (this.get_command().match(/^[a-z\-]*$/)) {
+        callback(Object.keys(COMMANDS));
+      }
+    },
     historyFilter: function (command) {
       return PRIVATE_COMMANDS.indexOf(command) == -1;
     },
