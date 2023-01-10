@@ -5,6 +5,7 @@ import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/util
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
+import { ProverMode } from 'zkbob-client-js/lib/config';
 
 var pjson = require('../package.json');
 
@@ -619,6 +620,39 @@ export async function getEphemeralPrivKey(index: string) {
     let idx = Number(index);
     let priv: string = await this.account.getEphemeralAddressPrivateKey(idx);
     this.echo(`Private key @${idx}: [[;white;]${priv}]`);
+    this.resume();
+}
+
+export async function setProverMode(mode: ProverMode) {
+    this.pause();
+    this.account.setProverMode(mode);
+    this.echo(`Prover mode: ${this.account.getProverMode()}`);
+    this.resume();
+}
+
+export async function getProverInfo() {
+    this.pause();
+    const proverMode = this.account.getProverMode();
+    const delegatedProverUrl = DELEGATED_PROVER_URL;
+    switch(proverMode) {
+        case ProverMode.Local:
+            this.echo(`Local Prover`);
+            break;
+        case ProverMode.Delegated:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover: delegated prover url not provided`);
+            }
+            break;
+        case ProverMode.DelegatedWithFallback:
+            if (delegatedProverUrl) {
+                this.echo(`Delegated Prover with fallback: ${delegatedProverUrl}`);
+            } else {
+                this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
+            }
+            break;
+    }
     this.resume();
 }
 

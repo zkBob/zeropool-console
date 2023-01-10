@@ -39,6 +39,7 @@ module.exports = merge(common, {
             TRANSACTION_URL: null,
             TOKEN_SYMBOL: null,
             SHIELDED_TOKEN_SYMBOL: null,
+            DELEGATED_PROVER_URL: null,
         }),
     ]
 });

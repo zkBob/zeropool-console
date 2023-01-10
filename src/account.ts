@@ -15,6 +15,7 @@ import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 
 import { TransferRequest } from 'zkbob-client-js/lib/client';
+import { ProverMode } from 'zkbob-client-js/lib/config';
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -64,6 +65,7 @@ export default class Account {
             TRANSACTION_URL = process.env.TRANSACTION_URL;
             TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
             SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
+            DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
         }
     }
 
@@ -108,6 +110,7 @@ export default class Account {
         this.supportId = uuidv4();
 
         const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
+
         this.zpClient = await ZkBobClient.create({
             sk,
             worker,
@@ -117,6 +120,8 @@ export default class Account {
                     relayerUrl: RELAYER_URL,
                     coldStorageConfigPath: bulkConfigUrl,
                     birthindex: isNewAcc ? -1 : undefined,
+                    proverMode: ProverMode.Local,
+                    delegatedProverUrl: DELEGATED_PROVER_URL,
                 }
             },
             networkName: NETWORK,
@@ -538,6 +543,14 @@ export default class Account {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
+    public setProverMode(mode: ProverMode) {
+        this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
+    }
+
+    public getProverMode(): ProverMode {
+        return this.zpClient.getProverMode(TOKEN_ADDRESS);
+    }
+    
     public async relayerVersion(): Promise<RelayerVersion> {
         return await this.zpClient.getRelayerVersion(TOKEN_ADDRESS);
     }
