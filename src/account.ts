@@ -4,7 +4,8 @@ import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropoo
 import { init, ZkBobClient, HistoryRecord,
         TransferConfig, FeeAmount, TxType,
         PoolLimits, InitLibCallback,
-        TreeState, EphemeralAddress, SyncStat, TreeNode
+        TreeState, EphemeralAddress, SyncStat, TreeNode,
+        RelayerVersion,
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -535,6 +536,10 @@ export default class Account {
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
+    }
+
+    public async relayerVersion(): Promise<RelayerVersion> {
+        return await this.zpClient.getRelayerVersion(TOKEN_ADDRESS);
     }
 
     private decryptSeed(password: string): string {
