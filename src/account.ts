@@ -15,6 +15,7 @@ import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
 
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 import { ProverMode } from 'zkbob-client-js/lib/config';
+import { v4 as uuidv4 } from 'uuid';
 
 
 function isEvmBased(network: string): boolean {
@@ -45,6 +46,8 @@ export default class Account {
     private storage: AccountStorage;
     public client: NetworkClient;
     private zpClient: ZkBobClient;
+    
+    public supportId: string;
 
     constructor(accountName: string) {
         this.accountName = accountName;
@@ -103,6 +106,8 @@ export default class Account {
         const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
         this.client = client;
 
+        this.supportId = uuidv4();
+
         const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
 
         this.zpClient = await ZkBobClient.create({
@@ -120,6 +125,7 @@ export default class Account {
             },
             networkName: NETWORK,
             network,
+            supportId: this.supportId,
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());

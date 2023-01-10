@@ -759,3 +759,9 @@ export function reset() {
     this.account = null;
     this.reset();
 }
+
+export function getSupportId() {
+    this.pause();
+    this.echo(`Current Support ID:  [[;white;]${this.account.supportId}]`);
+    this.resume();
+}
