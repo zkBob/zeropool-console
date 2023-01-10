@@ -9825,10 +9825,8 @@ yargs@^13.3.2:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-zkbob-client-js@1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-1.3.0.tgz#faf6781baa269eabaf10644e4f031bc9deba0745"
-  integrity sha512-rxqp29P+9v9ZztemMcp22vrrCSKhUGQnHduJv2JllDZxso/wJmRCIoexWjnLd0KnJlW33Ae/kxX57ER12p2cCA==
+"zkbob-client-js@file:../zkbob-client-js":
+  version "1.3.1"
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@metamask/eth-sig-util" "5.0.0"
