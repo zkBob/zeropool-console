@@ -625,7 +625,7 @@ export async function getEphemeralPrivKey(index: string) {
 
 export async function setProverMode(mode: ProverMode) {
     this.pause();
-    await this.account.setProverMode(mode);
+    this.account.setProverMode(mode);
     this.echo(`Prover mode: ${this.account.getProverMode()}`);
     this.resume();
 }
