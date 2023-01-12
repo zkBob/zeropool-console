@@ -543,8 +543,8 @@ export default class Account {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
-    public setProverMode(mode: ProverMode) {
-        this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
+    public async setProverMode(mode: ProverMode) {
+        await this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
     }
 
     public getProverMode(): ProverMode {
