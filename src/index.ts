@@ -64,8 +64,8 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
-  'version': [ c.getVersion, '', 'get console and relayer versions'
-  ],
+  'version': [ c.getVersion, '', 'get console and relayer versions'],
+  'gift-cards':[c.generateGiftCards,'<url> <prefix> <quantity> <balance> <token>','generate gift cards'],
   'environment': [
     function () {
       this.echo(`Network: ${NETWORK}`);
@@ -190,6 +190,7 @@ jQuery(async function ($) {
       this.resume();
       this.exception(err);
     },
+    anyLinks: true,
     onInit: async function () {
       // Account prompt
       do {
