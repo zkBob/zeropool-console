@@ -66,6 +66,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'
   ],
+  'gift-cards':[c.generateGiftCards,'<url> <prefix> <quantity> <balance> <token>','generate gift cards'],
   'environment': [
     function () {
       this.echo(`Network: ${NETWORK}`);
@@ -183,6 +184,7 @@ jQuery(async function ($) {
         callback(Object.keys(COMMANDS));
       }
     },
+    anyLinks:true,
     historyFilter: function (command) {
       return PRIVATE_COMMANDS.indexOf(command) == -1;
     },

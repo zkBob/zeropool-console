@@ -6,7 +6,9 @@ import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 import { ProverMode } from 'zkbob-client-js/lib/config';
-
+import qrcodegen from "@ribpay/qr-code-generator";
+import { toSvgString } from "@ribpay/qr-code-generator/utils";
+import JSZip from "jszip";
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -781,4 +783,98 @@ export async function getVersion() {
     }
     
     this.resume();
+}
+class GiftCard {
+    alias: string;
+    cloudId: string;
+    // balance: number = 0;
+    sk: string;
+    address: string;
+    svg: string;
+
+    constructor(alias: string, cloudId: string, sk: string, address: string, svg: string) {
+        // this.balance = 0;
+        this.alias = alias
+        this.cloudId = cloudId;
+        this.sk = sk;
+        this.address = address;
+        this.svg = svg
+    }
+}
+
+export async function generateGiftCards(cloudUrl: string, prefix: string, quantity: string, cardBalance: string, authToken: string) {
+
+    const [total] = await this.account.getShieldedBalances(true);
+    const requiredTotalSum = this.account.humanToShielded(cardBalance) * BigInt(quantity);
+
+    if (requiredTotalSum > total) {
+        this.echo(`total card balance ${requiredTotalSum} exceeds available funds ${this.account.shieldedToHuman(total)}`)
+        return
+    }
+
+    const headers = new Headers();
+    headers.append("Authorization", `Bearer ${authToken}`);
+    headers.append("Content-Type", "application/json");
+    let giftCards: GiftCard[] = [];
+    for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
+        const alias = `${prefix}_${cardIndex}`;
+        const body = JSON.stringify({ "description": `${alias}` });
+        const signupResponse = await fetch(`${cloudUrl}/signup`, {
+            method: 'POST',
+            headers,
+            body
+        });
+        const signupResponseJson = await signupResponse.json();
+        const cloudId = signupResponseJson.accountId;
+
+        const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`);
+        const exportJson = await exportResponse.json();
+        let sk = exportJson.sk;
+
+        const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
+        const generateAddressResponseJson = await generateAddressResponse.json();
+        const address = generateAddressResponseJson.address;
+        console.log(`generated new account with address: ${address} `);
+
+        const svg = qrcode(redemptionUrl(sk));
+        giftCards.push(new GiftCard(alias, cloudId, sk, address, svg));
+    }
+
+
+    let zipUrl = await zip(giftCards);
+
+    this.echo(`[[!;;;;${zipUrl}]link]`);
+
+
+
+}
+
+function redemptionUrl(sk: string): string {
+    return `https://staging--zkbob.netlify.app/redeem?code=${sk}` //TODO: move to config
+}
+
+export function qrcode(data: string): string {
+
+
+    const QRC = qrcodegen.QrCode;
+    const qr0 = QRC.encodeText(data, QRC.Ecc.MEDIUM);
+    const svg = toSvgString(qr0, 4, "#FFFFFF", "#000000");
+
+
+    return svg
+}
+
+
+async function zip(giftCards: GiftCard[]) {
+
+    let mainZip = new JSZip();
+    giftCards.forEach(async giftCard => {
+
+        mainZip.file(`${giftCard.cloudId}.${giftCard.alias}.svg`, giftCard.svg)
+    })
+
+    mainZip.file(`summary.json`, JSON.stringify({ summary: giftCards }))
+    let zipped = await mainZip.generateAsync({ type: 'blob' })
+    let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
+    return url
 }
