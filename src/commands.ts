@@ -9,6 +9,7 @@ import { ProverMode } from 'zkbob-client-js/lib/config';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
+import assert from 'assert';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -802,8 +803,11 @@ class GiftCard {
     }
 }
 
-export async function generateGiftCards(cloudUrl: string, prefix: string, quantity: string, cardBalance: string, authToken: string) {
+export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
 
+    this.pause();
+    const cloudUrl = process.env.CLOUD_API_ENDPOINT;
+    console.log("cloudUrl = ", cloudUrl)
     const [total] = await this.account.getShieldedBalances(true);
     const requiredTotalSum = this.account.humanToShielded(cardBalance) * BigInt(quantity);
 
@@ -816,41 +820,63 @@ export async function generateGiftCards(cloudUrl: string, prefix: string, quanti
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
-    for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
-        const alias = `${prefix}_${cardIndex}`;
-        const body = JSON.stringify({ "description": `${alias}` });
-        const signupResponse = await fetch(`${cloudUrl}/signup`, {
-            method: 'POST',
-            headers,
-            body
-        });
-        const signupResponseJson = await signupResponse.json();
-        const cloudId = signupResponseJson.accountId;
+    try {
+        for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
+            const alias = `${prefix}_${cardIndex}`;
+            const body = JSON.stringify({ "description": `${alias}` });
+            const signupResponse = await fetch(`${cloudUrl}/signup`, {
+                method: 'POST',
+                headers,
+                body
+            });
+            if (signupResponse.status == 401) {
+                throw new Error("not authorized to create new accounts, check admin token in environment variables")
+            } else if (!signupResponse.ok) {
+                throw new Error(`cloud wallet returned bad response ${signupResponse}` )
+            }
+            const signupResponseJson = await signupResponse.json();
+            const cloudId = signupResponseJson.accountId;
 
-        const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`);
-        const exportJson = await exportResponse.json();
-        let sk = exportJson.sk;
+            if(!cloudId) throw new Error("sign up response is invalid")
+    
+            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`);
 
-        const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
-        const generateAddressResponseJson = await generateAddressResponse.json();
-        const address = generateAddressResponseJson.address;
-        console.log(`generated new account with address: ${address} `);
+            if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
 
-        const svg = qrcode(redemptionUrl(sk));
-        giftCards.push(new GiftCard(alias, cloudId, sk, address, svg));
+            const exportJson = await exportResponse.json();
+            let sk = exportJson.sk;
+    
+            const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
+
+            if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
+            const generateAddressResponseJson = await generateAddressResponse.json();
+            const address = generateAddressResponseJson.address;
+            console.log(`generated new account with address: ${address} `);
+    
+            const svg = qrcode(redemptionUrl(sk));
+            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg));
+        }    
+    
+        this.echo(`gift cards successfuly generated, see result below:`);
+
+    } catch (error) {
+        
+        this.echo("process failed with error, see partial result below:", error)
+
     }
-
-
     let zipUrl = await zip(giftCards);
-
-    this.echo(`[[!;;;;${zipUrl}]link]`);
-
-
+    if (giftCards.length>0) {
+        this.echo(`[[!;;;;${zipUrl}]report] for ${giftCards.length} cards`);    
+    } else {
+        this.echo('no cards generated');
+    }
+    
+    this.resume();
 
 }
 
 function redemptionUrl(sk: string): string {
-    return `https://staging--zkbob.netlify.app/redeem?code=${sk}` //TODO: move to config
+    return `${process.env.GIFTCARD_REDEMPTION_URL}${sk}`
 }
 
 export function qrcode(data: string): string {

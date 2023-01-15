@@ -40,6 +40,8 @@ module.exports = merge(common, {
             TOKEN_SYMBOL: null,
             SHIELDED_TOKEN_SYMBOL: null,
             DELEGATED_PROVER_URL: null,
+            CLOUD_API_ENDPOINT:null,
+            GIFTCARD_REDEMPTION_URL:null
         }),
     ]
 });
