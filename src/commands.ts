@@ -654,7 +654,7 @@ export async function getProverInfo() {
             break;
     }
 
-    if (proverMode != proverMode.Local) {
+    if (proverMode != ProverMode.Local) {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
