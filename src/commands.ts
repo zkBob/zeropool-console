@@ -653,6 +653,17 @@ export async function getProverInfo() {
             }
             break;
     }
+
+    if (proverMode != proverMode.Local) {
+        this.echo(`Current prover version:  ...fetching...`);
+
+        try {
+            const ver = await this.account.proverVersion();
+            this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
+        } catch(err) {
+            this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
+        }
+    }
     this.resume();
 }
 
