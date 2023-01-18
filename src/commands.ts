@@ -185,8 +185,12 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
                 this.echo(`     [[;${multiTxColors[curColorIdx]};]${this.account.shieldedToHuman(aNote.amountGwei)}] ${SHIELDED_TOKEN_SYMBOL} -> ${aNote.destination}`);
             }
         } else {
-            const color = (notes.length == 0 ? 'gray' : 'green');
-            this.echo(`TX#${i} [[;${color};]${this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+            if (notes.length == 0) {
+                this.echo(`TX#${i} Aggregate notes with total amount: ${part.inNotesBalance} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);    
+            } else {
+                const color = (notes.length == 0 ? 'gray' : 'green');
+                this.echo(`TX#${i} [[;${color};]${this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+            }
         }
     }
 }
