@@ -746,6 +746,57 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
     return `${dt.toLocaleString()} : ${mainPart}`;
 }
 
+export async function complianceReport() {
+    this.echo('Please specify optional report interval. To omit the bound just press Enter');
+    this.echo('Acceptable formats: ISO8601 ([[;white;]e.g. 2022-10-28 09:15:00]) or linux timestamp (e.g. [[;white;]1666937700])');
+    const fromDate = readDate('[[;green;]Enter report START date time (press Enter to skip)]:');
+    const toDate = readDate('[[;green;]Enter report END date time (press Enter to skip)]:  ');
+    //this.update(-1, `Great! There ${requests.length==1 ? 'is' : 'are'} ${requests.length} request${requests.length==1 ? '' : 's'} collected!`);
+    const fromDescr = fromDate ? ` from ${fromDate}` : '';
+    const toDescr = fromDate ? ` up to  ${toDate}` : '';
+    this.echo(`Generating compliance report${fromDate}${toDate}...`);
+    
+}
+
+async function readDate(requestString: string): Promise<Date | null> {
+    let datetimeStr: string = '';
+    let date: Date | null = null;
+    do {
+        datetimeStr = await this.read(`${requestString}`);
+        if (datetimeStr == '') break;
+        datetimeStr = datetimeStr.trim();
+
+        date = new Date(datetimeStr);
+        if (!date || isNaN(date.valueOf())) {
+            // maybe user entered a timestamp?
+            let timestamp = Number(datetimeStr);
+            if (timestamp) {
+                if (timestamp < 10 ** 11) {
+                    // seconds
+                    timestamp *= 10 ** 3;
+                } else if (timestamp < 10 ** 14) {
+                    // milliseconds
+                } else if (timestamp < 10 ** 16) {
+                    // microseconds
+                    timestamp /= 10 ** 3;
+                } else {
+                    // nanoseconds
+                    timestamp /= 10 ** 6;
+                }
+                date = new Date(timestamp);
+            }
+        }
+
+        if (!date || isNaN(date.valueOf())) {
+            this.error(`Datetime is invalid. Use linux timestamp or ISO 8601 format (YYYY-MM-dd HH:mm:ss)`);
+            continue;
+        }
+
+    } while(datetimeStr == '');
+
+    return date;
+}
+
 export function cleanState() {
     this.pause();
     this.account.cleanInternalState();

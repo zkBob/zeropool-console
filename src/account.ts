@@ -299,6 +299,10 @@ export default class Account {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
     }
 
+    public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<HistoryRecord[]> {
+        return this.zpClient.getAllHistory(TOKEN_ADDRESS, startTimestamp, endTimestamp);
+    }
+
     public async rollback(index: bigint): Promise<bigint> {
         return this.zpClient.rollbackState(TOKEN_ADDRESS, index);
     }
