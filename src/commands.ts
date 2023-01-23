@@ -792,14 +792,16 @@ class GiftCard {
     sk: string;
     address: string;
     svg: string;
+    url:string;
 
-    constructor(alias: string, cloudId: string, sk: string, address: string, svg: string) {
+    constructor(alias: string, cloudId: string, sk: string, address: string, svg: string, url: string) {
         // this.balance = 0;
         this.alias = alias
         this.cloudId = cloudId;
         this.sk = sk;
         this.address = address;
-        this.svg = svg
+        this.svg = svg;
+        this.url = url;
     }
 }
 
@@ -820,6 +822,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
+    const treeIndex = (await this.account.getPoolTreeState()).index
     try {
         for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
             const alias = `${prefix}_${cardIndex}`;
@@ -844,7 +847,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
 
             const exportJson = await exportResponse.json();
-            let sk = exportJson.sk;
+            let sk = `0x${exportJson.sk}`;
     
             const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
 
@@ -853,30 +856,37 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const address = generateAddressResponseJson.address;
             console.log(`generated new account with address: ${address} `);
     
-            const svg = qrcode(redemptionUrl(sk));
-            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg));
+            const url = redemptionUrl(sk, treeIndex);
+            const svg = qrcode(url);
+            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
         }    
     
-        this.echo(`gift cards successfuly generated, see result below:`);
+        let zipUrl = await zip(giftCards);
+        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
+        const transferRequests:TransferRequest[] = giftCards.map(
+            giftCard =>  {return {
+                destination: giftCard.address,
+                amountGwei:this.account.humanToShielded(cardBalance) 
+            }
+        } );
+        const result = await this.account.transferShielded(transferRequests);
 
+        this.echo(`Funds transfer is done ${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
+            return `[job #${singleTxResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+        }).join(`\n     `)}`);
+        
     } catch (error) {
         
-        this.echo("process failed with error, see partial result below:", error)
+        this.echo("process failed with error: ", error)
 
-    }
-    let zipUrl = await zip(giftCards);
-    if (giftCards.length>0) {
-        this.echo(`[[!;;;;${zipUrl}]report] for ${giftCards.length} cards`);    
-    } else {
-        this.echo('no cards generated');
     }
     
     this.resume();
 
 }
 
-function redemptionUrl(sk: string): string {
-    return `${process.env.GIFTCARD_REDEMPTION_URL}${sk}`
+function redemptionUrl(sk: string, birthIndex: string): string {
+    return `${process.env.GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
 }
 
 export function qrcode(data: string): string {
@@ -899,7 +909,10 @@ async function zip(giftCards: GiftCard[]) {
         mainZip.file(`${giftCard.cloudId}.${giftCard.alias}.svg`, giftCard.svg)
     })
 
-    mainZip.file(`summary.json`, JSON.stringify({ summary: giftCards }))
+    mainZip.file(`summary.json`, JSON.stringify({ summary: giftCards.map( card =>  {
+        card.svg=""
+        return card
+    }) }))
     let zipped = await mainZip.generateAsync({ type: 'blob' })
     let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
     return url
