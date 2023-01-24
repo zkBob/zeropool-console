@@ -906,7 +906,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
 }
 
 function redemptionUrl(sk: string, birthIndex: string): string {
-    return `${process.env.GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
+    return `${GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
 }
 
 export function qrcode(data: string): string {
