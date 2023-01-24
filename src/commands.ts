@@ -810,11 +810,19 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     this.pause();
     const cloudUrl = process.env.CLOUD_API_ENDPOINT;
     console.log("cloudUrl = ", cloudUrl)
-    const [total] = await this.account.getShieldedBalances(true);
-    const requiredTotalSum = this.account.humanToShielded(cardBalance) * BigInt(quantity);
+    
+    const singleCardBalance = this.account.humanToShielded(cardBalance)
+    const requiredTotalSum = singleCardBalance * BigInt(quantity);
+    await this.account.syncState();
+    const maxAvailableFunds = await this.account.getMaxAvailableTransfer();
+    if (requiredTotalSum > maxAvailableFunds) {
+        this.echo(`total card balance ${requiredTotalSum} exceeds available funds ${this.account.shieldedToHuman(maxAvailableFunds)}`)
+        return
+    }
+    const minTransferAmount = await this.account.minTxAmount();
 
-    if (requiredTotalSum > total) {
-        this.echo(`total card balance ${requiredTotalSum} exceeds available funds ${this.account.shieldedToHuman(total)}`)
+    if (singleCardBalance < minTransferAmount) {
+        this.echo(`Single card balance ${requiredTotalSum} less than minimum transfer amount ${this.account.shieldedToHuman(minTransferAmount)}`);
         return
     }
 
@@ -861,7 +869,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
             if (Number(quantity) > 1) {
-                this.update(-1, `Generating accounts...[${cardIndex + 1}/${Number(quantity)}]`);
+                this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
             }
         }
         this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
@@ -876,7 +884,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         } );
         const result = await this.account.transferShielded(transferRequests);
 
-        this.echo(`Funds transfer is done ${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
+        this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
             return `[job #${singleTxResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
         }).join(`\n     `)}`);
         

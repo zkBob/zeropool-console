@@ -344,6 +344,9 @@ export default class Account {
         return await this.zpClient.getLimits(TOKEN_ADDRESS, addr, false);
     }
 
+    public async minTxAmount(): Promise<bigint> {
+        return await this.zpClient.minTxAmount();
+     }
     public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
         return await this.zpClient.calcMaxAvailableTransfer(TOKEN_ADDRESS, false);
     }
