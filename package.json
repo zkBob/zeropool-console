@@ -16,6 +16,7 @@
     "env.js"
   ],
   "dependencies": {
+    "@ribpay/qr-code-generator": "^1.0.6",
     "@truffle/hdwallet-provider": "2.0.9",
     "assert": "^2.0.0",
     "bip39-light": "^1.0.7",
@@ -27,6 +28,7 @@
     "https-browserify": "^1.0.0",
     "jquery": "^3.5.1",
     "jquery.terminal": "2.34.0",
+    "jszip": "^3.10.1",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",

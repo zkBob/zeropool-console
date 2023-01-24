@@ -6,7 +6,10 @@ import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 import { ProverMode } from 'zkbob-client-js/lib/config';
-
+import qrcodegen from "@ribpay/qr-code-generator";
+import { toSvgString } from "@ribpay/qr-code-generator/utils";
+import JSZip from "jszip";
+import assert from 'assert';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -781,4 +784,156 @@ export async function getVersion() {
     }
     
     this.resume();
+}
+class GiftCard {
+    alias: string;
+    cloudId: string;
+    // balance: number = 0;
+    sk: string;
+    address: string;
+    svg: string;
+    url:string;
+
+    constructor(alias: string, cloudId: string, sk: string, address: string, svg: string, url: string) {
+        // this.balance = 0;
+        this.alias = alias
+        this.cloudId = cloudId;
+        this.sk = sk;
+        this.address = address;
+        this.svg = svg;
+        this.url = url;
+    }
+}
+
+export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
+
+    this.pause();
+    const cloudUrl = process.env.CLOUD_API_ENDPOINT;
+    console.log("cloudUrl = ", cloudUrl)
+    
+    const singleCardBalance = this.account.humanToShielded(cardBalance)
+    const requiredTotalSum = singleCardBalance * BigInt(quantity);
+    await this.account.syncState();
+    const txRequests = Array(Number(quantity)).fill(singleCardBalance);
+    const fee = await this.account.estimateFee(txRequests, TxType.Transfer, true);
+    if (fee.insufficientFunds) {
+        const [balance] = await this.account.getShieldedBalances(false); // state already updated, do not sync again
+        const requiredStr = `${this.account.shieldedToHuman(requiredTotalSum)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const feeStr = `${this.account.shieldedToHuman(fee.total)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const balanceStr = `${this.account.shieldedToHuman(balance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
+        return;
+    }
+    const minTransferAmount = await this.account.minTxAmount();
+
+    if (singleCardBalance < minTransferAmount) {
+        const singleStr = `${this.account.shieldedToHuman(singleCardBalance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const minAmountStr = `${this.account.shieldedToHuman(minTransferAmount)} ${SHIELDED_TOKEN_SYMBOL}`;
+        this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
+        return
+    }
+
+    const headers = new Headers();
+    headers.append("Authorization", `Bearer ${authToken}`);
+    headers.append("Content-Type", "application/json");
+    let giftCards: GiftCard[] = [];
+    const treeIndex = (await this.account.getPoolTreeState()).index
+    try {
+        this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
+        for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
+            const alias = `${prefix}_${cardIndex}`;
+            const body = JSON.stringify({ "description": `${alias}` });
+            const signupResponse = await fetch(`${cloudUrl}/signup`, {
+                method: 'POST',
+                headers,
+                body
+            });
+            if (signupResponse.status == 401) {
+                throw new Error("not authorized to create new accounts, check admin token in environment variables")
+            } else if (!signupResponse.ok) {
+                throw new Error(`cloud wallet returned bad response ${signupResponse}` )
+            }
+            const signupResponseJson = await signupResponse.json();
+            const cloudId = signupResponseJson.accountId;
+
+            if(!cloudId) throw new Error("sign up response is invalid")
+    
+            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`);
+
+            if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
+
+            const exportJson = await exportResponse.json();
+            let sk = `0x${exportJson.sk}`;
+    
+            const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
+
+            if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
+            const generateAddressResponseJson = await generateAddressResponse.json();
+            const address = generateAddressResponseJson.address;
+            console.log(`generated new account with address: ${address} `);
+    
+            const url = redemptionUrl(sk, treeIndex);
+            const svg = qrcode(url);
+            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
+            if (Number(quantity) > 1) {
+                this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
+            }
+        }
+        this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
+    
+        let zipUrl = await zip(giftCards);
+        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
+        const transferRequests:TransferRequest[] = giftCards.map(
+            giftCard =>  {return {
+                destination: giftCard.address,
+                amountGwei:this.account.humanToShielded(cardBalance) 
+            }
+        } );
+        const result = await this.account.transferShielded(transferRequests);
+
+        this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
+            return `[job #${singleTxResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+        }).join(`\n     `)}`);
+        
+    } catch (error) {
+        
+        this.echo(`Process failed with error: [[;red;]${error.message}]`);
+
+    }
+    
+    this.resume();
+
+}
+
+function redemptionUrl(sk: string, birthIndex: string): string {
+    return `${process.env.GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
+}
+
+export function qrcode(data: string): string {
+
+
+    const QRC = qrcodegen.QrCode;
+    const qr0 = QRC.encodeText(data, QRC.Ecc.MEDIUM);
+    const svg = toSvgString(qr0, 4, "#FFFFFF", "#000000");
+
+
+    return svg
+}
+
+
+async function zip(giftCards: GiftCard[]) {
+
+    let mainZip = new JSZip();
+    giftCards.forEach(async giftCard => {
+
+        mainZip.file(`${giftCard.cloudId}.${giftCard.alias}.svg`, giftCard.svg)
+    })
+
+    mainZip.file(`summary.json`, JSON.stringify({ summary: giftCards.map( card =>  {
+        card.svg=""
+        return card
+    }) }))
+    let zipped = await mainZip.generateAsync({ type: 'blob' })
+    let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
+    return url
 }
