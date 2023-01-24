@@ -765,10 +765,68 @@ export async function complianceReport() {
         toDate ? toDate.getTime() : undefined,
         );
 
-    this.echo(`${report}`);
+    const denominator = 1000000000;
+    for (const aRecord of report) {
+        this.echo(`[[;white;]${humanReadable(aRecord, denominator)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
+        this.echo(`\tTx index:  ${aRecord.index}`);
+        this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
+        this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
+
+        let accEnc = findChunk(aRecord.index, aRecord.encChunks);
+        let accKey = findKey(aRecord.index, aRecord.ecdhKeys);
+        if (accEnc && accKey) {
+            this.echo(`\t      encrypted: ${bufToHex(accEnc)}`);
+            this.echo(`\t      ECDH key:  ${bufToHex(accKey)}`);
+        } else {
+            this.echo(`[[;red;]Incorrect report: cannot find compliance details for index ${aRecord.index}]`);
+        }
+        
+        for (const aNote of aRecord.notes) {
+            this.echo(`\tNote    @${aNote.index}: ${JSON.stringify(aNote.note)}`);
+
+            let noteEnc = findChunk(aNote.index, aRecord.encChunks);
+            let noteKey = findKey(aNote.index, aRecord.ecdhKeys);
+            if (noteEnc && noteKey) {
+                this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
+                this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
+            } else {
+                this.echo(`[[;red;]Incorrect report: cannot find compliance details for index ${aRecord.index}]`);
+            }
+        }
+        /*const json = JSON.stringify(aRecord, ((key, value) => {
+            if (typeof value === 'bigint') {
+                return value.toString() + 'n';
+            } else if (value instanceof Object.getPrototypeOf(Uint8Array)) {
+                return `${bufToHex(value)}`;
+            } else {
+                return value;
+            }
+        }), 4);
+        this.echo(`${json}`);*/
+    }
 
     this.resume();
     
+}
+
+function findChunk(index: number, array: Array<{data: Uint8Array, index: number}>): Uint8Array | undefined {
+    for(const obj of array) {
+        if (index == obj.index) {
+            return obj.data;
+        }
+    }
+
+    return undefined;
+}
+
+function findKey(index: number, array: Array<{key: Uint8Array, index: number}>): Uint8Array | undefined {
+    for(const obj of array) {
+        if (index == obj.index) {
+            return obj.key;
+        }
+    }
+
+    return undefined;
 }
 
 async function readDate(terminal: any, requestString: string): Promise<Date | null> {
