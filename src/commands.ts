@@ -824,6 +824,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     let giftCards: GiftCard[] = [];
     const treeIndex = (await this.account.getPoolTreeState()).index
     try {
+        this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
         for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
             const alias = `${prefix}_${cardIndex}`;
             const body = JSON.stringify({ "description": `${alias}` });
