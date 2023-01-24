@@ -877,7 +877,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         
     } catch (error) {
         
-        this.echo("process failed with error: ", error)
+        this.echo(`Process failed with error: [[;red;]${error.message}]`);
 
     }
     
