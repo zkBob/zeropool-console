@@ -808,7 +808,7 @@ class GiftCard {
 export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
 
     this.pause();
-    const cloudUrl = process.env.CLOUD_API_ENDPOINT;
+    const cloudUrl = CLOUD_API_ENDPOINT;
     console.log("cloudUrl = ", cloudUrl)
     
     const singleCardBalance = this.account.humanToShielded(cardBalance)
@@ -906,7 +906,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
 }
 
 function redemptionUrl(sk: string, birthIndex: string): string {
-    return `${process.env.GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
+    return `${GIFTCARD_REDEMPTION_URL}/?code=${sk}&index=${birthIndex}`
 }
 
 export function qrcode(data: string): string {
