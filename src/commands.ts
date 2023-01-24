@@ -859,7 +859,11 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const url = redemptionUrl(sk, treeIndex);
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
-        }    
+            if (Number(quantity) > 1) {
+                this.update(-1, `Generating accounts...[${cardIndex + 1}/${Number(quantity)}]`);
+            }
+        }
+        this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
     
         let zipUrl = await zip(giftCards);
         this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
