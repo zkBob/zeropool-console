@@ -1,5 +1,7 @@
 import bip39 from 'bip39-light';
-import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
+import { HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord,
+         EphemeralAddress, PoolLimits, TxType,
+ } from 'zkbob-client-js';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
@@ -749,20 +751,31 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
 export async function complianceReport() {
     this.echo('Please specify optional report interval. To omit the bound just press Enter');
     this.echo('Acceptable formats: ISO8601 ([[;white;]e.g. 2022-10-28 09:15:00]) or linux timestamp (e.g. [[;white;]1666937700])');
-    const fromDate = readDate('[[;green;]Enter report START date time (press Enter to skip)]:');
-    const toDate = readDate('[[;green;]Enter report END date time (press Enter to skip)]:  ');
+    const fromDate = await readDate(this, '[[;green;]Enter report START date time (press Enter to skip)]:');
+    const toDate = await readDate(this, '[[;green;]Enter report END date time (press Enter to skip)]:  ');
     //this.update(-1, `Great! There ${requests.length==1 ? 'is' : 'are'} ${requests.length} request${requests.length==1 ? '' : 's'} collected!`);
     const fromDescr = fromDate ? ` from ${fromDate}` : '';
     const toDescr = fromDate ? ` up to  ${toDate}` : '';
-    this.echo(`Generating compliance report${fromDate}${toDate}...`);
+    this.echo(`Generating compliance report${fromDescr}${toDescr}...`);
+
+    this.pause();
+
+    const report: ComplianceHistoryRecord[] = await this.account.generateComplianceReport(
+        fromDate ? fromDate.getTime() : undefined, 
+        toDate ? toDate.getTime() : undefined,
+        );
+
+    this.echo(`${report}`);
+
+    this.resume();
     
 }
 
-async function readDate(requestString: string): Promise<Date | null> {
+async function readDate(terminal: any, requestString: string): Promise<Date | null> {
     let datetimeStr: string = '';
     let date: Date | null = null;
     do {
-        datetimeStr = await this.read(`${requestString}`);
+        datetimeStr = await terminal.read(`${requestString}`);
         if (datetimeStr == '') break;
         datetimeStr = datetimeStr.trim();
 
@@ -788,7 +801,7 @@ async function readDate(requestString: string): Promise<Date | null> {
         }
 
         if (!date || isNaN(date.valueOf())) {
-            this.error(`Datetime is invalid. Use linux timestamp or ISO 8601 format (YYYY-MM-dd HH:mm:ss)`);
+            terminal.error(`Datetime is invalid. Use linux timestamp or ISO 8601 format (YYYY-MM-dd HH:mm:ss)`);
             continue;
         }
 

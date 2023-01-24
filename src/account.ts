@@ -5,7 +5,7 @@ import { init, ZkBobClient, HistoryRecord,
         TransferConfig, FeeAmount, TxType,
         PoolLimits, InitLibCallback,
         TreeState, EphemeralAddress, SyncStat, TreeNode,
-        RelayerVersion,
+        RelayerVersion, ComplianceHistoryRecord,
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -299,8 +299,8 @@ export default class Account {
         return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
     }
 
-    public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<HistoryRecord[]> {
-        return this.zpClient.getAllHistory(TOKEN_ADDRESS, startTimestamp, endTimestamp);
+    public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<ComplianceHistoryRecord[]> {
+        return this.zpClient.getComplianceReport(TOKEN_ADDRESS, startTimestamp, endTimestamp);
     }
 
     public async rollback(index: bigint): Promise<bigint> {
