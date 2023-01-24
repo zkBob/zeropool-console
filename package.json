@@ -36,7 +36,7 @@
     "uuid": "^9.0.0",
     "web3": "^1.7.1",
     "zeropool-support-js": "https://github.com/zkBob/zeropool-support-js#0.6.0",
-    "zkbob-client-js": "1.4.0"
+    "zkbob-client-js": "file:../zkbob-client-js"
   },
   "devDependencies": {
     "@parcel/compressor-gzip": "^2.0.1",
