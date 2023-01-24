@@ -814,15 +814,22 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     const singleCardBalance = this.account.humanToShielded(cardBalance)
     const requiredTotalSum = singleCardBalance * BigInt(quantity);
     await this.account.syncState();
-    const maxAvailableFunds = await this.account.getMaxAvailableTransfer();
-    if (requiredTotalSum > maxAvailableFunds) {
-        this.echo(`total card balance ${requiredTotalSum} exceeds available funds ${this.account.shieldedToHuman(maxAvailableFunds)}`)
-        return
+    const txRequests = Array(Number(quantity)).fill(singleCardBalance);
+    const fee = await this.account.estimateFee(txRequests, TxType.Transfer, true);
+    if (fee.insufficientFunds) {
+        const [balance] = await this.account.getShieldedBalances(false); // state already updated, do not sync again
+        const requiredStr = `${this.account.shieldedToHuman(requiredTotalSum)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const feeStr = `${this.account.shieldedToHuman(fee.total)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const balanceStr = `${this.account.shieldedToHuman(balance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
+        return;
     }
     const minTransferAmount = await this.account.minTxAmount();
 
     if (singleCardBalance < minTransferAmount) {
-        this.echo(`Single card balance ${requiredTotalSum} less than minimum transfer amount ${this.account.shieldedToHuman(minTransferAmount)}`);
+        const singleStr = `${this.account.shieldedToHuman(singleCardBalance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const minAmountStr = `${this.account.shieldedToHuman(minTransferAmount)} ${SHIELDED_TOKEN_SYMBOL}`;
+        this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
         return
     }
 
