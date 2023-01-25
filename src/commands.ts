@@ -741,8 +741,8 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         if (record.fee > 0) {
         mainPart += `(fee = ${Number(record.fee) / denominator})`;
         }
-    } else if (record.type == HistoryTransactionType.TransferOut) {
-        mainPart = `${statusMark}VOID TRANSFER (NOTES BURNING)`;
+    } else if (record.type == HistoryTransactionType.AggregateNotes) {
+        mainPart = `${statusMark}AGGREGATE NOTES`;
     } else {
         mainPart = `incorrect history record`;
     }
