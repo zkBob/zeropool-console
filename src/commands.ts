@@ -793,6 +793,15 @@ export async function complianceReport() {
                 this.echo(`[[;red;]Incorrect report: cannot find compliance details for index ${aRecord.index}]`);
             }
         }
+
+        const inputs = aRecord.inputs;
+        if (inputs) {
+            this.echo(`\t[[;green;]Input account @${inputs.account.index}:] ${JSON.stringify(inputs.account.account)}`);
+            for (const aNote of inputs.notes) {
+                this.echo(`\t[[;green;]Input note    @${aNote.index}:] ${JSON.stringify(aNote.note)}`);
+            }
+        }
+
         /*const json = JSON.stringify(aRecord, ((key, value) => {
             if (typeof value === 'bigint') {
                 return value.toString() + 'n';
