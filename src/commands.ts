@@ -732,8 +732,6 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
             mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
-        } else if (record.type == HistoryTransactionType.TransferLoopback) {
-            mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO MYSELF`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }
