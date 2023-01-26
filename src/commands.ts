@@ -751,11 +751,11 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
 export async function complianceReport() {
     this.echo('Please specify optional report interval. To omit the bound just press Enter');
     this.echo('Acceptable formats: ISO8601 ([[;white;]e.g. 2022-10-28 09:15:00]) or linux timestamp (e.g. [[;white;]1666937700])');
-    const fromDate = await readDate(this, '[[;green;]Enter report START date time (press Enter to skip)]:');
-    const toDate = await readDate(this, '[[;green;]Enter report END date time (press Enter to skip)]:  ');
+    const fromDate = await readDate(this, '[[;green;]Enter report START date time (press Enter to skip)]: ');
+    const toDate = await readDate(this, '[[;green;]Enter report END date time (press Enter to skip)]:   ');
     //this.update(-1, `Great! There ${requests.length==1 ? 'is' : 'are'} ${requests.length} request${requests.length==1 ? '' : 's'} collected!`);
     const fromDescr = fromDate ? ` from ${fromDate}` : '';
-    const toDescr = fromDate ? ` up to  ${toDate}` : '';
+    const toDescr = toDate ? ` up to  ${toDate}` : '';
     this.echo(`Generating compliance report${fromDescr}${toDescr}...`);
 
     this.pause();
@@ -772,13 +772,16 @@ export async function complianceReport() {
         this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
         this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
 
-        let accEnc = findChunk(aRecord.index, aRecord.encChunks);
-        let accKey = findKey(aRecord.index, aRecord.ecdhKeys);
-        if (accEnc && accKey) {
-            this.echo(`\t      encrypted: ${bufToHex(accEnc)}`);
-            this.echo(`\t      ECDH key:  ${bufToHex(accKey)}`);
-        } else {
-            this.echo(`[[;red;]Incorrect report: cannot find compliance details for index ${aRecord.index}]`);
+        // The account for incoming transfers cannot be decrypted
+        if (aRecord.type != HistoryTransactionType.TransferIn) {
+            let accEnc = findChunk(aRecord.index, aRecord.encChunks);
+            let accKey = findKey(aRecord.index, aRecord.ecdhKeys);
+            if (accEnc && accKey) {
+                this.echo(`\t      encrypted: ${bufToHex(accEnc)}`);
+                this.echo(`\t      ECDH key:  ${bufToHex(accKey)}`);
+            } else {
+                this.echo(`[[;red;]Incorrect report: cannot find compliance details for account @${aRecord.index}]`);
+            }
         }
         
         for (const aNote of aRecord.notes) {
@@ -790,7 +793,7 @@ export async function complianceReport() {
                 this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
                 this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
             } else {
-                this.echo(`[[;red;]Incorrect report: cannot find compliance details for index ${aRecord.index}]`);
+                this.echo(`[[;red;]Incorrect report: cannot find compliance details for note @${aNote.index}]`);
             }
         }
 
@@ -869,6 +872,7 @@ async function readDate(terminal: any, requestString: string): Promise<Date | nu
 
         if (!date || isNaN(date.valueOf())) {
             terminal.error(`Datetime is invalid. Use linux timestamp or ISO 8601 format (YYYY-MM-dd HH:mm:ss)`);
+            datetimeStr = '';
             continue;
         }
 
