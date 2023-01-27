@@ -769,11 +769,19 @@ export async function complianceReport() {
     for (const aRecord of report) {
         this.echo(`[[;white;]${humanReadable(aRecord, denominator)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
         this.echo(`\tTx index:  ${aRecord.index}`);
-        this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
-        this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
 
-        // The account for incoming transfers cannot be decrypted
+        // Incoming transfer - is a special case:
+        //  - the output account for incoming transfers cannot be decrypted
+        //  - the nullifier doesn't take into account (it's not belong to us)
+        //  - the next nullifier cannot be calculated without output account
         if (aRecord.type != HistoryTransactionType.TransferIn) {
+            this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
+            if (aRecord.nextNullifier) {
+                this.echo(`\tNext nullifier: ${bufToHex(aRecord.nextNullifier)}`);
+            }
+
+            this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
+
             let accEnc = findChunk(aRecord.index, aRecord.encChunks);
             let accKey = findKey(aRecord.index, aRecord.ecdhKeys);
             if (accEnc && accKey) {
@@ -816,6 +824,26 @@ export async function complianceReport() {
         }), 4);
         this.echo(`${json}`);*/
     }
+
+    const space = 4;
+    const replacer = (key, value) => {
+        if (typeof value === 'bigint') {
+            return value.toString() + 'n';
+        } else if (value instanceof Object.getPrototypeOf(Uint8Array)) {
+            return `${bufToHex(value)}`;
+        }  else {
+            return value;
+        }
+    }
+
+    const json = report.map((aRecord) => {
+        return JSON.stringify(aRecord, replacer, space);
+    });
+
+    this.echo(`[[;yellow;]${json}]`);
+
+    //let url = window.URL.createObjectURL(new Blob([JSON.stringify(report, )], { type: "application/zip" }));
+    //return url
 
     this.resume();
     
