@@ -5,7 +5,7 @@ import { init, ZkBobClient, HistoryRecord,
         TransferConfig, FeeAmount, TxType,
         PoolLimits, InitLibCallback,
         TreeState, EphemeralAddress, SyncStat, TreeNode,
-        RelayerVersion,
+        ServiceVersion,
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -548,16 +548,20 @@ export default class Account {
         return await this.zpClient.verifyShieldedAddress(shieldedAddress);
     }
 
-    public setProverMode(mode: ProverMode) {
-        this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
+    public async setProverMode(mode: ProverMode) {
+        await this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
     }
 
     public getProverMode(): ProverMode {
         return this.zpClient.getProverMode(TOKEN_ADDRESS);
     }
     
-    public async relayerVersion(): Promise<RelayerVersion> {
+    public async relayerVersion(): Promise<ServiceVersion> {
         return await this.zpClient.getRelayerVersion(TOKEN_ADDRESS);
+    }
+
+    public async proverVersion(): Promise<ServiceVersion> {
+        return await this.zpClient.getProverVersion(TOKEN_ADDRESS);
     }
 
     private decryptSeed(password: string): string {
