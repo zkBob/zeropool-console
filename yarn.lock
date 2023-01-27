@@ -6024,6 +6024,13 @@ lie@~3.3.0:
   dependencies:
     immediate "~3.0.5"
 
+lie@~3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/lie/-/lie-3.3.0.tgz#dcf82dee545f46074daf200c7c1c5a08e0f40f6a"
+  integrity sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==
+  dependencies:
+    immediate "~3.0.5"
+
 lightningcss-darwin-arm64@1.17.1:
   version "1.17.1"
   resolved "https://registry.yarnpkg.com/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.17.1.tgz#d0384a47f19f1a02c29074930a23e5888e76b11a"

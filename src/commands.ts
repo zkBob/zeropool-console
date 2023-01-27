@@ -984,6 +984,7 @@ export async function getVersion() {
     
     this.resume();
 }
+
 class GiftCard {
     alias: string;
     cloudId: string;
@@ -1101,6 +1102,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     }
     
     this.resume();
+
 }
 
 function redemptionUrl(sk: string, birthIndex: string): string {
