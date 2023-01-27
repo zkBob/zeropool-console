@@ -121,6 +121,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `reset` log out from the current account
 
+`account-id` get the current account unique id'
+
 `support-id` print current support id (changed on each library initialization)
 
 `version` print console and relayer versions

@@ -172,6 +172,10 @@ export default class Account {
         return await this.client.getAddress();
     }
 
+    public getAccountId(): string {
+        return this.zpClient.getAccountId();
+    }
+
     public async genShieldedAddress(): Promise<string> {
         return await this.zpClient.generateAddress(TOKEN_ADDRESS);
     }

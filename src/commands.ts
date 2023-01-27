@@ -8,7 +8,7 @@ import { HistoryRecordState } from 'zkbob-client-js/lib/history';
 import { TransferConfig } from 'zkbob-client-js';
 import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
 import { ProverMode } from 'zkbob-client-js/lib/config';
-
+import JSZip from "jszip";
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -765,6 +765,8 @@ export async function complianceReport() {
         toDate ? toDate.getTime() : undefined,
         );
 
+    const reportGeneratedDate = new Date();
+
     const denominator = 1000000000;
     for (const aRecord of report) {
         this.echo(`[[;white;]${humanReadable(aRecord, denominator)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
@@ -808,22 +810,20 @@ export async function complianceReport() {
         const inputs = aRecord.inputs;
         if (inputs) {
             this.echo(`\t[[;green;]Input account @${inputs.account.index}:] ${JSON.stringify(inputs.account.account)}`);
+            this.echo(`\t\t...intermediate nullifier hash: ${inputs.intermediateNullifier}`);
             for (const aNote of inputs.notes) {
                 this.echo(`\t[[;green;]Input note    @${aNote.index}:] ${JSON.stringify(aNote.note)}`);
             }
         }
-
-        /*const json = JSON.stringify(aRecord, ((key, value) => {
-            if (typeof value === 'bigint') {
-                return value.toString() + 'n';
-            } else if (value instanceof Object.getPrototypeOf(Uint8Array)) {
-                return `${bufToHex(value)}`;
-            } else {
-                return value;
-            }
-        }), 4);
-        this.echo(`${json}`);*/
     }
+
+    this.echo('[[;white;]--------------------------------END-OF-REPORT--------------------------------]\n');
+
+    let metadata: any = {};
+    metadata.userId = this.account.getAccountId();
+    metadata.startTimestamp = fromDate ? fromDate.getTime() : null;
+    metadata.endTimestamp = toDate ? toDate.getTime() : null;
+    metadata.recordsCount = report.length;
 
     const space = 4;
     const replacer = (key, value) => {
@@ -836,14 +836,22 @@ export async function complianceReport() {
         }
     }
 
-    const json = report.map((aRecord) => {
-        return JSON.stringify(aRecord, replacer, space);
-    });
+    let zipFile = new JSZip();
+    zipFile.file(`metadata.json`, JSON.stringify(metadata, replacer, space));
+    zipFile.file(`transactions.json`, JSON.stringify(report, replacer, space));
+    let zipped = await zipFile.generateAsync({ type: 'blob' })
+    let reportUrl = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
 
-    this.echo(`[[;yellow;]${json}]`);
+    if (fromDate) {
+        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${fromDate.getTime()})`); 
+    }
+    if (toDate) {
+        this.echo(`The report time interval end:   [[;white;]${toDate.toLocaleString()}] (${toDate.getTime()})`);
+    }
+    this.echo(`Records in report: [[;white;]${report.length}]`);
+    this.echo(`Report was generated at: [[;white;]${reportGeneratedDate.toLocaleString()}] (${reportGeneratedDate.getTime()})`);
 
-    //let url = window.URL.createObjectURL(new Blob([JSON.stringify(report, )], { type: "application/zip" }));
-    //return url
+    this.echo(`You could also [[!;;;;${reportUrl}]download raw report] now`); 
 
     this.resume();
     
@@ -923,6 +931,12 @@ export function clear() {
 export function reset() {
     this.account = null;
     this.reset();
+}
+
+export function getAccountId() {
+    this.pause();
+    this.echo(`Account unique ID:  [[;white;]${this.account.getAccountId()}]`);
+    this.resume();
 }
 
 export function getSupportId() {

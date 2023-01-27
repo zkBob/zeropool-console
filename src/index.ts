@@ -64,6 +64,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'prover-info': [c.getProverInfo, '', 'print info about the used prover'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
+  'account-id': [c.getAccountId, '', 'get the current account unique id'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'
   ],
@@ -184,6 +185,7 @@ jQuery(async function ($) {
         callback(Object.keys(COMMANDS));
       }
     },
+    anyLinks:true,
     historyFilter: function (command) {
       return PRIVATE_COMMANDS.indexOf(command) == -1;
     },
