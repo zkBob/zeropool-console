@@ -630,7 +630,7 @@ export async function getEphemeralPrivKey(index: string) {
 
 export async function setProverMode(mode: ProverMode) {
     this.pause();
-    this.account.setProverMode(mode);
+    await this.account.setProverMode(mode);
     this.echo(`Prover mode: ${this.account.getProverMode()}`);
     this.resume();
 }
@@ -657,6 +657,17 @@ export async function getProverInfo() {
                 this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
             }
             break;
+    }
+
+    if (proverMode != ProverMode.Local) {
+        this.echo(`Current prover version:  ...fetching...`);
+
+        try {
+            const ver = await this.account.proverVersion();
+            this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
+        } catch(err) {
+            this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
+        }
     }
     this.resume();
 }
@@ -959,6 +970,17 @@ export async function getVersion() {
     } catch (err) {
         this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
     }
+
+    if (this.account.getProverMode() != ProverMode.Local) {
+        this.echo(`Current prover version:  ...fetching...`);
+
+        try {
+            const ver = await this.account.proverVersion();
+            this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
+        } catch(err) {
+            this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
+        }
+    }
     
     this.resume();
 }
@@ -1079,7 +1101,6 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     }
     
     this.resume();
-
 }
 
 function redemptionUrl(sk: string, birthIndex: string): string {
