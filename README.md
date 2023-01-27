@@ -132,3 +132,7 @@ Suppose you already done local running and set appropriated parameters and setti
 `help` display CLI commands list
 
 `tutorial` print usage example
+
+## Gift cards commands
+
+`gift-cards <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids

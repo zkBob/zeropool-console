@@ -1439,6 +1439,11 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==
 
+"@ribpay/qr-code-generator@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@ribpay/qr-code-generator/-/qr-code-generator-1.0.6.tgz#b0e5b43af9c1a1fe8fad8c089bdbd1af23e8db1f"
+  integrity sha512-Pucebv9RyNL2+xntvCJ7TQiWoC9hsEFkMlV0KMVnPXzKVn7mF3V+c/2A8L/iHm8QnZMtzQjb5cXJJdaigeoVjg==
+
 "@scure/base@1.0.0", "@scure/base@~1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@scure/base/-/base-1.0.0.tgz#109fb595021de285f05a7db6806f2f48296fcee7"
@@ -6011,6 +6016,13 @@ levn@^0.3.0, levn@~0.3.0:
 
 "libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web-debug":
   version "0.9.0"
+
+lie@~3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/lie/-/lie-3.3.0.tgz#dcf82dee545f46074daf200c7c1c5a08e0f40f6a"
+  integrity sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==
+  dependencies:
+    immediate "~3.0.5"
 
 lie@~3.3.0:
   version "3.3.0"

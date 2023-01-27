@@ -66,6 +66,8 @@ export default class Account {
             TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
             SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
             DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
+            CLOUD_API_ENDPOINT = process.env.CLOUD_API_ENDPOINT;
+            GIFTCARD_REDEMPTION_URL = process.env.GIFTCARD_REDEMPTION_URL;
         }
     }
 
@@ -352,6 +354,9 @@ export default class Account {
         return await this.zpClient.getLimits(TOKEN_ADDRESS, addr, false);
     }
 
+    public async minTxAmount(): Promise<bigint> {
+        return await this.zpClient.minTxAmount();
+     }
     public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
         return await this.zpClient.calcMaxAvailableTransfer(TOKEN_ADDRESS, false);
     }

@@ -68,15 +68,18 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'
   ],
+  'gift-cards':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
   'environment': [
     function () {
-      this.echo(`Network: ${NETWORK}`);
-      this.echo(`RPC URL: ${RPC_URL}`);
-      this.echo(`Relayer: ${RELAYER_URL}`);
-      this.echo(`Pool:    ${CONTRACT_ADDRESS}`);
-      this.echo(`Token:   ${TOKEN_ADDRESS}`);
-      this.echo(`Minter:  ${MINTER_ADDRESS}`);
-      this.echo(`Prover:  ${DELEGATED_PROVER_URL}`)
+      this.echo(`Network:   ${NETWORK}`);
+      this.echo(`RPC URL:   ${RPC_URL}`);
+      this.echo(`Relayer:   ${RELAYER_URL}`);
+      this.echo(`Pool:      ${CONTRACT_ADDRESS}`);
+      this.echo(`Token:     ${TOKEN_ADDRESS}`);
+      this.echo(`Minter:    ${MINTER_ADDRESS}`);
+      this.echo(`Prover:    ${DELEGATED_PROVER_URL}`)
+      this.echo(`Cloud API: ${CLOUD_API_ENDPOINT}`);
+      this.echo(`UI URL:    ${GIFTCARD_REDEMPTION_URL}`);
     },
     '',
     'get environment constants'
