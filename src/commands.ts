@@ -779,7 +779,7 @@ export async function complianceReport() {
         toDate ? toDate.getTime() : undefined,
         );
 
-    const reportGeneratedDate = new Date();
+    const genDate = new Date();
 
     const denominator = 1000000000;
     for (const aRecord of report) {
@@ -798,8 +798,8 @@ export async function complianceReport() {
 
             this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
 
-            let accEnc = findChunk(aRecord.index, aRecord.encChunks);
-            let accKey = findKey(aRecord.index, aRecord.ecdhKeys);
+            let accEnc = aRecord.encChunks.find(obj => obj.index == aRecord.index)?.data;
+            let accKey = aRecord.ecdhKeys.find(obj => obj.index == aRecord.index)?.key;
             if (accEnc && accKey) {
                 this.echo(`\t      encrypted: ${bufToHex(accEnc)}`);
                 this.echo(`\t      ECDH key:  ${bufToHex(accKey)}`);
@@ -811,8 +811,8 @@ export async function complianceReport() {
         for (const aNote of aRecord.notes) {
             this.echo(`\tNote    @${aNote.index}: ${JSON.stringify(aNote.note)}`);
 
-            let noteEnc = findChunk(aNote.index, aRecord.encChunks);
-            let noteKey = findKey(aNote.index, aRecord.ecdhKeys);
+            let noteEnc = aRecord.encChunks.find(obj => obj.index == aNote.index)?.data;
+            let noteKey = aRecord.ecdhKeys.find(obj => obj.index == aNote.index)?.key;
             if (noteEnc && noteKey) {
                 this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
                 this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
@@ -835,9 +835,12 @@ export async function complianceReport() {
 
     let metadata: any = {};
     metadata.userId = this.account.getAccountId();
-    metadata.startTimestamp = fromDate ? fromDate.getTime() : null;
-    metadata.endTimestamp = toDate ? toDate.getTime() : null;
+    metadata.exportTimestamp = Math.floor(genDate.getTime() / 1000);
+    metadata.startTimestamp = fromDate ? Math.floor(fromDate.getTime() / 1000) : null;
+    metadata.endTimestamp = toDate ? Math.floor(toDate.getTime() / 1000) : null;
     metadata.recordsCount = report.length;
+
+    const exportReport = {metadata, transactions: report};
 
     const space = 4;
     const replacer = (key, value) => {
@@ -851,19 +854,18 @@ export async function complianceReport() {
     }
 
     let zipFile = new JSZip();
-    zipFile.file(`metadata.json`, JSON.stringify(metadata, replacer, space));
-    zipFile.file(`transactions.json`, JSON.stringify(report, replacer, space));
+    zipFile.file(`report_${metadata.userId.slice(0, 8)}_${dateStrForFilename(genDate)}.json`, JSON.stringify(exportReport, replacer, space));
     let zipped = await zipFile.generateAsync({ type: 'blob' })
     let reportUrl = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
 
     if (fromDate) {
-        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${fromDate.getTime()})`); 
+        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${Math.floor(fromDate.getTime() / 1000)})`); 
     }
     if (toDate) {
-        this.echo(`The report time interval end:   [[;white;]${toDate.toLocaleString()}] (${toDate.getTime()})`);
+        this.echo(`The report time interval end:   [[;white;]${toDate.toLocaleString()}] (${Math.floor(toDate.getTime() / 1000)})`);
     }
     this.echo(`Records in report: [[;white;]${report.length}]`);
-    this.echo(`Report was generated at: [[;white;]${reportGeneratedDate.toLocaleString()}] (${reportGeneratedDate.getTime()})`);
+    this.echo(`Report was generated at: [[;white;]${genDate.toLocaleString()}] (${Math.floor(genDate.getTime() / 1000)})`);
 
     this.echo(`You could also [[!;;;;${reportUrl}]download raw report] now`); 
 
@@ -871,24 +873,14 @@ export async function complianceReport() {
     
 }
 
-function findChunk(index: number, array: Array<{data: Uint8Array, index: number}>): Uint8Array | undefined {
-    for(const obj of array) {
-        if (index == obj.index) {
-            return obj.data;
-        }
-    }
+function dateStrForFilename(date: Date): string {
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hour = date.getHours().toString().padStart(2, '0');
+    const min = date.getMinutes().toString().padStart(2, '0');
 
-    return undefined;
-}
-
-function findKey(index: number, array: Array<{key: Uint8Array, index: number}>): Uint8Array | undefined {
-    for(const obj of array) {
-        if (index == obj.index) {
-            return obj.key;
-        }
-    }
-
-    return undefined;
+    return `${year}-${month}-${day}_${hour}-${min}`;
 }
 
 async function readDate(terminal: any, requestString: string): Promise<Date | null> {
