@@ -178,18 +178,22 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
         }
 
         const txTotalAmount = notes.map(note => note.amountGwei).reduce((acc, cur) => acc + cur, BigInt(0));
-        if (amounts.length > 1 || notes.length > 1) {   // output notes details in case of multi-note configuration
-            this.echo(`TX#${i} ${this.account.shieldedToHuman(txTotalAmount)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
-            for (const aNote of notes) {
-                if(aNote.destination != lastDest) {
-                    lastDest = aNote.destination;
-                    curColorIdx = (curColorIdx + 1) % multiTxColors.length;
-                }
-                this.echo(`     [[;${multiTxColors[curColorIdx]};]${this.account.shieldedToHuman(aNote.amountGwei)}] ${SHIELDED_TOKEN_SYMBOL} -> ${aNote.destination}`);
-            }
+        if (notes.length == 0) {
+            this.echo(`TX#${i} Aggregate notes: ${this.account.shieldedToHuman(part.inNotesBalance)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
         } else {
-            const color = (notes.length == 0 ? 'gray' : 'green');
-            this.echo(`TX#${i} [[;${color};]${this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+            if (amounts.length > 1 || notes.length > 1) {
+                this.echo(`TX#${i} ${this.account.shieldedToHuman(txTotalAmount)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+                for (const aNote of notes) {
+                    if(aNote.destination != lastDest) {
+                        lastDest = aNote.destination;
+                        curColorIdx = (curColorIdx + 1) % multiTxColors.length;
+                    }
+                    this.echo(`     [[;${multiTxColors[curColorIdx]};]${this.account.shieldedToHuman(aNote.amountGwei)}] ${SHIELDED_TOKEN_SYMBOL} -> ${aNote.destination}`);
+                }
+            } else {
+                const color = (notes.length == 0 ? 'gray' : 'green');
+                this.echo(`TX#${i} [[;${color};]${this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+            }
         }
     }
 }
@@ -742,8 +746,6 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
             mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
-        } else if (record.type == HistoryTransactionType.TransferLoopback) {
-            mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO MYSELF`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }
@@ -751,8 +753,8 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
         if (record.fee > 0) {
         mainPart += `(fee = ${Number(record.fee) / denominator})`;
         }
-    } else if (record.type == HistoryTransactionType.TransferOut) {
-        mainPart = `${statusMark}VOID TRANSFER (NOTES BURNING)`;
+    } else if (record.type == HistoryTransactionType.AggregateNotes) {
+        mainPart = `${statusMark}AGGREGATE NOTES`;
     } else {
         mainPart = `incorrect history record`;
     }
