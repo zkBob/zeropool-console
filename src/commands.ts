@@ -697,7 +697,7 @@ export async function printHistory() {
             }
 
 
-            const prep = tx.type == HistoryTransactionType.TransferIn ? 'ON' : 'TO';
+            const prep = (tx.type == HistoryTransactionType.TransferIn || tx.type == HistoryTransactionType.DirectDeposit ) ? 'ON' : 'TO';
             for (let [key, value] of directions) {
                 let notesCntDescription = '';
                 if (value.notesCnt > 1) {
@@ -746,6 +746,8 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
             mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
+        } else if (record.type == HistoryTransactionType.DirectDeposit) {
+            mainPart = `${statusMark}DEPOSITED DIRECT ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }

@@ -6014,15 +6014,11 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-libzkbob-rs-wasm-web-mt@0.9.0:
+"libzkbob-rs-wasm-web-mt@file:../libzkbob-rs/libzkbob-rs-wasm/web-mt-debug":
   version "0.9.0"
-  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-0.9.0.tgz#0f3cf5353392c384e8cf827f2abc0daf31acadb3"
-  integrity sha512-3z6gw9n+iW7QGS63uqTM7bUtdNBcCA50JsptrfIOW11+kjxGSEH1fY/VB84C3Cod5SST7Ye8mF2YwmbzsaNCFw==
 
-libzkbob-rs-wasm-web@0.9.0:
+"libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web-debug":
   version "0.9.0"
-  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-0.9.0.tgz#8bf6198382bbdd3750ee7386b0ffc32ea2be09c3"
-  integrity sha512-H9a6QYuR7ZXhwSOstJWAobJh128xV5EI66wQSw/oMFjGvMgD8JuClVw/eDLV+WDncFuT7p2OPnAPwBdeehVx7A==
 
 lie@~3.3.0:
   version "3.3.0"
@@ -6419,10 +6415,15 @@ minimatch@^3.0.4, minimatch@^3.1.1:
   dependencies:
     brace-expansion "^1.1.7"
 
-minimist@^1.2.0, minimist@^1.2.6:
+minimist@^1.2.0:
   version "1.2.7"
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.7.tgz#daa1c4d91f507390437c6a8bc01078e7000c4d18"
   integrity sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g==
+
+minimist@^1.2.6:
+  version "1.2.8"
+  resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.8.tgz#c1a464e7693302e082a075cee0c057741ac4772c"
+  integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
 
 minipass@^2.6.0, minipass@^2.9.0:
   version "2.9.0"
@@ -10080,7 +10081,7 @@ yargs@^13.3.2:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-zkbob-client-js@../zkbob-client-js:
+"zkbob-client-js@file:../zkbob-client-js":
   version "1.4.0"
   dependencies:
     "@ethereumjs/util" "^8.0.2"
@@ -10091,8 +10092,8 @@ zkbob-client-js@../zkbob-client-js:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "0.9.0"
-    libzkbob-rs-wasm-web-mt "0.9.0"
+    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-1.4.0-abf67dd5-1914-40f4-96b6-6d49aba0a89a-1676207870684/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-debug"
+    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-1.4.0-abf67dd5-1914-40f4-96b6-6d49aba0a89a-1676207870684/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt-debug"
     regenerator-runtime "^0.13.9"
     wasm-feature-detect "^1.2.11"
     web3 "1.8.0"
