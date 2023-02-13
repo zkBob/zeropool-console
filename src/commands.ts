@@ -313,6 +313,18 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
 
+export async function directDeposit(to: string, amount: string) {
+    if ((await this.account.verifyShieldedAddress(to)) === false) {
+        this.error(`Shielded address ${to} is invalid. Please check it!`);
+    } else {
+        this.echo(`Performing direct deposit...`);
+        this.pause();
+        const txHash = await this.account.directDeposit(to, this.account.humanToShielded(amount));
+        this.resume();
+        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    }
+}
+
 export async function transferShielded(to: string, amount: string, times: string) {
     if ((await this.account.verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);

@@ -69,6 +69,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `deposit-shielded-permittable-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
 
+`direct-deposit <shielded address> <amount>` send tokens to the pool directly to receive it on the specified zkAddress
+
 `transfer-shielded <shielded address> <amount> [times | +]` move shielded tokens to the another zkBob account (inside a pool). You can specify `times` numeric value to repeat the operation several times ***OR*** enter the multitransfer mode with adding `+` sign at the end of the command
 
 `withdraw-shielded <amount> [address] [times]` withdraw shielded tokens from the zk accouint to the native address (to the your account if address is ommited). Specify `times` numeric value to repeat the operation several times

@@ -93,6 +93,7 @@ export default class Account {
                 providerOrUrl: RPC_URL,
             });
             client = new EthereumClient(provider, { transactionUrl: TRANSACTION_URL });
+            client.gasMultiplier = 1.2; // increase gas
             network = new EvmNetwork(RPC_URL);
         } else if (isSubstrateBased(NETWORK)) {
             client = await PolkadotClient.create(mnemonic, { rpcUrl: RPC_URL, transactionUrl: TRANSACTION_URL });
@@ -491,6 +492,27 @@ export default class Account {
 
             throw Error('State is not ready for transact');
         }
+    }
+
+    // returns txHash in promise
+    public async directDeposit(to: string, amount: bigint): Promise<string> {
+        const ddFee = (await this.zpClient.directDepositFee(TOKEN_ADDRESS));
+        const amountWithFeeWei = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + ddFee);
+
+        if (isEvmBased(NETWORK)) {
+            let totalApproveAmount = amountWithFeeWei;
+            const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
+            if (totalApproveAmount > currentAllowance) {
+                totalApproveAmount -= currentAllowance;
+                console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
+                await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+            } else {
+                console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+            }
+        }
+
+        console.log('Making direct deposit...');
+        return await this.client.directDeposit(CONTRACT_ADDRESS, amountWithFeeWei.toString(), to);
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
