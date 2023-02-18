@@ -499,13 +499,15 @@ export default class Account {
         const ddFee = (await this.zpClient.directDepositFee(TOKEN_ADDRESS));
         const amountWithFeeWei = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + ddFee);
 
+        const ddContract = await this.client.getDirectDepositContract(CONTRACT_ADDRESS);
+
         if (isEvmBased(NETWORK)) {
             let totalApproveAmount = amountWithFeeWei;
-            const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
+            const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, ddContract);
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
-                console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-                await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+                console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
+                await this.client.increaseAllowance(TOKEN_ADDRESS, ddContract, totalApproveAmount.toString());
             } else {
                 console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
             }
