@@ -33,6 +33,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'testnet-mint': [c.mint, ' <amount>', 'mint some unshielded tokens'],
   'transfer': [c.transfer, ' <to> <amount>', ' transfer native coins to the destination'],
   'transfer-token': [c.transferToken, ' <to> <amount>', 'transfer unshielded tokens to the destination account'],
+  'approve-token': [c.approveToken, ' <spender> <amount>', 'approve allowance to spend your token for the specified spender'],
   'gen-shielded-address': [c.genShieldedAddress, '[number]', 'generate a new zkBob shielded address (or several addressed)'],
   'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
   'deposit-shielded': [c.depositShielded, '<amount> [times]', 'shield some tokens [via approving allowance]'],

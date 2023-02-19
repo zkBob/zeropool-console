@@ -124,6 +124,14 @@ export async function transferToken(to: string, amount: string) {
     this.resume();
 }
 
+export async function approveToken(spender: string, amount: string) {
+    this.pause();
+    this.echo(`Approving ${TOKEN_SYMBOL}... `);
+    const txHash = await this.account.approveAllowance(spender, this.account.humanToWei(amount));
+    this.update(-1, `Approving ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
+}
+
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
     let amounts: bigint[] = [];
     amounts.push(this.account.humanToShielded(amount));

@@ -57,6 +57,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `transfer-token <to> <amount>` transfer tokens to the destination L1 address
 
+`approve-token <spender> <amount>` approve allowance to spend your token for the specified spender
+
 ## L2-level commands
 
 `gen-shielded-address` generate a new zkBob shielded address

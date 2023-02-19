@@ -320,7 +320,11 @@ export default class Account {
     }
 
     public async mint(amount: bigint): Promise<string> {
-        return await this.client.mint(MINTER_ADDRESS, amount.toString());
+        if (MINTER_ADDRESS) {
+            return await this.client.mint(MINTER_ADDRESS, amount.toString());
+        } else {
+            throw new Error('Cannot find the minter address. Most likely that token is not for test');
+        }
     }
 
     public async transfer(to: string, amount: bigint): Promise<string> {
@@ -385,7 +389,7 @@ export default class Account {
                     console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
                     await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
                 } else {
-                    console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+                    console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
                 }
             }
 
@@ -400,6 +404,7 @@ export default class Account {
             throw Error('State is not ready for transact');
         }
     }
+    
 
     private async createPermittableDepositData(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
         const tokenName = await this.client.getTokenName(tokenAddress);
@@ -509,12 +514,18 @@ export default class Account {
                 console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
                 await this.client.increaseAllowance(TOKEN_ADDRESS, ddContract, totalApproveAmount.toString());
             } else {
-                console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+                console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
             }
         }
 
         console.log('Making direct deposit...');
         return await this.client.directDeposit(CONTRACT_ADDRESS, amountWithFeeWei.toString(), to);
+    }
+
+    // returns txHash in promise
+    public async approveAllowance(spender: string, amount: bigint): Promise<string> {
+        console.log(`Approving allowance for ${spender} to spend our tokens (${this.weiToHuman(amount)} ${TOKEN_SYMBOL})`);
+        return await this.client.approve(TOKEN_ADDRESS, spender, amount.toString());
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
