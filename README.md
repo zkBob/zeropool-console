@@ -57,6 +57,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `transfer-token <to> <amount>` transfer tokens to the destination L1 address
 
+`approve-token <spender> <amount>` approve allowance to spend your token for the specified spender
+
 ## L2-level commands
 
 `gen-shielded-address` generate a new zkBob shielded address
@@ -68,6 +70,8 @@ Suppose you already done local running and set appropriated parameters and setti
 `deposit-shielded-permittable <amount> [times]` deposit some tokens into zk-account (permit scheme, no native coins needed). Specify `times` numeric value to repeat the operation several times
 
 `deposit-shielded-permittable-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
+
+`direct-deposit <shielded address> <amount> [times]` send tokens to the pool directly to receive it on the specified zkAddress. Specify `times` numeric value to repeat the operation several times
 
 `transfer-shielded <shielded address> <amount> [times | +]` move shielded tokens to the another zkBob account (inside a pool). You can specify `times` numeric value to repeat the operation several times ***OR*** enter the multitransfer mode with adding `+` sign at the end of the command
 
