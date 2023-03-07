@@ -126,6 +126,14 @@ export async function transferToken(to: string, amount: string) {
     this.resume();
 }
 
+export async function approveToken(spender: string, amount: string) {
+    this.pause();
+    this.echo(`Approving ${TOKEN_SYMBOL}... `);
+    const txHash = await this.account.approveAllowance(spender, this.account.humanToWei(amount));
+    this.update(-1, `Approving ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    this.resume();
+}
+
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
     let amounts: bigint[] = [];
     amounts.push(this.account.humanToShielded(amount));
@@ -313,6 +321,22 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
     this.resume();
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+}
+
+export async function directDeposit(to: string, amount: string, times: string) {
+    if ((await this.account.verifyShieldedAddress(to))) {
+        let txCnt = times !== undefined ? Number(times) : 1;
+        for (let i = 0; i < txCnt; i++) {
+            let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
+            this.echo(`Performing direct deposit${cntStr}...`);
+            this.pause();
+            const txHash = await this.account.directDeposit(to, this.account.humanToShielded(amount));
+            this.resume();
+            this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        }
+    } else {
+        this.error(`Shielded address ${to} is invalid. Please check it!`);
+    }
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
@@ -699,7 +723,7 @@ export async function printHistory() {
             }
 
 
-            const prep = tx.type == HistoryTransactionType.TransferIn ? 'ON' : 'TO';
+            const prep = (tx.type == HistoryTransactionType.TransferIn || tx.type == HistoryTransactionType.DirectDeposit ) ? 'ON' : 'TO';
             for (let [key, value] of directions) {
                 let notesCntDescription = '';
                 if (value.notesCnt > 1) {
@@ -748,6 +772,8 @@ function humanReadable(record: HistoryRecord, denominator: number): string {
             mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
             mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} TO ${toAddress}`;
+        } else if (record.type == HistoryTransactionType.DirectDeposit) {
+            mainPart = `${statusMark}DEPOSITED DIRECT ${Number(totalAmount) / denominator} ${SHIELDED_TOKEN_SYMBOL} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }
