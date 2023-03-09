@@ -814,11 +814,13 @@ export async function complianceReport() {
         this.echo(`[[;white;]${humanReadable(aRecord, denominator)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
         this.echo(`\tTx index:  ${aRecord.index}`);
 
-        // Incoming transfer - is a special case:
+        // Incoming transfer and direct deposit - are special cases:
         //  - the output account for incoming transfers cannot be decrypted
         //  - the nullifier doesn't take into account (it's not belong to us)
         //  - the next nullifier cannot be calculated without output account
-        if (aRecord.type != HistoryTransactionType.TransferIn) {
+        if (aRecord.type != HistoryTransactionType.TransferIn && 
+            aRecord.type != HistoryTransactionType.DirectDeposit) 
+        {
             this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
             if (aRecord.nextNullifier) {
                 this.echo(`\tNext nullifier: ${bufToHex(aRecord.nextNullifier)}`);
@@ -839,13 +841,15 @@ export async function complianceReport() {
         for (const aNote of aRecord.notes) {
             this.echo(`\tNote    @${aNote.index}: ${JSON.stringify(aNote.note)}`);
 
-            let noteEnc = aRecord.encChunks.find(obj => obj.index == aNote.index)?.data;
-            let noteKey = aRecord.ecdhKeys.find(obj => obj.index == aNote.index)?.key;
-            if (noteEnc && noteKey) {
-                this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
-                this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
-            } else {
-                this.echo(`[[;red;]Incorrect report: cannot find compliance details for note @${aNote.index}]`);
+            if (aRecord.type != HistoryTransactionType.DirectDeposit) {
+                let noteEnc = aRecord.encChunks.find(obj => obj.index == aNote.index)?.data;
+                let noteKey = aRecord.ecdhKeys.find(obj => obj.index == aNote.index)?.key;
+                if (noteEnc && noteKey) {
+                    this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
+                    this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
+                } else {
+                    this.echo(`[[;red;]Incorrect report: cannot find compliance details for note @${aNote.index}]`);
+                }
             }
         }
 
