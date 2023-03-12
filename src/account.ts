@@ -2,10 +2,10 @@ import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
 import { init, ZkBobClient, HistoryRecord,
-        TransferConfig, FeeAmount, TxType,
-        PoolLimits, InitLibCallback,
-        TreeState, EphemeralAddress, SyncStat, TreeNode,
-        ServiceVersion,
+         TransferConfig, FeeAmount, TxType,
+         PoolLimits, InitLibCallback,
+         TreeState, EphemeralAddress, SyncStat, TreeNode,
+         ServiceVersion,
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -196,17 +196,17 @@ export default class Account {
     }
 
     // wei -> Gwei
-    public weiToShielded(amountWei: bigint): bigint {
-        return this.zpClient.weiToShieldedAmount(TOKEN_ADDRESS, amountWei);
+    public async weiToShielded(amountWei: bigint): Promise<bigint> {
+        return await this.zpClient.weiToShieldedAmount(TOKEN_ADDRESS, amountWei);
     }
 
     // Gwei -> wei
-    public shieldedToWei(amountShielded: bigint): bigint {
-        return this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded);
+    public async shieldedToWei(amountShielded: bigint): Promise<bigint> {
+        return await this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded);
     }
 
     // ^tokens|wei -> wei
-    public humanToWei(amount: string): bigint {
+    public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
             return BigInt(this.client.toBaseUnit(amount.substr(1)));
         }
@@ -215,18 +215,18 @@ export default class Account {
     }
 
     // ^tokens|wei -> Gwei
-    public humanToShielded(amount: string): bigint {
-        return this.weiToShielded(this.humanToWei(amount));
+    public async humanToShielded(amount: string): Promise<bigint> {
+        return await this.weiToShielded(await this.humanToWei(amount));
     }
 
     // Gwei -> tokens
-    public shieldedToHuman(amountShielded: bigint): string {
-        return this.weiToHuman(this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded));
+    public async shieldedToHuman(amountShielded: bigint): Promise<string> {
+        return this.weiToHuman(await this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded));
 
     }
 
     // wei -> tokens
-    public weiToHuman(amountWei: bigint): string {
+    public async weiToHuman(amountWei: bigint): Promise<string> {
         return this.client.fromBaseUnit(amountWei.toString());
     }
 
@@ -382,7 +382,7 @@ export default class Account {
             const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Deposit, false));
 
             if (isEvmBased(NETWORK)) {
-                let totalApproveAmount = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
+                let totalApproveAmount = await this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
                 const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
                 if (totalApproveAmount > currentAllowance) {
                     totalApproveAmount -= currentAllowance;
@@ -502,7 +502,7 @@ export default class Account {
     // returns txHash in promise
     public async directDeposit(to: string, amount: bigint): Promise<string> {
         const ddFee = (await this.zpClient.directDepositFee(TOKEN_ADDRESS));
-        const amountWithFeeWei = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + ddFee);
+        const amountWithFeeWei = await this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + ddFee);
 
         const ddContract = await this.client.getDirectDepositContract(CONTRACT_ADDRESS);
 

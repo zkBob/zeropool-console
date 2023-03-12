@@ -3,13 +3,11 @@ import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, Tx
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { deriveSpendingKey, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
 import { HistoryRecordState } from 'zkbob-client-js/lib/history';
-import { TransferConfig } from 'zkbob-client-js';
-import { TransferRequest, TreeState } from 'zkbob-client-js/lib/client';
+import { TransferConfig, TransferRequest, TreeState } from 'zkbob-client-js';
 import { ProverMode } from 'zkbob-client-js/lib/config';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
-import assert from 'assert';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -81,13 +79,13 @@ export async function getShieldedBalance() {
     const optimisticBalance = await this.account.getOptimisticTotalBalance(false);
 
     this.echo(`[[;gray;]
-[[;white;]Private balance: ${this.account.shieldedToHuman(total)} ${SHIELDED_TOKEN_SYMBOL}]
-      - account: ${this.account.shieldedToHuman(acc)} ${SHIELDED_TOKEN_SYMBOL} (${this.account.shieldedToWei(acc)} wei)
-      - note:    ${this.account.shieldedToHuman(note)} ${SHIELDED_TOKEN_SYMBOL} (${this.account.shieldedToWei(note)} wei)
+[[;white;]Private balance: ${await this.account.shieldedToHuman(total)} ${SHIELDED_TOKEN_SYMBOL}]
+      - account: ${await this.account.shieldedToHuman(acc)} ${SHIELDED_TOKEN_SYMBOL} (${await this.account.shieldedToWei(acc)} wei)
+      - note:    ${await this.account.shieldedToHuman(note)} ${SHIELDED_TOKEN_SYMBOL} (${await this.account.shieldedToWei(note)} wei)
 ]`);
 
     if (total != optimisticBalance) {
-        this.echo(`[[;green;]Optimistic private balance: ${this.account.shieldedToHuman(optimisticBalance)} ${SHIELDED_TOKEN_SYMBOL} (${this.account.shieldedToWei(optimisticBalance)} wei)
+        this.echo(`[[;green;]Optimistic private balance: ${await this.account.shieldedToHuman(optimisticBalance)} ${SHIELDED_TOKEN_SYMBOL} (${await this.account.shieldedToWei(optimisticBalance)} wei)
 ]`);
     }
 
@@ -96,14 +94,14 @@ export async function getShieldedBalance() {
 
 export async function getTokenBalance() {
     const balanceWei = await this.account.getTokenBalance();
-    const human = this.account.weiToHuman(balanceWei);
+    const human = await this.account.weiToHuman(balanceWei);
     this.echo(`Token balance: [[;white;]${human} ${TOKEN_SYMBOL}] (${balanceWei} wei)`);
 }
 
 export async function mint(amount: string) {
     this.pause();
     this.echo('Minting tokens... ');
-    const txHash = await this.account.mint(this.account.humanToWei(amount));
+    const txHash = await this.account.mint(await this.account.humanToWei(amount));
     this.update(-1, `Minting tokens... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
@@ -111,7 +109,7 @@ export async function mint(amount: string) {
 export async function transfer(to: string, amount: string) {
     this.pause();
     this.echo(`Transfering ${this.account.nativeSymbol()}... `);
-    const txHash = await this.account.transfer(to, this.account.humanToWei(amount));
+    const txHash = await this.account.transfer(to, await this.account.humanToWei(amount));
     this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
@@ -119,7 +117,7 @@ export async function transfer(to: string, amount: string) {
 export async function transferToken(to: string, amount: string) {
     this.pause();
     this.echo(`Transfering ${TOKEN_SYMBOL}... `);
-    const txHash = await this.account.transferToken(to, this.account.humanToWei(amount));
+    const txHash = await this.account.transferToken(to, await this.account.humanToWei(amount));
     this.update(-1, `Transfering ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
@@ -127,17 +125,17 @@ export async function transferToken(to: string, amount: string) {
 export async function approveToken(spender: string, amount: string) {
     this.pause();
     this.echo(`Approving ${TOKEN_SYMBOL}... `);
-    const txHash = await this.account.approveAllowance(spender, this.account.humanToWei(amount));
+    const txHash = await this.account.approveAllowance(spender, await this.account.humanToWei(amount));
     this.update(-1, `Approving ${TOKEN_SYMBOL}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
 
 export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
     let amounts: bigint[] = [];
-    amounts.push(this.account.humanToShielded(amount));
+    amounts.push(await this.account.humanToShielded(amount));
     if (requestAdditional == '+' || fee == '+') {
         const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
-        let convertedAmounts: bigint[] = additionalAmounts.trim().split(/\s+/).map(add => this.account.humanToShielded(add));
+        let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
         amounts = amounts.concat(convertedAmounts);
     }
 
@@ -145,7 +143,7 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
     if (fee === undefined || fee == '+') {
         actualFee = await this.account.minFee();
     } else {
-        actualFee = this.account.humanToShielded(fee);
+        actualFee = await this.account.humanToShielded(fee);
     }
     
     this.pause();
@@ -153,7 +151,7 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
     this.resume();
 
     if (amounts.length > 1) {
-        this.echo(`Multi-destination request: ${ amounts.map(a => `^${this.account.shieldedToHuman(a)}`).join(', ') }`);
+        this.echo(`Multi-destination request: ${ amounts.map(async a => `^${await this.account.shieldedToHuman(a)}`).join(', ') }`);
     }
 
     if (result.length == 0) {
@@ -169,7 +167,7 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
         } else {
             this.echo(`Multitransfer detected. To transfer this amount will require ${result.length} txs`);
         }
-        this.echo(`Fee required: ${this.account.shieldedToHuman(totalFee)} ${SHIELDED_TOKEN_SYMBOL}`);
+        this.echo(`Fee required: ${await this.account.shieldedToHuman(totalFee)} ${SHIELDED_TOKEN_SYMBOL}`);
     }
 
     const multiTxColors = ['green', 'purple', 'yellow', 'aqua', 'olive', 'magenta', 'orange', 'pink', 'lime', 'salmon'];
@@ -178,29 +176,29 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
 
     for (let i = 0; i < result.length; i++) {
         const part = result[i];
-        const notes = part.outNotes; //this.account.shieldedToHuman(part.amount);
-        const partFee = this.account.shieldedToHuman(part.fee);
+        const notes = part.outNotes;
+        const partFee = await this.account.shieldedToHuman(part.fee);
         let partLimit = "";
         if (part.accountLimit > 0) {
-            partLimit = `, accountLimit = ${this.account.shieldedToHuman(part.accountLimit)} ${SHIELDED_TOKEN_SYMBOL}`;
+            partLimit = `, accountLimit = ${await this.account.shieldedToHuman(part.accountLimit)} ${SHIELDED_TOKEN_SYMBOL}`;
         }
 
         const txTotalAmount = notes.map(note => note.amountGwei).reduce((acc, cur) => acc + cur, BigInt(0));
         if (notes.length == 0) {
-            this.echo(`TX#${i} Aggregate notes: ${this.account.shieldedToHuman(part.inNotesBalance)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+            this.echo(`TX#${i} Aggregate notes: ${await this.account.shieldedToHuman(part.inNotesBalance)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
         } else {
             if (amounts.length > 1 || notes.length > 1) {
-                this.echo(`TX#${i} ${this.account.shieldedToHuman(txTotalAmount)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} ${await this.account.shieldedToHuman(txTotalAmount)} ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
                 for (const aNote of notes) {
                     if(aNote.destination != lastDest) {
                         lastDest = aNote.destination;
                         curColorIdx = (curColorIdx + 1) % multiTxColors.length;
                     }
-                    this.echo(`     [[;${multiTxColors[curColorIdx]};]${this.account.shieldedToHuman(aNote.amountGwei)}] ${SHIELDED_TOKEN_SYMBOL} -> ${aNote.destination}`);
+                    this.echo(`     [[;${multiTxColors[curColorIdx]};]${await this.account.shieldedToHuman(aNote.amountGwei)}] ${SHIELDED_TOKEN_SYMBOL} -> ${aNote.destination}`);
                 }
             } else {
                 const color = (notes.length == 0 ? 'gray' : 'green');
-                this.echo(`TX#${i} [[;${color};]${this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} [[;${color};]${await this.account.shieldedToHuman(txTotalAmount)}] ${SHIELDED_TOKEN_SYMBOL} [fee: ${partFee}]${partLimit}`);
             }
         }
     }
@@ -208,21 +206,21 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([this.account.humanToShielded(amount)], TxType.Deposit, false);
+    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Deposit, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${this.account.shieldedToHuman(result.total)} ${TOKEN_SYMBOL}]`);
-    this.echo(`Atomic fee:        [[;white;]${this.account.shieldedToHuman(result.totalPerTx)} (${this.account.shieldedToHuman(result.relayer)} + ${this.account.shieldedToHuman(result.l1)}) ${TOKEN_SYMBOL}]`);
+    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${TOKEN_SYMBOL}]`);
+    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${TOKEN_SYMBOL}]`);
     this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeTransfer(amount: string, requestAdditional: string) {
     let amounts: bigint[] = [];
-    amounts.push(this.account.humanToShielded(amount));
+    amounts.push(await this.account.humanToShielded(amount));
     if (requestAdditional == '+') {
         const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
-        let convertedAmounts: bigint[] = additionalAmounts.trim().split(/\s+/).map(add => this.account.humanToShielded(add));
+        let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
         amounts = amounts.concat(convertedAmounts);
     }
 
@@ -232,20 +230,20 @@ export async function estimateFeeTransfer(amount: string, requestAdditional: str
 
     const effectiveAmount = amounts.reduce((acc, cur) => acc + cur, BigInt(0));
 
-    this.echo(`Total fee est.:    [[;white;]${this.account.shieldedToHuman(result.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`Atomic fee:        [[;white;]${this.account.shieldedToHuman(result.totalPerTx)} (${this.account.shieldedToHuman(result.relayer)} + ${this.account.shieldedToHuman(result.l1)}) ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`Transaction count: [[;white;]${result.txCnt}`);
-    this.echo(`Requested amount:  [[;white;]${this.account.shieldedToHuman(effectiveAmount)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`Requested amount:  [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeWithdraw(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([this.account.humanToShielded(amount)], TxType.Withdraw, false);
+    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${this.account.shieldedToHuman(result.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`Atomic fee:        [[;white;]${this.account.shieldedToHuman(result.totalPerTx)} (${this.account.shieldedToHuman(result.relayer)} + ${this.account.shieldedToHuman(result.l1)}) ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
@@ -255,13 +253,13 @@ export async function getLimits(address: string | undefined) {
     const result: PoolLimits = await this.account.getLimits(address);
     this.resume();
 
-    this.echo(`[[;white;]Max available deposit:  ${this.account.shieldedToHuman(result.deposit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...single operation:    ${this.account.shieldedToHuman(result.deposit.components.singleOperation)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...address daily limit: ${this.account.shieldedToHuman(result.deposit.components.dailyForAddress.available)} / ${this.account.shieldedToHuman(result.deposit.components.dailyForAddress.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...total daily limit:   ${this.account.shieldedToHuman(result.deposit.components.dailyForAll.available)} / ${this.account.shieldedToHuman(result.deposit.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...pool limit:          ${this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;white;]Max available withdraw: ${this.account.shieldedToHuman(result.withdraw.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
-    this.echo(`[[;gray;]...total daily limit:   ${this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;white;]Max available deposit:  ${await this.account.shieldedToHuman(result.deposit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...single operation:    ${await this.account.shieldedToHuman(result.deposit.components.singleOperation)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...address daily limit: ${await this.account.shieldedToHuman(result.deposit.components.dailyForAddress.available)} / ${await this.account.shieldedToHuman(result.deposit.components.dailyForAddress.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.deposit.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.deposit.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...pool limit:          ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;white;]Max available withdraw: ${await this.account.shieldedToHuman(result.withdraw.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${SHIELDED_TOKEN_SYMBOL}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
     
 }
@@ -269,8 +267,8 @@ export async function getLimits(address: string | undefined) {
 export async function getMaxAvailableTransfer() {
     this.pause();
     const result = await this.account.getMaxAvailableTransfer();
-    const human = this.account.shieldedToHuman(result);
-    const wei = this.account.shieldedToWei(result);
+    const human = await this.account.shieldedToHuman(result);
+    const wei = await this.account.shieldedToWei(result);
     this.resume();
 
     this.echo(`Max available shielded balance for outcoming transactions: [[;white;]${human} ${SHIELDED_TOKEN_SYMBOL}] (${wei} wei)`);
@@ -283,7 +281,7 @@ export async function depositShielded(amount: string, times: string) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded deposit${cntStr}...`);
         this.pause();
-        const result = await this.account.depositShielded(this.account.humanToShielded(amount));
+        const result = await this.account.depositShielded(await this.account.humanToShielded(amount));
         this.resume();
         this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
@@ -299,7 +297,7 @@ export async function depositShieldedPermittable(amount: string, times: string) 
 
         // Due to the fact that the console is a test tool, we doesn't check address balance here
         // we should get ability to test relayer's behaviour
-        const result = await this.account.depositShieldedPermittable(this.account.humanToShielded(amount));
+        const result = await this.account.depositShieldedPermittable(await this.account.humanToShielded(amount));
 
         this.resume();
         this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
@@ -312,11 +310,11 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     this.echo(`Getting ephemeral acount info...`);
     this.pause();
     let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
-    this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${TOKEN_SYMBOL}`);
+    this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${TOKEN_SYMBOL}`);
 
     // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
     this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
-    const result = await this.account.depositShieldedPermittableEphemeral(this.account.humanToShielded(amount), ephemeralIndex);
+    const result = await this.account.depositShieldedPermittableEphemeral(await this.account.humanToShielded(amount), ephemeralIndex);
     this.resume();
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
@@ -328,7 +326,7 @@ export async function directDeposit(to: string, amount: string, times: string) {
             let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
             this.echo(`Performing direct deposit${cntStr}...`);
             this.pause();
-            const txHash = await this.account.directDeposit(to, this.account.humanToShielded(amount));
+            const txHash = await this.account.directDeposit(to, await this.account.humanToShielded(amount));
             this.resume();
             this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
         }
@@ -343,7 +341,7 @@ export async function transferShielded(to: string, amount: string, times: string
     } else {
         let txCnt = 1;
         let requests: TransferRequest[] = [];
-        requests.push({ destination: to, amountGwei: this.account.humanToShielded(amount)});
+        requests.push({ destination: to, amountGwei: await this.account.humanToShielded(amount)});
 
         if (times == '+') {
             let newRequest = '';
@@ -362,7 +360,7 @@ export async function transferShielded(to: string, amount: string, times: string
                 }
                 let newAmount: bigint;
                 try {
-                    newAmount = this.account.humanToShielded(components[1]);
+                    newAmount = await this.account.humanToShielded(components[1]);
                 } catch (err) {
                     this.error(`Cannot convert \'${components[1]} to the number`);
                     continue;
@@ -403,7 +401,7 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
 
         let requests: TransferRequest[] = [];
         for(let reqIdx = 0; reqIdx < notesCnt; reqIdx++) {
-            requests.push({ destination: to, amountGwei: this.account.humanToShielded(amount)});
+            requests.push({ destination: to, amountGwei: await this.account.humanToShielded(amount)});
         }
 
         for (let i = 0; i < txCnt; i++) {
@@ -426,7 +424,7 @@ export async function withdrawShielded(amount: string, address: string, times: s
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded withdraw${cntStr}...`);
         this.pause();
-        const result = await this.account.withdrawShielded(this.account.humanToShielded(amount), address);
+        const result = await this.account.withdrawShielded(await this.account.humanToShielded(amount), address);
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
@@ -614,8 +612,8 @@ export async function getEphemeral(index: string) {
 
     this.echo(`Index: [[;white;]${addr.index}]`);
     this.echo(`  Address:            [[;white;]${addr.address}]`);
-    this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-    this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+    this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
     this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
     this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
     this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
@@ -636,8 +634,8 @@ export async function getEphemeralUsed() {
 
         this.echo(`Index: [[;white;]${addr.index}]`);
         this.echo(`  Address:            [[;white;]${addr.address}]`);
-        this.echo(`  Token balance:      [[;white;]${this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
-        this.echo(`  Native balance:     [[;white;]${this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${TOKEN_SYMBOL}]`);
+        this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
         this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
         this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
         this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
@@ -861,24 +859,24 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     const cloudUrl = CLOUD_API_ENDPOINT;
     console.log("cloudUrl = ", cloudUrl)
     
-    const singleCardBalance = this.account.humanToShielded(cardBalance)
+    const singleCardBalance = await this.account.humanToShielded(cardBalance)
     const requiredTotalSum = singleCardBalance * BigInt(quantity);
     await this.account.syncState();
     const txRequests = Array(Number(quantity)).fill(singleCardBalance);
     const fee = await this.account.estimateFee(txRequests, TxType.Transfer, true);
     if (fee.insufficientFunds) {
         const [balance] = await this.account.getShieldedBalances(false); // state already updated, do not sync again
-        const requiredStr = `${this.account.shieldedToHuman(requiredTotalSum)} ${SHIELDED_TOKEN_SYMBOL}`;
-        const feeStr = `${this.account.shieldedToHuman(fee.total)} ${SHIELDED_TOKEN_SYMBOL}`;
-        const balanceStr = `${this.account.shieldedToHuman(balance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const requiredStr = `${await this.account.shieldedToHuman(requiredTotalSum)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const feeStr = `${await this.account.shieldedToHuman(fee.total)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const balanceStr = `${await this.account.shieldedToHuman(balance)} ${SHIELDED_TOKEN_SYMBOL}`;
         this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
         return;
     }
     const minTransferAmount = await this.account.minTxAmount();
 
     if (singleCardBalance < minTransferAmount) {
-        const singleStr = `${this.account.shieldedToHuman(singleCardBalance)} ${SHIELDED_TOKEN_SYMBOL}`;
-        const minAmountStr = `${this.account.shieldedToHuman(minTransferAmount)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const singleStr = `${await this.account.shieldedToHuman(singleCardBalance)} ${SHIELDED_TOKEN_SYMBOL}`;
+        const minAmountStr = `${await this.account.shieldedToHuman(minTransferAmount)} ${SHIELDED_TOKEN_SYMBOL}`;
         this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
         return
     }
@@ -933,12 +931,12 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     
         let zipUrl = await zip(giftCards);
         this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
-        const transferRequests:TransferRequest[] = giftCards.map(
-            giftCard =>  {return {
+        const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
+            async giftCard =>  {return {
                 destination: giftCard.address,
-                amountGwei:this.account.humanToShielded(cardBalance) 
+                amountGwei: await this.account.humanToShielded(cardBalance) 
             }
-        } );
+        } ));
         const result = await this.account.transferShielded(transferRequests);
 
         this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
