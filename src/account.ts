@@ -6,6 +6,7 @@ import { init, ZkBobClient, HistoryRecord,
          PoolLimits, InitLibCallback,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
+         ZkBobAccountlessClient,
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -13,7 +14,7 @@ import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 import { NetworkType } from 'zkbob-client-js/lib/network-type';
 import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
 import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
-
+import Web3 from 'web3'
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 import { ProverMode } from 'zkbob-client-js/lib/config';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,6 +42,24 @@ class LocalAccountStorage implements AccountStorage {
     }
 }
 
+function loadDevEnvironment() {
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Dev environment, using local env variables.');
+        NETWORK = process.env.NETWORK;
+        CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+        TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
+        MINTER_ADDRESS = process.env.MINTER_ADDRESS;
+        RELAYER_URL = process.env.RELAYER_URL;
+        RPC_URL = process.env.RPC_URL;
+        TRANSACTION_URL = process.env.TRANSACTION_URL;
+        TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
+        SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
+        DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
+        CLOUD_API_ENDPOINT = process.env.CLOUD_API_ENDPOINT;
+        GIFTCARD_REDEMPTION_URL = process.env.GIFTCARD_REDEMPTION_URL;
+    }
+}
+
 // TODO: Extract timeout management code
 export default class Account {
     readonly accountName: string;
@@ -54,21 +73,7 @@ export default class Account {
         this.accountName = accountName;
         this.storage = new LocalAccountStorage();
 
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Dev environment, using local env variables.');
-            NETWORK = process.env.NETWORK;
-            CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
-            TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
-            MINTER_ADDRESS = process.env.MINTER_ADDRESS;
-            RELAYER_URL = process.env.RELAYER_URL;
-            RPC_URL = process.env.RPC_URL;
-            TRANSACTION_URL = process.env.TRANSACTION_URL;
-            TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
-            SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
-            DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
-            CLOUD_API_ENDPOINT = process.env.CLOUD_API_ENDPOINT;
-            GIFTCARD_REDEMPTION_URL = process.env.GIFTCARD_REDEMPTION_URL;
-        }
+        loadDevEnvironment();
     }
 
     public async init(
@@ -610,5 +615,77 @@ export default class Account {
         }
 
         return seed;
+    }
+}
+
+
+export class NakedClient {
+    private zkClient: ZkBobAccountlessClient;
+
+    constructor() {
+        loadDevEnvironment();
+
+        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
+        const tokens = {
+            [TOKEN_ADDRESS]: {
+                poolAddress: CONTRACT_ADDRESS,
+                relayerUrl: RELAYER_URL,
+                coldStorageConfigPath: bulkConfigUrl,
+                birthindex: undefined,
+                proverMode: ProverMode.Local,
+                delegatedProverUrl: DELEGATED_PROVER_URL,
+            }
+        };
+        const evm = new EvmNetwork(RPC_URL);
+        this.zkClient = new ZkBobAccountlessClient(tokens, uuidv4(), evm);
+    }
+
+    // wei -> Gwei
+    public async weiToShielded(amountWei: bigint): Promise<bigint> {
+        return await this.zkClient.weiToShieldedAmount(TOKEN_ADDRESS, amountWei);
+    }
+
+    // Gwei -> wei
+    public async shieldedToWei(amountShielded: bigint): Promise<bigint> {
+        return await this.zkClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded);
+    }
+
+    // Gwei -> tokens
+    public async shieldedToHuman(amountShielded: bigint): Promise<string> {
+        return this.weiToHuman(await this.zkClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded));
+
+    }
+
+    // wei -> tokens
+    public async weiToHuman(amountWei: bigint): Promise<string> {
+        return Web3.utils.fromWei(amountWei.toString(), 'ether')
+    }
+
+    public async relayerVersion(): Promise<ServiceVersion> {
+        return this.zkClient.getRelayerVersion(TOKEN_ADDRESS);
+    }
+
+    public async proverVersion(): Promise<ServiceVersion> {
+        return this.zkClient.getProverVersion(TOKEN_ADDRESS);
+    }
+
+    public async libraryVersion(): Promise<string> {
+        return this.zkClient.getLibraryVersion();
+    }
+
+    public async poolState(): Promise<TreeState> {
+        return this.zkClient.getPoolState(TOKEN_ADDRESS);
+    }
+
+    public async poolLimits(): Promise<PoolLimits> {
+        return this.zkClient.getLimits(TOKEN_ADDRESS);
+    }
+
+    public async relayerFee(): Promise<bigint> {
+        return this.zkClient.atomicTxFee(TOKEN_ADDRESS);
+    }
+
+    public async minTxAmount(): Promise<bigint> {
+        return this.zkClient.minTxAmount();
     }
 }

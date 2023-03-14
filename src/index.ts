@@ -12,7 +12,7 @@ import bip39 from 'bip39-light';
 var pjson = require('../package.json');
 
 
-import Account from './account';
+import Account, { NakedClient } from './account';
 import * as c from './commands';
 import { InitLibCallback, InitState, InitStatus } from 'zkbob-client-js';
 
@@ -165,7 +165,7 @@ const GREETING = String.raw`
 |_  / |/ / ___ \/ _ \| '_ \ 
  / /|   <| |_/ / (_) | |_) |
 /___|_|\_\____/ \___/|_.__/ 
-                      v${pjson.version}
+                      [[;white;]v${pjson.version}]
     `;
 
 jQuery(async function ($) {
@@ -197,8 +197,35 @@ jQuery(async function ($) {
       this.exception(err);
     },
     onInit: async function () {
-      // Account prompt
       do {
+        if (!this.additionalInfoRequested) {
+          // Here is just an example to demonstrate accountless client interactions
+          // We'll show it once on page loading
+          let zkClient: NakedClient;
+          try {
+            this.pause()
+            zkClient = new NakedClient();
+            this.echo('Getting additional info...');
+            const [libVersion, relayerVer, limits, treeState] = await Promise.all([
+              zkClient.libraryVersion(),
+              zkClient.relayerVersion(),
+              zkClient.poolLimits(),
+              zkClient.poolState()]);
+
+              const tvl = limits.deposit.components.poolLimit.total - limits.deposit.components.poolLimit.available;
+              this.update(-1, `Library [[;white;]v${libVersion}] \\ Relayer [[;white;]${relayerVer.ref}]`);
+              this.echo(`Pool @ [[;white;]${treeState.index}] (TVL = [[;white;]${await zkClient.shieldedToHuman(tvl)}] ${TOKEN_SYMBOL})`);
+              this.additionalInfoRequested = true;
+          } catch (err) {
+            this.echo(`Error was occured [network issues?]: [[;red;]${err.message}]`);
+          } finally {
+            this.echo('\n');
+            this.resume();
+            zkClient = undefined; // destroy the client to prevent rpc sync activities
+          }
+        }
+
+        // Account prompt
         try {
           const accountName = await this.read('Enter account name (new or existing): ');
 
