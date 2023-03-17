@@ -89,7 +89,7 @@ export default class Account {
             treeVkUrl: './assets/tree_verification_key.json',
         };
 
-        const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
+        //const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
 
         let client, network;
         if (isEvmBased(NETWORK)) {
@@ -121,7 +121,7 @@ export default class Account {
 
         this.zpClient = await ZkBobClient.create({
             sk,
-            worker,
+            //worker,
             tokens: {
                 [TOKEN_ADDRESS]: {
                     poolAddress: CONTRACT_ADDRESS,
@@ -135,6 +135,8 @@ export default class Account {
             networkName: NETWORK,
             network,
             supportId: this.supportId,
+            snarkParams: snarkParamsConfig,
+            forcedMultithreading: undefined,
         });
 
         this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
