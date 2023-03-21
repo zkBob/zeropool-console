@@ -13,6 +13,7 @@ import assert from 'assert';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
+import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 
 
 
@@ -986,4 +987,40 @@ async function zip(giftCards: GiftCard[]) {
     let zipped = await mainZip.generateAsync({ type: 'blob' })
     let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
     return url
+}
+
+export async function genBurnerAddress(amount: number){
+    this.pause();
+    this.echo('creating a new burner wallet...')
+    const poolId = await this.account.zpClient.getPoolId(TOKEN_ADDRESS);
+    const treeIndex = (await this.account.getPoolTreeState()).index
+    const mnemonic = bip39.generateMnemonic();
+    const seed = deriveSpendingKeyZkBob(mnemonic, NETWORK as NetworkType)
+    const receivingAddress = await this.account.zpClient.genBurnerAddress(poolId, seed)
+    const transferRequests:TransferRequest[] = [ {
+            destination: receivingAddress,
+            amountGwei:this.account.humanToShielded(amount.toString()) 
+        }]
+    ;
+    const walletUrl = redemptionUrl(`0x${bufToHex(seed)}`,treeIndex);
+    this.update(-1, `Your burner wallet:\n${walletUrl}`);
+    this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
+        raw: true,
+        finalize: function(div) {
+          div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
+        }
+      });
+    this.echo('Sending funds...')
+    const results = await this.account.transferShielded(transferRequests);
+    this.update(-1 , `Done ${results.map((singleResult) => {
+        return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
+    }).join(`\n     `)}`);
+    this.resume();
+}
+
+
+function removeSvgHeader(data: string) {
+    let header = `<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"`
+    return data.replace(header,'')
 }

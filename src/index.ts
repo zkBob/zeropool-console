@@ -69,6 +69,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'version': [ c.getVersion, '', 'get console and relayer versions'
   ],
   'gift-cards':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
+  'give':[c.genBurnerAddress, '<amount>', 'creates a single burner wallet with specified amount and returns redemption url and qr code'],
   'environment': [
     function () {
       this.echo(`Network:   ${NETWORK}`);
