@@ -12,7 +12,7 @@ import bip39 from 'bip39-light';
 var pjson = require('../package.json');
 
 
-import Account, { NakedClient } from './account';
+import Account from './account';
 import * as c from './commands';
 import { InitLibCallback, InitState, InitStatus } from 'zkbob-client-js';
 
@@ -71,15 +71,17 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'gift-cards':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
   'environment': [
     function () {
-      this.echo(`Network:   ${NETWORK}`);
-      this.echo(`RPC URL:   ${RPC_URL}`);
-      this.echo(`Relayer:   ${RELAYER_URL}`);
-      this.echo(`Pool:      ${CONTRACT_ADDRESS}`);
-      this.echo(`Token:     ${TOKEN_ADDRESS}`);
-      this.echo(`Minter:    ${MINTER_ADDRESS}`);
-      this.echo(`Prover:    ${DELEGATED_PROVER_URL}`)
-      this.echo(`Cloud API: ${CLOUD_API_ENDPOINT}`);
-      this.echo(`UI URL:    ${GIFTCARD_REDEMPTION_URL}`);
+      this.echo(`Network:    ${NETWORK}`);
+      this.echo(`Chain ID:   ${CHAIN_ID}`);
+      this.echo(`Pool alias: ${POOL_NAME}`);
+      this.echo(`RPC URL:    ${RPC_URL}`);
+      this.echo(`Relayer:    ${RELAYER_URL}`);
+      this.echo(`Pool:       ${CONTRACT_ADDRESS}`);
+      this.echo(`Token:      ${TOKEN_ADDRESS}`);
+      this.echo(`Minter:     ${MINTER_ADDRESS}`);
+      this.echo(`Prover:     ${DELEGATED_PROVER_URL}`)
+      this.echo(`Cloud API:  ${CLOUD_API_ENDPOINT}`);
+      this.echo(`UI URL:     ${GIFTCARD_REDEMPTION_URL}`);
     },
     '',
     'get environment constants'
@@ -198,7 +200,7 @@ jQuery(async function ($) {
     },
     onInit: async function () {
       do {
-        if (!this.additionalInfoRequested) {
+        /*if (!this.additionalInfoRequested) {
           // Here is just an example to demonstrate accountless client interactions
           // We'll show it once on page loading
           let zkClient: NakedClient;
@@ -223,7 +225,7 @@ jQuery(async function ($) {
             this.resume();
             zkClient = undefined; // destroy the client to prevent rpc sync activities
           }
-        }
+        }*/
 
         // Account prompt
         try {

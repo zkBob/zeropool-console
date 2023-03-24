@@ -6,6 +6,8 @@ declare module '*.bin' {
 // env.js
 /** Network id (e.g.: ethereum, aurora, xdai) */
 declare var NETWORK: string;
+declare var CHAIN_ID: string;
+declare var POOL_NAME: string;
 /** URL to the network RPC */
 declare var RPC_URL: string;
 declare var RELAYER_URL: string;

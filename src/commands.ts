@@ -655,13 +655,13 @@ export async function getEphemeralPrivKey(index: string) {
 export async function setProverMode(mode: ProverMode) {
     this.pause();
     await this.account.setProverMode(mode);
-    this.echo(`Prover mode: ${this.account.getProverMode()}`);
+    this.echo(`Prover mode: ${await this.account.getProverMode()}`);
     this.resume();
 }
 
 export async function getProverInfo() {
     this.pause();
-    const proverMode = this.account.getProverMode();
+    const proverMode = await this.account.getProverMode();
     const delegatedProverUrl = DELEGATED_PROVER_URL;
     switch(proverMode) {
         case ProverMode.Local:
@@ -820,7 +820,7 @@ export async function getVersion() {
         this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
     }
 
-    if (this.account.getProverMode() != ProverMode.Local) {
+    if (await this.account.getProverMode() != ProverMode.Local) {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {

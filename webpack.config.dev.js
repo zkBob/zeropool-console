@@ -31,6 +31,8 @@ module.exports = merge(common, {
     plugins: [
         new webpack.EnvironmentPlugin({
             NETWORK: null,
+            CHAIN_ID: null,
+            POOL_NAME: null,
             CONTRACT_ADDRESS: null,
             TOKEN_ADDRESS: null,
             MINTER_ADDRESS: null,

@@ -1,4 +1,6 @@
 window.NETWORK = '$NETWORK'.toLowerCase();
+window.CHAIN_ID = '$CHAIN_ID';
+window.POOL_NAME = '$POOL_NAME';
 window.RPC_URL = '$RPC_URL';
 window.RELAYER_URL = '$RELAYER_URL';
 window.CONTRACT_ADDRESS = '$CONTRACT_ADDRESS';
