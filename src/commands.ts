@@ -13,6 +13,15 @@ var pjson = require('../package.json');
 const bs58 = require('bs58');
 
 
+export async function getAvailablePools() {
+    const pools: string[] = await this.account.getPools();
+    this.echo(`Available pools: ${pools.join(', ')}`)
+}
+
+export async function switchPool(poolAlias: string) {
+    await this.account.switchPool(poolAlias);
+    this.echo(`Current pool: ${await this.account.getCurrentPool()}`);
+}
 
 export async function setSeed(seed: string, password: string) {
     await this.account.login(seed, password);

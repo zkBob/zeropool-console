@@ -23,6 +23,8 @@ const PRIVATE_COMMANDS = [
 ];
 
 const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
+  'pools': [c.getAvailablePools, '', 'list of the available pools'],
+  'switch-pool': [c.switchPool, 'pool_alias', 'switch to the another pool with the current spending key'],
   //'set-seed': [c.setSeed, '<seed phrase> <password>', 'replace the seed phrase for the current account'],
   'get-seed': [c.getSeed, '<password>', 'print the seed phrase for the current account'],
   //'gen-seed': [c.genSeed, '', 'generate and print a new seed phrase'],
