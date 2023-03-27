@@ -12,9 +12,9 @@ import bip39 from 'bip39-light';
 var pjson = require('../package.json');
 
 
-import Account from './account';
+import Account, { InitAccountCallback, InitAccountState, InitAccountStatus } from './account';
 import * as c from './commands';
-import { InitLibCallback, InitState, InitStatus } from 'zkbob-client-js';
+import { env } from './environment';
 
 const PRIVATE_COMMANDS = [
   'set-seed',
@@ -23,8 +23,9 @@ const PRIVATE_COMMANDS = [
 ];
 
 const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
+
   'pools': [c.getAvailablePools, '', 'list of the available pools'],
-  'switch-pool': [c.switchPool, 'pool_alias', 'switch to the another pool with the current spending key'],
+  'switch-pool': [c.switchPool, '<pool_alias> <password>', 'switch to the another pool with the current spending key'],
   //'set-seed': [c.setSeed, '<seed phrase> <password>', 'replace the seed phrase for the current account'],
   'get-seed': [c.getSeed, '<password>', 'print the seed phrase for the current account'],
   //'gen-seed': [c.genSeed, '', 'generate and print a new seed phrase'],
@@ -68,27 +69,9 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
-  'version': [ c.getVersion, '', 'get console and relayer versions'
-  ],
+  'version': [ c.getVersion, '', 'get console and relayer versions'],
   'gift-cards':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
-  'environment': [
-    function () {
-      this.echo(`Network:    ${NETWORK}`);
-      this.echo(`Chain ID:   ${CHAIN_ID}`);
-      this.echo(`Pool alias: ${POOL_NAME}`);
-      this.echo(`RPC URL:    ${RPC_URL}`);
-      this.echo(`Relayer:    ${RELAYER_URL}`);
-      this.echo(`Pool:       ${CONTRACT_ADDRESS}`);
-      this.echo(`Token:      ${TOKEN_ADDRESS}`);
-      this.echo(`Minter:     ${MINTER_ADDRESS}`);
-      this.echo(`Prover:     ${DELEGATED_PROVER_URL}`)
-      this.echo(`Cloud API:  ${CLOUD_API_ENDPOINT}`);
-      this.echo(`UI URL:     ${GIFTCARD_REDEMPTION_URL}`);
-    },
-    '',
-    'get environment constants'
-  ],
-  // 'internal-state': [c.showState, '', 'show internal state'],
+  'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
     function () {
       let message = '\nAvailable commands:\n' + Object.entries(COMMANDS)
@@ -188,6 +171,8 @@ jQuery(async function ($) {
     completion: function(_, callback) {
       if (this.get_command().match(/^set-prover-mode /)) {
         callback(['Local', 'Delegated', 'DelegatedWithFallback']);
+      } else if (this.get_command().match(/^switch-pool /)) {
+        callback(Object.keys(env.pools));
       } else if (this.get_command().match(/^[a-z\-]*$/)) {
         callback(Object.keys(COMMANDS));
       }
@@ -202,88 +187,75 @@ jQuery(async function ($) {
     },
     onInit: async function () {
       do {
-        /*if (!this.additionalInfoRequested) {
-          // Here is just an example to demonstrate accountless client interactions
-          // We'll show it once on page loading
-          let zkClient: NakedClient;
-          try {
-            this.pause()
-            zkClient = new NakedClient();
-            this.echo('Getting additional info...');
-            const [libVersion, relayerVer, limits, treeState] = await Promise.all([
-              zkClient.libraryVersion(),
-              zkClient.relayerVersion(),
-              zkClient.poolLimits(),
-              zkClient.poolState()]);
-
-              const tvl = limits.deposit.components.poolLimit.total - limits.deposit.components.poolLimit.available;
-              this.update(-1, `Library [[;white;]v${libVersion}] \\ Relayer [[;white;]${relayerVer.ref}]`);
-              this.echo(`Pool @ [[;white;]${treeState.index}] (TVL = [[;white;]${await zkClient.shieldedToHuman(tvl)}] ${TOKEN_SYMBOL})`);
-              this.additionalInfoRequested = true;
-          } catch (err) {
-            this.echo(`Error was occured [network issues?]: [[;red;]${err.message}]`);
-          } finally {
-            this.echo('\n');
-            this.resume();
-            zkClient = undefined; // destroy the client to prevent rpc sync activities
-          }
-        }*/
-
-        // Account prompt
         try {
+
+          this.pause();
+          let clientReady = true;
+          if (!this.account) {
+            clientReady = false;
+            let initAccCallback: InitAccountCallback = async (status: InitAccountStatus) => {
+              switch(status.state) {
+                case InitAccountState.ClientInitializing:
+                  this.echo('Initializing client...');
+                  break;
+
+                case InitAccountState.AccountlessClientReady:
+                  this.update(-1, 'Initializing client...[[;green;]OK]');
+                  this.echo(`Current pool:    ${await this.account.getCurrentPool()}`);
+                  if (this.account.getPools().length > 1) {
+                    this.echo(`Supported pools: ${await this.account.getPools().join(', ')}`);
+                  }
+                  this.echo(`Library version: ${await this.account.libraryVersion()}`);
+                  this.echo(`Relayer version: ...requesting...`);
+                  const relayerVer = await this.account.relayerVersion();
+                  this.update(-1, `Relayer version: ${relayerVer.ref} (${relayerVer.commitHash})\n`);
+                  clientReady = true;
+                  break;
+
+                case InitAccountState.AccountInitializing:
+                  //this.echo(`Initializing account...`);
+                  break;
+
+                case InitAccountState.FullClientReady:
+                  this.update(-1, `Initializing account...[[;green;]OK]`);
+                  break;
+
+                case InitAccountState.Failed:
+                  this.echo(`[[;red;]Error occured: ${this.account?.initError?.message ?? 'unknown error'}]`);
+                default: break;
+              }
+            };
+            this.account = new Account(initAccCallback);
+          }
+
+          while(!clientReady) {
+            await new Promise(f => setTimeout(f, 50));
+          }
+          this.resume();
+
+          // Account prompt
           const accountName = await this.read('Enter account name (new or existing): ');
 
           if (accountName.trim().length == 0) {
             throw new Error('Account name cannot be empty');
           }
 
-          this.pause();
-          this.account = new Account(accountName);
-          this.resume();
-
-          let initLibCallback: InitLibCallback = (status: InitStatus) => {
-            switch(status.state) {
-              case InitState.Started:
-                this.echo(`Loading client library...`);
-                break;
-
-              case InitState.InitWorker:
-                this.echo(`Initializing objects...`);
-                break;
-              
-              case InitState.Completed:
-                this.echo(`Library has been loaded successfully`);
-                break;
-
-              case InitState.Failed:
-                if (status.error !== undefined) {
-                  throw status.error;
-                } else {
-                  throw new Error('Cannot load library');
-                }
-                break;
-
-              default:
-                break;
-            } 
-          };
-
-          if (this.account.isAccountPresent()) {
+          if (this.account.isAccountPresent(accountName)) {
             this.set_mask(true);
             const password = await this.read('Enter password: ');
             this.set_mask(false);
 
+            this.echo(`Initializing account...`);
+
             this.pause();
-            await this.account.unlockAccount(password, initLibCallback);
+            await this.account.activateExistingAccount(accountName, password);
             this.resume();
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
 
-            let isNewAccount = false;
             if (seed.trim().length == 0) {
               seed = bip39.generateMnemonic();
               this.echo(`New mnemonic: ${seed}`);
-              isNewAccount = true;
             } else if (!bip39.validateMnemonic(seed)) {
               throw new Error('Invalid seed phrase');
             }
@@ -297,8 +269,10 @@ jQuery(async function ($) {
               throw new Error('Password is too weak');
             }
 
+            this.echo(`Creating new account...`);
+
             this.pause();
-            await this.account.init(seed, password, isNewAccount, initLibCallback);
+            await this.account.init(accountName, seed, password, true);
             this.resume();
           }
         } catch (e) {
@@ -306,11 +280,11 @@ jQuery(async function ($) {
           this.error(e);
           console.error(e);
         }
-      } while (!this.account || !this.account.isInitialized());
+      } while (!this.account || !this.account.hasActiveAccount());
 
       this.clear();
       this.echo(GREETING);
-      this.echo(`Welcome to the zkBob console for ${NETWORK}`);
+      this.echo(`Welcome to the zkBob console for ${this.account.networkName()}`);
       this.echo('');
       this.echo('Amounts are interpreted as Wei by default');
       this.echo('If you want to specify human-readable decimal value pls add [[;white;]^] prefix');
@@ -323,9 +297,13 @@ jQuery(async function ($) {
     },
     prompt: function () {
       if (this.account) {
-        return `[[;gray;]${this.account.accountName}>] `;
+        if (this.account.accountName) {
+          return `[[;gray;]${this.account.accountName}(${this.account.networkName()})>] `;
+        } else {
+          return `[[;gray;]${this.account.networkName()}>] `;
+        }
       } else {
-        return '[[;gray;]>] ';
+        return '';
       }
     },
   };

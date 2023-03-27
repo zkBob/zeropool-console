@@ -57,11 +57,6 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin(),
-        new CopyPlugin({
-            patterns: [
-                { from: 'src/env.js' }
-            ],
-        }),
         new HtmlWebpackPlugin({
             template: 'src/index.html',
             filename: 'index.html',

@@ -29,21 +29,6 @@ module.exports = merge(common, {
         ],
     },
     plugins: [
-        new webpack.EnvironmentPlugin({
-            NETWORK: null,
-            CHAIN_ID: null,
-            POOL_NAME: null,
-            CONTRACT_ADDRESS: null,
-            TOKEN_ADDRESS: null,
-            MINTER_ADDRESS: null,
-            RELAYER_URL: null,
-            RPC_URL: null,
-            TRANSACTION_URL: null,
-            TOKEN_SYMBOL: null,
-            SHIELDED_TOKEN_SYMBOL: null,
-            DELEGATED_PROVER_URL: null,
-            CLOUD_API_ENDPOINT:null,
-            GIFTCARD_REDEMPTION_URL:null
-        }),
+        
     ]
 });

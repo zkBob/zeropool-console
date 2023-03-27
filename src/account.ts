@@ -3,7 +3,7 @@ import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
 import { ZkBobClient, HistoryRecord,
          TransferConfig, FeeAmount, TxType,
-         PoolLimits, InitLibCallback,
+         PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
         } from 'zkbob-client-js';
@@ -14,7 +14,7 @@ import Web3 from 'web3'
 import { TransferRequest } from 'zkbob-client-js/lib/client';
 import { AcccountConfig, ClientConfig, ProverMode } from 'zkbob-client-js/lib/config';
 import { v4 as uuidv4 } from 'uuid';
-
+import { env } from './environment';
 
 
 interface AccountStorage {
@@ -28,26 +28,6 @@ class LocalAccountStorage implements AccountStorage {
     }
     set(accountName: string, field: string, value: string) {
         localStorage.setItem(`zconsole.${accountName}.${field}`, value);
-    }
-}
-
-function loadDevEnvironment() {
-    if (process.env.NODE_ENV === 'development') {
-        console.log('Dev environment, using local env variables.');
-        NETWORK = process.env.NETWORK;
-        CHAIN_ID = process.env.CHAIN_ID;
-        POOL_NAME = process.env.POOL_NAME;
-        CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
-        TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
-        MINTER_ADDRESS = process.env.MINTER_ADDRESS;
-        RELAYER_URL = process.env.RELAYER_URL;
-        RPC_URL = process.env.RPC_URL;
-        TRANSACTION_URL = process.env.TRANSACTION_URL;
-        TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
-        SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
-        DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
-        CLOUD_API_ENDPOINT = process.env.CLOUD_API_ENDPOINT;
-        GIFTCARD_REDEMPTION_URL = process.env.GIFTCARD_REDEMPTION_URL;
     }
 }
 
@@ -67,22 +47,22 @@ export interface InitAccountStatus {
 export type InitAccountCallback = (status: InitAccountStatus) => void;
 
 export default class Account {
-    readonly accountName: string;
+    accountName: string;
     private storage: AccountStorage;
     public client: NetworkClient;
     private zpClient?: ZkBobClient;
     private zpClientPromise?: Promise<ZkBobClient>;
     private initError?: Error;
+    private tokenSymbols: {[poolName: string]: string} = {};
+
+    private config: ClientConfig;
 
     public initCallback?: InitAccountCallback;
     
     public supportId: string;
 
-    constructor(accountName: string, callback?: InitAccountCallback) {
-        loadDevEnvironment();
-
+    constructor(callback?: InitAccountCallback) {
         this.initCallback = callback;
-        this.accountName = accountName;
         this.storage = new LocalAccountStorage();
 
         const snarkParamsConfig = {
@@ -94,24 +74,9 @@ export default class Account {
 
         this.supportId = uuidv4();
 
-        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
-
-        const clientConf: ClientConfig = {
-            pools: {
-                [POOL_NAME]: {
-                    chainId: Number(CHAIN_ID),
-                    poolAddress: CONTRACT_ADDRESS,
-                    tokenAddress: TOKEN_ADDRESS,
-                    relayerUrls: [RELAYER_URL],
-                    delegatedProverUrls: [DELEGATED_PROVER_URL],
-                    coldStorageConfigPath: bulkConfigUrl,
-                }
-            },
-            chains: {
-                [CHAIN_ID]: {
-                    rpcUrls: [RPC_URL],
-                }
-            },
+        this.config = {
+            pools: env.pools,
+            chains: env.chains,
             snarkParams: snarkParamsConfig,
             supportId: this.supportId,
             forcedMultithreading: undefined,
@@ -119,7 +84,7 @@ export default class Account {
 
         if (this.initCallback) this.initCallback({ state: InitAccountState.ClientInitializing });
 
-        this.zpClientPromise = ZkBobClient.create(clientConf, POOL_NAME);
+        this.zpClientPromise = ZkBobClient.create(this.config, env.defaultPool);
 
         this.zpClientPromise.then((zpClient) => {
             this.zpClient = zpClient;
@@ -136,10 +101,10 @@ export default class Account {
     }
 
     public async init(
+        accountName: string,
         mnemonic: string,
         password: string,
         isNewAcc: boolean,
-        loadingCallback: InitLibCallback | undefined = undefined
     ): Promise<void> {
 
         // waiting when accountless client will initialized (or failed)
@@ -152,23 +117,16 @@ export default class Account {
             return;
         }
 
-        // Initialize L1 network client (to interact with the native blockchain)
-        const provider = new HDWalletProvider({
-            mnemonic,
-            providerOrUrl: RPC_URL,
-        });
-        const client = new EthereumClient(provider, { transactionUrl: TRANSACTION_URL });
-        client.gasMultiplier = 1.2; // increase default gas
-        this.client = client;
-
         const sk = deriveSpendingKeyZkBob(mnemonic);
-
+        const curPool = await this.getCurrentPool();
         const accountConf: AcccountConfig = {
             sk,
-            pool: POOL_NAME,
+            pool: curPool,
             birthindex: isNewAcc ? -1 : undefined,
             proverMode: ProverMode.Local,
         }
+
+        this.createL1Client(curPool, mnemonic);
         
         try {
             await this.zpClient?.login(accountConf);
@@ -181,42 +139,119 @@ export default class Account {
         this.initError = undefined;
         if (this.initCallback) this.initCallback({ state: InitAccountState.FullClientReady });
 
-        this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
+        this.storage.set(accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
+        this.accountName = accountName;
     }
 
-    public async unlockAccount(
+    private async createL1Client(poolName: string, mnemonic: string) {
+        // Initialize L1 network client (to interact with the native blockchain)
+        const newChainId = env.pools[poolName].chainId;
+        if (!this.client || await this.client.getChainId() != newChainId) {
+            const curChainId = String(env.pools[poolName].chainId);
+            const rpcURLs = env.chains[curChainId].rpcUrls;
+            const transactionUrl = env.blockExplorerUrls[curChainId].tx;
+            const provider = new HDWalletProvider({
+                mnemonic,
+                providerOrUrl: rpcURLs[0],  // TODO: check URL count
+            });
+            const client = new EthereumClient(provider, { transactionUrl });
+            client.gasMultiplier = 1.2; // increase default gas
+            this.client = client;
+        }
+
+        // Request token symbol if needed
+        let attemptsNum = 3;
+        while(!this.tokenSymbols[poolName] && attemptsNum-- > 0) {
+            try {
+                this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
+                console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
+            } catch(err) {
+                console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
+            }
+        }
+    }
+
+    public async activateExistingAccount(
+        accountName: string,
         password: string,
-        loadingCallback: InitLibCallback | undefined = undefined
     ) {
-        let seed = this.decryptSeed(password);
-        await this.init(seed, password, false, loadingCallback);
+        let seed = this.decryptSeed(accountName, password);
+        await this.init(accountName, seed, password, false);
     }
 
-    public async getCurrentPool(): Promise<string> {
+    public async detachAccount() {
+        if (!this.zpClient) {
+            return;
+        }
+
+        await this.zpClient.logout();
+        this.accountName = undefined;
+    }
+
+    public getCurrentPool(): string {
         this.assertZpClient();
         return this.zpClient.currentPool();
     }
 
-    public async getPools(): Promise<string[]> {
+    public getPools(): string[] {
         this.assertZpClient();
         return this.zpClient.availabePools();
     }
 
-    public async switchPool(poolAlias: string): Promise<void> {
+    public getTokenAddr(): string {
+        return env.pools[this.getCurrentPool()].tokenAddress;
+    }
+
+    public getPoolAddr(): string {
+        return env.pools[this.getCurrentPool()].poolAddress;
+    }
+
+    public getDelegatedProverUrls(): string[] {
+        return env.pools[this.getCurrentPool()].delegatedProverUrls
+    }
+
+    public tokenSymbol(): string {
+        return this.tokenSymbols[this.getCurrentPool()] ?? 'UNK';
+    }
+    
+    public shTokenSymbol(): string {
+        return `sh${this.tokenSymbol()}`;
+    }
+
+    public async switchPool(poolAlias: string, password: string): Promise<void> {
         this.assertZpClient();
+        const mnemonic = this.decryptSeed(this.accountName, password)
+        await this.createL1Client(poolAlias, mnemonic);
         return this.zpClient.switchToPool(poolAlias);
     }
 
-    public getSeed(password: string): string {
-        return this.decryptSeed(password);
+    public getSeed(accountName: string, password: string): string {
+        return this.decryptSeed(accountName, password);
+    }
+
+    private decryptSeed(accountName: string, password: string): string {
+        const cipherText = this.storage.get(accountName, 'seed');
+        let seed;
+        try {
+            seed = AES.decrypt(cipherText, password).toString(Utf8);
+            if (!bip39.validateMnemonic(seed)) throw new Error('invalid mnemonic');
+        } catch (_) {
+            throw new Error('Incorrect password');
+        }
+
+        return seed;
     }
 
     public isInitialized(): boolean {
         return !!this.client;
     }
 
-    public isAccountPresent(): boolean {
-        return !!this.storage.get(this.accountName, 'seed');
+    public hasActiveAccount(): boolean {
+        return (this.zpClient && this.zpClient.hasAccount() && this.accountName !== undefined);
+    }
+
+    public isAccountPresent(accountName?: string): boolean {
+        return !!this.storage.get(accountName ?? this.accountName, 'seed');
     }
 
     private assertZpClient() {
@@ -226,8 +261,13 @@ export default class Account {
         }
     }
 
+    public networkName(): string {
+        this.assertZpClient();
+        return this.zpClient.networkName();
+    }
+
     public nativeSymbol(): string {
-        switch(NETWORK) {
+        switch(this.networkName()) {
             case 'ethereum': return 'ETH';
             case 'xdai': return 'XDAI';
             case 'aurora': return 'AURORA';
@@ -413,12 +453,13 @@ export default class Account {
 
     // TODO: Support multiple tokens
     public async getTokenBalance(): Promise<string> {
-        return await this.client.getTokenBalance(TOKEN_ADDRESS);
+        return await this.client.getTokenBalance(this.getTokenAddr());
     }
 
     public async mint(amount: bigint): Promise<string> {
-        if (MINTER_ADDRESS) {
-            return await this.client.mint(MINTER_ADDRESS, amount.toString());
+        const minterAddr = env.minters[this.getCurrentPool()];
+        if (minterAddr) {
+            return await this.client.mint(minterAddr, amount.toString());
         } else {
             throw new Error('Cannot find the minter address. Most likely that token is not for test');
         }
@@ -429,7 +470,8 @@ export default class Account {
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        return await this.client.transferToken(TOKEN_ADDRESS, to, amount.toString());
+        const tokenAddress = env.pools[this.getCurrentPool()].tokenAddress;
+        return await this.client.transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
@@ -469,8 +511,16 @@ export default class Account {
         return await this.zpClient.feeEstimate(amounts, txType, updateState);
     }
 
-    public getTransactionUrl(txHash: string): string {
-        return this.client.getTransactionUrl(txHash);
+    public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
+        const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
+        const txUrl = env.blockExplorerUrls[String(curChainId)].tx;
+        return txUrl.replace('{{hash}}', txHash);
+    }
+
+    public getAddressUrl(addr: string, chainId: number | undefined = undefined): string {
+        const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
+        const txUrl = env.blockExplorerUrls[String(curChainId)].tx;
+        return txUrl.replace('{{addr}}', addr);
     }
 
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
@@ -483,13 +533,13 @@ export default class Account {
             const txFee = (await this.zpClient.feeEstimate([amount], TxType.Deposit, false));
 
             let totalApproveAmount = await this.zpClient.shieldedAmountToWei(amount + txFee.totalPerTx);
-            const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
+            const currentAllowance = await this.client.allowance(this.getTokenAddr(), this.getPoolAddr());
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
-                console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-                await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
+                console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
+                await this.client.increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalApproveAmount.toString());
             } else {
-                console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+                console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
             }
 
             console.log('Making deposit...');
@@ -554,7 +604,7 @@ export default class Account {
             console.log('Making deposit...');
             let jobId;
             jobId = await this.zpClient.depositPermittable(amount, async (deadline, value, salt) => {
-                const dataToSign = await this.createPermittableDepositData(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
+                const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
 
@@ -598,26 +648,26 @@ export default class Account {
         const ddFee = (await this.zpClient.directDepositFee());
         const amountWithFeeWei = await this.zpClient.shieldedAmountToWei(amount + ddFee);
 
-        const ddContract = await this.client.getDirectDepositContract(CONTRACT_ADDRESS);
+        const ddContract = await this.client.getDirectDepositContract(this.getPoolAddr());
 
         let totalApproveAmount = amountWithFeeWei;
-        const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, ddContract);
+        const currentAllowance = await this.client.allowance(this.getTokenAddr(), ddContract);
         if (totalApproveAmount > currentAllowance) {
             totalApproveAmount -= currentAllowance;
-            console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-            await this.client.increaseAllowance(TOKEN_ADDRESS, ddContract, totalApproveAmount.toString());
+            console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
+            await this.client.increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
         } else {
-            console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
+            console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
         }
 
         console.log('Making direct deposit...');
-        return await this.client.directDeposit(CONTRACT_ADDRESS, amountWithFeeWei.toString(), to);
+        return await this.client.directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
     }
 
     // returns txHash in promise
     public async approveAllowance(spender: string, amount: bigint): Promise<string> {
-        console.log(`Approving allowance for ${spender} to spend our tokens (${this.weiToHuman(amount)} ${TOKEN_SYMBOL})`);
-        return await this.client.approve(TOKEN_ADDRESS, spender, amount.toString());
+        console.log(`Approving allowance for ${spender} to spend our tokens (${await this.weiToHuman(amount)} ${this.tokenSymbol()})`);
+        return await this.client.approve(this.getTokenAddr(), spender, amount.toString());
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
@@ -676,6 +726,11 @@ export default class Account {
         return this.zpClient.getProverMode();
     }
     
+    public async libraryVersion(): Promise<string> {
+        this.assertZpClient();
+        return this.zpClient.getLibraryVersion();
+    }
+
     public async relayerVersion(): Promise<ServiceVersion> {
         this.assertZpClient();
         return await this.zpClient.getRelayerVersion();
@@ -684,18 +739,5 @@ export default class Account {
     public async proverVersion(): Promise<ServiceVersion> {
         this.assertZpClient();
         return await this.zpClient.getProverVersion();
-    }
-
-    private decryptSeed(password: string): string {
-        const cipherText = this.storage.get(this.accountName, 'seed');
-        let seed;
-        try {
-            seed = AES.decrypt(cipherText, password).toString(Utf8);
-            if (!bip39.validateMnemonic(seed)) throw new Error('invalid mnemonic');
-        } catch (_) {
-            throw new Error('Incorrect password');
-        }
-
-        return seed;
     }
 }
