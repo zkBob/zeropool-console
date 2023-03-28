@@ -10,7 +10,6 @@ import { env } from './environment';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
-import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 
 
 export async function currentPoolEnvironment() {
@@ -935,6 +934,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     const treeIndex = (await this.account.getPoolTreeState()).index
     try {
         this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
+        const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
         for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
             const alias = `${prefix}_${cardIndex}`;
             const body = JSON.stringify({ "description": `${alias}` });
@@ -967,7 +967,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const address = generateAddressResponseJson.address;
             console.log(`generated new account with address: ${address} `);
     
-            const url = redemptionUrl(sk, treeIndex);
+            const url = redemptionUrl(sk, treeIndex, baseUrl);
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
             if (Number(quantity) > 1) {
@@ -1000,8 +1000,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
 
 }
 
-function redemptionUrl(sk: string, birthIndex: string): string {
-    const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+function redemptionUrl(sk: string, birthIndex: string, baseUrl: string): string {
     return `${baseUrl}/?code=${sk}&index=${birthIndex}`
 }
 
@@ -1037,17 +1036,17 @@ async function zip(giftCards: GiftCard[]) {
 export async function genBurnerAddress(amount: number){
     this.pause();
     this.echo('creating a new burner wallet...')
-    const poolId = await this.account.zpClient.getPoolId(TOKEN_ADDRESS);
     const treeIndex = (await this.account.getPoolTreeState()).index
     const mnemonic = bip39.generateMnemonic();
-    const seed = deriveSpendingKeyZkBob(mnemonic, NETWORK as NetworkType)
-    const receivingAddress = await this.account.zpClient.genBurnerAddress(poolId, seed)
+    const seed = deriveSpendingKeyZkBob(mnemonic)
+    const receivingAddress = await this.account.genBurnerAddress(seed)
     const transferRequests:TransferRequest[] = [ {
             destination: receivingAddress,
-            amountGwei:this.account.humanToShielded(amount.toString()) 
+            amountGwei: await this.account.humanToShielded(amount.toString()) 
         }]
     ;
-    const walletUrl = redemptionUrl(`0x${bufToHex(seed)}`,treeIndex);
+    const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+    const walletUrl = redemptionUrl(`0x${bufToHex(seed)}`,treeIndex, baseUrl);
     this.update(-1, `Your burner wallet:\n${walletUrl}`);
     this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
         raw: true,
