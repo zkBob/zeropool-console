@@ -294,6 +294,11 @@ export default class Account {
         return await this.zpClient.generateAddress();
     }
 
+    public async genBurnerAddress(seed: Uint8Array): Promise<string> {
+        this.assertZpClient();
+        return await this.zpClient.genBurnerAddress(seed);
+    }
+
     public async isMyAddress(shieldedAddress: string): Promise<boolean> {
         this.assertZpClient();
         return await this.zpClient.isMyAddress(shieldedAddress);
