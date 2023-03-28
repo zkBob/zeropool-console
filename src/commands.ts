@@ -851,6 +851,7 @@ export function getSupportId() {
 export async function getVersion() {
     this.pause();
     this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
+    this.echo(`Client library  version: [[;white;]${await this.account.libraryVersion()}]`);
     this.echo(`Current relayer version: ...fetching...`);
     
     try {

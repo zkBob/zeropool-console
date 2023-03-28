@@ -16,7 +16,7 @@
             "tokenAddress": "0x97a4ab97028466FE67F18A6cd67559BAABE391b8",
             "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
             "delegatedProverUrls": [],
-            "coldStorageConfigPath": "./assets/zkbob-goelri-coldstorage.cfg"
+            "coldStorageConfigPath": ""
         }
     },
 
