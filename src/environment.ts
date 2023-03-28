@@ -1,4 +1,4 @@
-import { Chains, Pools } from 'zkbob-client-js/lib/config';
+import { Chains, Pools } from 'zkbob-client-js';
 var config = require('../client-config.json');
 
 export interface ConsoleConfig {

@@ -6057,10 +6057,10 @@ levn@^0.3.0, levn@~0.3.0:
     type-check "~0.3.2"
 
 "libzkbob-rs-wasm-web-mt@file:../libzkbob-rs/libzkbob-rs-wasm/web-mt":
-  version "1.0.0"
+  version "1.1.0"
 
 "libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web":
-  version "1.0.0"
+  version "1.1.0"
 
 lie@~3.3.0:
   version "3.3.0"
@@ -10164,8 +10164,8 @@ yargs@^13.3.2:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-2.1.0-44328acb-f5f8-4fa9-aec7-6b43c4464df3-1680010123646/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
-    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-2.1.0-44328acb-f5f8-4fa9-aec7-6b43c4464df3-1680010123646/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt"
+    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-2.1.0-e6f49cc4-f3ee-47ff-bf15-7ada2e6d1e8f-1680033400176/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
+    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-2.1.0-e6f49cc4-f3ee-47ff-bf15-7ada2e6d1e8f-1680033400176/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt"
     regenerator-runtime "^0.13.9"
     wasm-feature-detect "^1.2.11"
     web3 "1.8.0"

@@ -1,9 +1,8 @@
 import bip39 from 'bip39-light';
-import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType } from 'zkbob-client-js';
-import { deriveSpendingKeyZkBob, bufToHex, nodeToHex } from 'zkbob-client-js/lib/utils';
-import { HistoryRecordState } from 'zkbob-client-js/lib/history';
-import { TransferConfig, TransferRequest, TreeState } from 'zkbob-client-js';
-import { ProverMode } from 'zkbob-client-js/lib/config';
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType,
+         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState,
+        } from 'zkbob-client-js';
+import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
@@ -842,6 +841,12 @@ export function reset() {
     this.reset();
 }
 
+export function getAccountId() {
+    this.pause();
+    this.echo(`Current Account ID:  [[;white;]${this.account.accountId}]`);
+    this.resume();
+}
+
 export function getSupportId() {
     this.pause();
     this.echo(`Current Support ID:  [[;white;]${this.account.supportId}]`);
@@ -1026,4 +1031,52 @@ async function zip(giftCards: GiftCard[]) {
     let zipped = await mainZip.generateAsync({ type: 'blob' })
     let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
     return url
+}
+
+export async function giftCardBalance(sk: string, birthIndex: string) {
+    const skBuf = hexToBuf(sk);
+    if (skBuf.length != 32) {
+        this.echo(`[[;red;]Spending key must contain 32 bytes]`);
+        return;
+    }
+    let index = 0;
+    if (birthIndex) {
+        try {
+            index = Number(birthIndex)
+            if (index % 128 != 0) throw new Error(`index error`);
+        } catch(err) {
+            this.echo(`[[;red;]Birth index must be a positive number and divided by 128]`)
+            return;
+        }
+    }
+
+    this.pause();
+    this.echo(`Getting gift card balance...`);
+    const balance = await this.account.giftCardBalance(skBuf, index);
+    this.update(-1, `Gift card balance: ${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}`)
+    this.resume();
+}
+
+export async function redeemGiftCard(sk: string, birthIndex: string) {
+    const skBuf = hexToBuf(sk);
+    if (skBuf.length != 32) {
+        this.echo(`[[;red;]Spending key must contain 32 bytes]`);
+        return;
+    }
+    let index = 0;
+    if (birthIndex) {
+        try {
+            index = Number(birthIndex)
+            if (index % 128 != 0) throw new Error(`index error`);
+        } catch(err) {
+            this.echo(`[[;red;]Birth index must be a positive number and divided by 128]`)
+            return;
+        }
+    }
+
+    this.pause();
+    this.echo(`Redeeming gift card...`);
+    const result = await this.account.redeemGiftCard(skBuf, index);
+    this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+    this.resume();
 }

@@ -1,18 +1,18 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
-import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { ZkBobClient, HistoryRecord,
-         TransferConfig, FeeAmount, TxType,
+import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
+import { AccountConfig, ClientConfig, ProverMode,
+         ZkBobClient, HistoryRecord,
+         TransferConfig, TransferRequest, FeeAmount, TxType,
          PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
+         accountId,
         } from 'zkbob-client-js';
+import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
-import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
 import Web3 from 'web3'
-import { TransferRequest } from 'zkbob-client-js/lib/client';
-import { AcccountConfig, ClientConfig, ProverMode } from 'zkbob-client-js/lib/config';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 
@@ -59,6 +59,7 @@ export default class Account {
 
     public initCallback?: InitAccountCallback;
     
+    public accountId: string;
     public supportId: string;
 
     constructor(callback?: InitAccountCallback) {
@@ -119,7 +120,7 @@ export default class Account {
 
         const sk = deriveSpendingKeyZkBob(mnemonic);
         const curPool = await this.getCurrentPool();
-        const accountConf: AcccountConfig = {
+        const accountConf: AccountConfig = {
             sk,
             pool: curPool,
             birthindex: isNewAcc ? -1 : undefined,
@@ -130,6 +131,7 @@ export default class Account {
         
         try {
             await this.zpClient?.login(accountConf);
+            this.accountId = accountId(accountConf);
         } catch (err) {
             this.initError = err;
             if (this.initCallback) this.initCallback({ state: InitAccountState.Failed, error: err });
@@ -186,6 +188,7 @@ export default class Account {
 
         await this.zpClient.logout();
         this.accountName = undefined;
+        this.accountId = '';
     }
 
     public getCurrentPool(): string {
@@ -709,6 +712,33 @@ export default class Account {
 
             throw Error('State is not ready for transact');
         }
+    }
+
+    public async giftCardBalance(sk: Uint8Array, birthindex?: number): Promise<bigint> {
+        this.assertZpClient();
+        const giftCardAccountConfig: AccountConfig = {
+            sk,
+            pool: this.zpClient.currentPool(),
+            birthindex,
+            proverMode: await this.zpClient.getProverMode(),
+        }
+        return await this.zpClient.giftCardBalance(giftCardAccountConfig);
+    }
+
+    public async redeemGiftCard(sk: Uint8Array, birthindex?: number): Promise<{jobId: string, txHash: string}> {
+        this.assertZpClient();
+        const giftCardAccountConfig: AccountConfig = {
+            sk,
+            pool: this.zpClient.currentPool(),
+            birthindex,
+            proverMode: await this.zpClient.getProverMode(),
+        }
+
+        console.log('Redeeming gift-card...');
+        const jobId: string = await this.zpClient.redeemGiftCard(giftCardAccountConfig);
+        console.log(`Please wait relayer provide txHash for job ${jobId}...`);
+
+        return {jobId, txHash: (await this.zpClient.waitJobTxHash(jobId))};
     }
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {

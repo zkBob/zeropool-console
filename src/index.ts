@@ -26,9 +26,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
 
   'pools': [c.getAvailablePools, '', 'list of the available pools'],
   'switch-pool': [c.switchPool, '<pool_alias> <password>', 'switch to the another pool with the current spending key'],
-  //'set-seed': [c.setSeed, '<seed phrase> <password>', 'replace the seed phrase for the current account'],
   'get-seed': [c.getSeed, '<password>', 'print the seed phrase for the current account'],
-  //'gen-seed': [c.genSeed, '', 'generate and print a new seed phrase'],
   'get-sk': [c.getSk, '<password>', 'get zkBob account spending key'],
   'get-address': [c.getAddress, '', 'get your native address'],
   'get-balance': [c.getBalance, '', 'fetch and print native account balance'],
@@ -68,9 +66,12 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'prover-info': [c.getProverInfo, '', 'print info about the used prover'],
   'clear': [c.clear, '', 'clear the terminal'],
   'reset': [c.reset, '', 'log out from the current account'],
+  'account-id': [c.getAccountId, '', 'get the client account id (indexed DB name)'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'],
   'gift-cards':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
+  'gift-card-balance': [c.giftCardBalance, '<spending_key> [birthindex]', 'retrieve gift card balance'],
+  'gift-card-redeem': [c.redeemGiftCard, '<spending_key> [birthindex]', 'redeem gift card to the current account'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
     function () {
