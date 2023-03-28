@@ -42,6 +42,10 @@ Suppose you already done local running and set appropriated parameters and setti
 `get-seed <password>` print the seed phrase for the current account (current password needed)
 
 `get-sk <password>` get zkBob account spending key (current password needed,
+
+`pools` list of the available pools
+
+`switch-pool <pool_alias> <password>` switch to the another pool with the current spending key
   
 ## L1-level commands
 
@@ -125,6 +129,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `reset` log out from the current account
 
+`account-id` get the client account id (indexed DB name)
+
 `support-id` print current support id (changed on each library initialization)
 
 `version` print console and external services versions
@@ -138,4 +144,9 @@ Suppose you already done local running and set appropriated parameters and setti
 ## Gift cards commands
 
 `gift-card-generate <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
-`give amount` generates a single burner wallet without any persistence other than the resulting URL/QR, transfers the specified amount of tokens to a newly generated wallet address
+
+`give <amount>` generates a single burner wallet without any persistence other than the resulting URL/QR, transfers the specified amount of tokens to a newly generated wallet address
+
+`gift-card-balance <spending_key> [birthindex]` retrieves gift card balance
+
+`gift-card-redeem <spending_key> [birthindex]` redeems gift card to the current account
