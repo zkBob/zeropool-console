@@ -101,7 +101,7 @@ export default class Account {
         });
     }
 
-    public async init(
+    public async attachAccount(
         accountName: string,
         mnemonic: string,
         password: string,
@@ -119,15 +119,14 @@ export default class Account {
         }
 
         const sk = deriveSpendingKeyZkBob(mnemonic);
-        const curPool = await this.getCurrentPool();
-        const accountConf: AccountConfig = {
-            sk,
-            pool: curPool,
-            birthindex: isNewAcc ? -1 : undefined,
-            proverMode: ProverMode.Local,
-        }
+        const pool = await this.getCurrentPool();
+        const birthindex = isNewAcc ? -1 : undefined;
+        const proverMode = this.config.pools[pool].delegatedProverUrls.length > 0 ? 
+                                ProverMode.DelegatedWithFallback : 
+                                ProverMode.Local;
+        const accountConf: AccountConfig = { sk, pool, birthindex, proverMode };
 
-        this.createL1Client(curPool, mnemonic);
+        this.createL1Client(pool, mnemonic);
         
         try {
             await this.zpClient?.login(accountConf);
@@ -143,6 +142,24 @@ export default class Account {
 
         this.storage.set(accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
         this.accountName = accountName;
+    }
+
+    public async attachExistingAccount(
+        accountName: string,
+        password: string,
+    ) {
+        let seed = this.decryptSeed(accountName, password);
+        await this.attachAccount(accountName, seed, password, false);
+    }
+
+    public async detachAccount() {
+        if (!this.zpClient) {
+            return;
+        }
+
+        await this.zpClient.logout();
+        this.accountName = undefined;
+        this.accountId = '';
     }
 
     private async createL1Client(poolName: string, mnemonic: string) {
@@ -171,24 +188,6 @@ export default class Account {
                 console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
             }
         }
-    }
-
-    public async activateExistingAccount(
-        accountName: string,
-        password: string,
-    ) {
-        let seed = this.decryptSeed(accountName, password);
-        await this.init(accountName, seed, password, false);
-    }
-
-    public async detachAccount() {
-        if (!this.zpClient) {
-            return;
-        }
-
-        await this.zpClient.logout();
-        this.accountName = undefined;
-        this.accountId = '';
     }
 
     public getCurrentPool(): string {

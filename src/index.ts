@@ -250,7 +250,7 @@ jQuery(async function ($) {
             this.echo(`Initializing account...`);
 
             this.pause();
-            await this.account.activateExistingAccount(accountName, password);
+            await this.account.attachExistingAccount(accountName, password);
             this.resume();
           } else {
             let seed = await this.read(`Enter seed phrase or leave empty to generate a new one: `);
@@ -274,7 +274,7 @@ jQuery(async function ($) {
             this.echo(`Creating new account...`);
 
             this.pause();
-            await this.account.init(accountName, seed, password, true);
+            await this.account.attachAccount(accountName, seed, password, true);
             this.resume();
           }
         } catch (e) {
