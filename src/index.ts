@@ -286,7 +286,11 @@ jQuery(async function ($) {
 
       this.clear();
       this.echo(GREETING);
-      this.echo(`Welcome to the zkBob console for ${this.account.networkName()}`);
+      if (this.account.getPools().length == 1) {
+        this.echo(`Welcome to the zkBob console for ${this.account.networkName()}`);
+      } else {
+        this.echo(`Welcome to the multipool zkBob console`);
+      }
       this.echo('');
       this.echo('Amounts are interpreted as Wei by default');
       this.echo('If you want to specify human-readable decimal value pls add [[;white;]^] prefix');
