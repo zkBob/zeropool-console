@@ -68,9 +68,7 @@ export default class Account {
 
         const snarkParamsConfig = {
             transferParamsUrl: './assets/transfer_params.bin',
-            treeParamsUrl: './assets/tree_params.bin',
             transferVkUrl: './assets/transfer_verification_key.json',
-            treeVkUrl: './assets/tree_verification_key.json',
         };
 
         this.supportId = uuidv4();
@@ -78,7 +76,7 @@ export default class Account {
         this.config = {
             pools: env.pools,
             chains: env.chains,
-            snarkParams: snarkParamsConfig,
+            snarkParams: env.globalSnarks,
             supportId: this.supportId,
             forcedMultithreading: undefined,
         };

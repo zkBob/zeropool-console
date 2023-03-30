@@ -40,6 +40,11 @@
         }
     },
 
+    "globalSnarks": {
+        "transferParamsUrl": "./assets/transfer_params.bin",
+        "transferVkUrl": "./assets/transfer_verification_key.json"
+    },
+
     "minters": {
         "BOB-sepolia": "",
         "BOB-goerli": ""
