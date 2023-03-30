@@ -199,13 +199,11 @@ export default class Account {
     }
 
     public getCurrentPool(): string {
-        this.assertZpClient();
-        return this.zpClient.currentPool();
+        return this.getZpClient().currentPool();
     }
 
     public getPools(): string[] {
-        this.assertZpClient();
-        return this.zpClient.availabePools();
+        return this.getZpClient().availabePools();
     }
 
     public getTokenAddr(): string {
@@ -229,10 +227,9 @@ export default class Account {
     }
 
     public async switchPool(poolAlias: string, password: string): Promise<void> {
-        this.assertZpClient();
         const mnemonic = this.decryptSeed(this.accountName, password)
         await this.createL1Client(poolAlias, mnemonic);
-        return this.zpClient.switchToPool(poolAlias);
+        return this.getZpClient().switchToPool(poolAlias);
     }
 
     public getSeed(accountName: string, password: string): string {
@@ -264,16 +261,16 @@ export default class Account {
         return !!this.storage.get(accountName ?? this.accountName, 'seed');
     }
 
-    private assertZpClient() {
+    private getZpClient(): ZkBobClient {
         if (!this.zpClient) {
             const errMsg = this.initError ? `(client init failed: ${this.initError.message})` : '(unknown error)';
             throw new Error(`ZkAccount is not ready currently ${errMsg}`);
         }
+        return this.zpClient;
     }
 
     public networkName(): string {
-        this.assertZpClient();
-        return this.zpClient.networkName();
+        return this.getZpClient().networkName();
     }
 
     public nativeSymbol(): string {
@@ -297,44 +294,37 @@ export default class Account {
     }
 
     public async genShieldedAddress(): Promise<string> {
-        this.assertZpClient();
-        return await this.zpClient.generateAddress();
+        return await this.getZpClient().generateAddress();
     }
 
     public async genBurnerAddress(seed: Uint8Array): Promise<string> {
-        this.assertZpClient();
-        return await this.zpClient.genBurnerAddress(seed);
+        return await this.getZpClient().genBurnerAddress(seed);
     }
 
     public async isMyAddress(shieldedAddress: string): Promise<boolean> {
-        this.assertZpClient();
-        return await this.zpClient.isMyAddress(shieldedAddress);
+        return await this.getZpClient().isMyAddress(shieldedAddress);
     }
 
     public async getShieldedBalances(updateState: boolean = true): Promise<[bigint, bigint, bigint]> {
-        this.assertZpClient();
-        const balances = this.zpClient.getBalances(updateState);
+        const balances = this.getZpClient().getBalances(updateState);
 
         return balances;
     }
 
     public async getOptimisticTotalBalance(updateState: boolean = true): Promise<bigint> {
-        this.assertZpClient();
-        const pendingBalance = this.zpClient.getOptimisticTotalBalance(updateState);
+        const pendingBalance = this.getZpClient().getOptimisticTotalBalance(updateState);
 
         return pendingBalance;
     }
 
     // wei -> Gwei
     public async weiToShielded(amountWei: bigint): Promise<bigint> {
-        this.assertZpClient();
-        return await this.zpClient.weiToShieldedAmount(amountWei);
+        return await this.getZpClient().weiToShieldedAmount(amountWei);
     }
 
     // Gwei -> wei
     public async shieldedToWei(amountShielded: bigint): Promise<bigint> {
-        this.assertZpClient();
-        return await this.zpClient.shieldedAmountToWei(amountShielded);
+        return await this.getZpClient().shieldedAmountToWei(amountShielded);
     }
 
     // ^tokens|wei -> wei
@@ -353,8 +343,7 @@ export default class Account {
 
     // Gwei -> tokens
     public async shieldedToHuman(amountShielded: bigint): Promise<string> {
-        this.assertZpClient();
-        return this.weiToHuman(await this.zpClient.shieldedAmountToWei(amountShielded));
+        return this.weiToHuman(await this.getZpClient().shieldedAmountToWei(amountShielded));
 
     }
 
@@ -372,98 +361,79 @@ export default class Account {
     }
 
     public async getInternalState(): Promise<any> {
-        this.assertZpClient();
-        return this.zpClient.rawState();
+        return this.getZpClient().rawState();
     }
 
     public async getLocalTreeState(index?: bigint): Promise<TreeState> {
-        this.assertZpClient();
-        return await this.zpClient.getLocalState(index);
+        return await this.getZpClient().getLocalState(index);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {
-        this.assertZpClient();
-        return this.zpClient.getRelayerState();
+        return this.getZpClient().getRelayerState();
     }
 
     public async getRelayerOptimisticTreeState(): Promise<TreeState> {
-        this.assertZpClient();
-        return this.zpClient.getRelayerOptimisticState();
+        return this.getZpClient().getRelayerOptimisticState();
     }
 
     public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
-        this.assertZpClient();
-        return this.zpClient.getTreeStartIndex();
+        return this.getZpClient().getTreeStartIndex();
     }
 
     public async getPoolTreeState(index?: bigint): Promise<TreeState> {
-        this.assertZpClient();
-        return this.zpClient.getPoolState(index);
+        return this.getZpClient().getPoolState(index);
     }
 
     public async getTreeLeftSiblings(index: bigint): Promise<TreeNode[]> {
-        this.assertZpClient();
-        return await this.zpClient.getLeftSiblings(index);
+        return await this.getZpClient().getLeftSiblings(index);
     }
 
     public async getStatFullSync(): Promise<SyncStat | undefined> {
-        this.assertZpClient();
-        return this.zpClient.getStatFullSync();
+        return this.getZpClient().getStatFullSync();
     }
 
     public async getAverageTimePerTx(): Promise<number | undefined> {
-        this.assertZpClient();
-        return this.zpClient.getAverageTimePerTx();
+        return this.getZpClient().getAverageTimePerTx();
     }
 
     public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
-        this.assertZpClient();
-        return this.zpClient.getEphemeralAddress(index);
+        return this.getZpClient().getEphemeralAddress(index);
     }
 
     public async getNonusedEphemeralIndex(): Promise<number> {
-        this.assertZpClient();
-        return this.zpClient.getNonusedEphemeralIndex();
+        return this.getZpClient().getNonusedEphemeralIndex();
     }
 
     public async getUsedEphemeralAddresses(): Promise<EphemeralAddress[]> {
-        this.assertZpClient();
-        return this.zpClient.getUsedEphemeralAddresses();
+        return this.getZpClient().getUsedEphemeralAddresses();
     }
 
     public async getEphemeralAddressInTxCount(index: number): Promise<number> {
-        this.assertZpClient();
-        return this.zpClient.getEphemeralAddressInTxCount(index);
+        return this.getZpClient().getEphemeralAddressInTxCount(index);
     }
 
     public async getEphemeralAddressOutTxCount(index: number): Promise<number> {
-        this.assertZpClient();
-        return this.zpClient.getEphemeralAddressOutTxCount(index);
+        return this.getZpClient().getEphemeralAddressOutTxCount(index);
     }
 
     public async getEphemeralAddressPrivateKey(index: number): Promise<string> {
-        this.assertZpClient();
-        return this.zpClient.getEphemeralAddressPrivateKey(index);
+        return this.getZpClient().getEphemeralAddressPrivateKey(index);
     }
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
-        this.assertZpClient();
-        return this.zpClient.getAllHistory(updateState);
+        return this.getZpClient().getAllHistory(updateState);
     }
 
     public async rollback(index: bigint): Promise<bigint> {
-        this.assertZpClient();
-        return this.zpClient.rollbackState(index);
+        return this.getZpClient().rollbackState(index);
     }
 
     public async syncState(): Promise<boolean> {
-        this.assertZpClient();
-        return this.zpClient.updateState();
+        return this.getZpClient().updateState();
     }
 
     public async cleanInternalState(): Promise<void> {
-        this.assertZpClient();
-        return this.zpClient.cleanState();
+        return this.getZpClient().cleanState();
     }
 
     // TODO: Support multiple tokens
@@ -489,40 +459,34 @@ export default class Account {
     }
 
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
-        this.assertZpClient();
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
-        return await this.zpClient.getTransactionParts(transfers, fee, false);
+        return await this.getZpClient().getTransactionParts(transfers, fee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
-        this.assertZpClient();
         let addr = address;
         if (address === undefined) {
             addr = await this.client.getAddress();
         }
 
-        return await this.zpClient.getLimits(addr, false);
+        return await this.getZpClient().getLimits(addr, false);
     }
 
     public async minTxAmount(): Promise<bigint> {
-        this.assertZpClient();
-        return await this.zpClient.minTxAmount();
+        return await this.getZpClient().minTxAmount();
      }
     public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
-        this.assertZpClient();
-        return await this.zpClient.calcMaxAvailableTransfer(false);
+        return await this.getZpClient().calcMaxAvailableTransfer(false);
     }
 
     public async minFee(amount: bigint, txType: TxType): Promise<bigint> {
-        this.assertZpClient();
-        return await this.zpClient.atomicTxFee();
+        return await this.getZpClient().atomicTxFee();
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
-        this.assertZpClient();
-        return await this.zpClient.feeEstimate(amounts, txType, updateState);
+        return await this.getZpClient().feeEstimate(amounts, txType, updateState);
     }
 
     public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
@@ -533,20 +497,19 @@ export default class Account {
 
     public getAddressUrl(addr: string, chainId: number | undefined = undefined): string {
         const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
-        const txUrl = env.blockExplorerUrls[String(curChainId)].address;
-        return txUrl.replace('{{addr}}', addr);
+        const addrUrl = env.blockExplorerUrls[String(curChainId)].address;
+        return addrUrl.replace('{{addr}}', addr);
     }
 
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
-        this.assertZpClient();
         let fromAddress = null;
 
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact();
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate([amount], TxType.Deposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Deposit, false));
 
-            let totalApproveAmount = await this.zpClient.shieldedAmountToWei(amount + txFee.totalPerTx);
+            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + txFee.totalPerTx);
             const currentAllowance = await this.client.allowance(this.getTokenAddr(), this.getPoolAddr());
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
@@ -557,10 +520,10 @@ export default class Account {
             }
 
             console.log('Making deposit...');
-            const jobId = await this.zpClient.deposit(amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
+            const jobId = await this.getZpClient().deposit(amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(jobId)) };
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -606,25 +569,24 @@ export default class Account {
     }
 
     public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
-        this.assertZpClient();
         let myAddress = null;
         myAddress = await this.client.getAddress();
         
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact();
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate([amount], TxType.BridgeDeposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittable(amount, async (deadline, value, salt) => {
+            jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
                 const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(jobId))};
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -633,22 +595,21 @@ export default class Account {
     }
 
     public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
-        this.assertZpClient();
         let myAddress = null;
         myAddress = await this.client.getAddress();
         
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact();
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate([amount], TxType.BridgeDeposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittableEphemeral(amount, index, txFee.totalPerTx);
+            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, txFee.totalPerTx);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(jobId))};
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -658,9 +619,8 @@ export default class Account {
 
     // returns txHash in promise
     public async directDeposit(to: string, amount: bigint): Promise<string> {
-        this.assertZpClient();
-        const ddFee = (await this.zpClient.directDepositFee());
-        const amountWithFeeWei = await this.zpClient.shieldedAmountToWei(amount + ddFee);
+        const ddFee = (await this.getZpClient().directDepositFee());
+        const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
         const ddContract = await this.client.getDirectDepositContract(this.getPoolAddr());
 
@@ -685,18 +645,17 @@ export default class Account {
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
-        this.assertZpClient();
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact();
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const amounts = transfers.map((oneTransfer) => oneTransfer.amountGwei);
-            const txFee = (await this.zpClient.feeEstimate(amounts, TxType.Transfer, false));
+            const txFee = (await this.getZpClient().feeEstimate(amounts, TxType.Transfer, false));
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.zpClient.transferMulti(transfers, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -705,19 +664,18 @@ export default class Account {
     }
 
     public async withdrawShielded(amount: bigint, external_addr: string): Promise<{jobId: string, txHash: string}[]> {
-        this.assertZpClient();
         let address = external_addr ?? await this.client.getAddress();
 
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact();
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate([amount], TxType.Transfer, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Transfer, false));
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.zpClient.withdrawMulti(address, amount, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -726,59 +684,51 @@ export default class Account {
     }
 
     public async giftCardBalance(sk: Uint8Array, birthindex?: number): Promise<bigint> {
-        this.assertZpClient();
         const giftCardAccountConfig: AccountConfig = {
             sk,
-            pool: this.zpClient.currentPool(),
+            pool: this.getZpClient().currentPool(),
             birthindex,
-            proverMode: await this.zpClient.getProverMode(),
+            proverMode: await this.getZpClient().getProverMode(),
         }
-        return await this.zpClient.giftCardBalance(giftCardAccountConfig);
+        return await this.getZpClient().giftCardBalance(giftCardAccountConfig);
     }
 
     public async redeemGiftCard(sk: Uint8Array, birthindex?: number): Promise<{jobId: string, txHash: string}> {
-        this.assertZpClient();
         const giftCardAccountConfig: AccountConfig = {
             sk,
-            pool: this.zpClient.currentPool(),
+            pool: this.getZpClient().currentPool(),
             birthindex,
-            proverMode: await this.zpClient.getProverMode(),
+            proverMode: await this.getZpClient().getProverMode(),
         }
 
         console.log('Redeeming gift-card...');
-        const jobId: string = await this.zpClient.redeemGiftCard(giftCardAccountConfig);
+        const jobId: string = await this.getZpClient().redeemGiftCard(giftCardAccountConfig);
         console.log(`Please wait relayer provide txHash for job ${jobId}...`);
 
-        return {jobId, txHash: (await this.zpClient.waitJobTxHash(jobId))};
+        return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
     }
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
-        this.assertZpClient();
-        return await this.zpClient.verifyShieldedAddress(shieldedAddress);
+        return await this.getZpClient().verifyShieldedAddress(shieldedAddress);
     }
 
     public async setProverMode(mode: ProverMode) {
-        this.assertZpClient();
-        await this.zpClient.setProverMode(mode);
+        await this.getZpClient().setProverMode(mode);
     }
 
     public async getProverMode(): Promise<ProverMode> {
-        this.assertZpClient();
-        return this.zpClient.getProverMode();
+        return this.getZpClient().getProverMode();
     }
     
     public async libraryVersion(): Promise<string> {
-        this.assertZpClient();
-        return this.zpClient.getLibraryVersion();
+        return this.getZpClient().getLibraryVersion();
     }
 
     public async relayerVersion(): Promise<ServiceVersion> {
-        this.assertZpClient();
-        return await this.zpClient.getRelayerVersion();
+        return await this.getZpClient().getRelayerVersion();
     }
 
     public async proverVersion(): Promise<ServiceVersion> {
-        this.assertZpClient();
-        return await this.zpClient.getProverVersion();
+        return await this.getZpClient().getProverVersion();
     }
 }

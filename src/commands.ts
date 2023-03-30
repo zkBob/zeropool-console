@@ -52,10 +52,6 @@ export async function switchPool(poolAlias: string, password: string) {
     this.echo(`Current pool: ${await this.account.getCurrentPool()}`);
 }
 
-export async function setSeed(seed: string, password: string) {
-    //await this.account.login(seed, password);
-}
-
 export function getSeed(password: string) {
     const seed = this.account.getSeed(this.account.accountName, password);
     this.echo(`[[;gray;]Seed phrase: ${seed}]`);
