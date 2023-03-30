@@ -12,7 +12,6 @@ import { AccountConfig, ClientConfig, ProverMode,
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
-import Web3 from 'web3'
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 
@@ -486,7 +485,6 @@ export default class Account {
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        const tokenAddress = env.pools[this.getCurrentPool()].tokenAddress;
         return await this.client.transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
@@ -535,7 +533,7 @@ export default class Account {
 
     public getAddressUrl(addr: string, chainId: number | undefined = undefined): string {
         const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
-        const txUrl = env.blockExplorerUrls[String(curChainId)].tx;
+        const txUrl = env.blockExplorerUrls[String(curChainId)].address;
         return txUrl.replace('{{addr}}', addr);
     }
 
