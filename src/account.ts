@@ -49,6 +49,7 @@ export type InitAccountCallback = (status: InitAccountStatus) => void;
 export default class Account {
     accountName: string;
     private storage: AccountStorage;
+    public provider: HDWalletProvider;
     public client: NetworkClient;
     private zpClient?: ZkBobClient;
     private zpClientPromise?: Promise<ZkBobClient>;
@@ -162,16 +163,26 @@ export default class Account {
 
     private async createL1Client(poolName: string, mnemonic: string) {
         // Initialize L1 network client (to interact with the native blockchain)
-        const newChainId = env.pools[poolName].chainId;
-        if (!this.client || await this.client.getChainId() != newChainId) {
+        if(this.client) {
+            const curChainId = await this.client.getChainId();
+            const newChainId = env.pools[poolName].chainId;
+            if (newChainId != curChainId) {
+                this.provider.engine.stop();
+                delete this.client;
+                delete this.provider;
+            }
+        }
+
+        if (!this.client) {
             const curChainId = String(env.pools[poolName].chainId);
             const rpcURLs = env.chains[curChainId].rpcUrls;
             const transactionUrl = env.blockExplorerUrls[curChainId].tx;
-            const provider = new HDWalletProvider({
+
+            this.provider = new HDWalletProvider({
                 mnemonic,
                 providerOrUrl: rpcURLs[0],  // TODO: check URL count
             });
-            const client = new EthereumClient(provider, { transactionUrl });
+            const client = new EthereumClient(this.provider, { transactionUrl });
             client.gasMultiplier = 1.2; // increase default gas
             this.client = client;
         }
