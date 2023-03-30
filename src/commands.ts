@@ -953,7 +953,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
 
             if(!cloudId) throw new Error("sign up response is invalid")
     
-            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`);
+            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
 
             if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
 
