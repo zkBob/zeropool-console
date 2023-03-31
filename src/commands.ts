@@ -70,7 +70,7 @@ export function getSk(password: string) {
 
 export async function getAddress() {
     const address = await this.account.getRegularAddress();
-    this.echo(`[[;gray;]Address: ${address}]`);
+    this.echo(`[[;gray;]Address:] [[!;;;;${this.account.getAddressUrl(address)}]${address}]`);
 }
 
 export async function genShieldedAddress(number: string) {
@@ -343,7 +343,7 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     this.echo(`Getting ephemeral acount info...`);
     this.pause();
     let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
-    this.update(-1, `Ephemeral address [[;white;]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${this.account.tokenSymbol()}`);
+    this.update(-1, `Ephemeral address [[!;;;;${this.account.getAddressUrl(ephemeralAddress.address)}]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${this.account.tokenSymbol()}`);
 
     // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
     this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
@@ -644,7 +644,7 @@ export async function getEphemeral(index: string) {
     ]);
 
     this.echo(`Index: [[;white;]${addr.index}]`);
-    this.echo(`  Address:            [[;white;]${addr.address}]`);
+    this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
     this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
     this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
     this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
@@ -666,7 +666,7 @@ export async function getEphemeralUsed() {
         ]);
 
         this.echo(`Index: [[;white;]${addr.index}]`);
-        this.echo(`  Address:            [[;white;]${addr.address}]`);
+        this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
         this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
         this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
         this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
