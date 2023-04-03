@@ -65,12 +65,7 @@ export default class Account {
     constructor(callback?: InitAccountCallback) {
         this.initCallback = callback;
         this.storage = new LocalAccountStorage();
-
-        const snarkParamsConfig = {
-            transferParamsUrl: './assets/transfer_params.bin',
-            transferVkUrl: './assets/transfer_verification_key.json',
-        };
-
+        
         this.supportId = uuidv4();
 
         this.config = {
