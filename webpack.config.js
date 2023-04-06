@@ -57,6 +57,9 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin(),
+        new CopyPlugin({
+           patterns: [{ from: 'src/env.js' }],
+        }),
         new HtmlWebpackPlugin({
             template: 'src/index.html',
             filename: 'index.html',
@@ -73,4 +76,7 @@ module.exports = {
         }),
     ],
     ignoreWarnings: [/Failed to parse source map/],
+    experiments: {
+        topLevelAwait: true,
+    },
 };

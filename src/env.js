@@ -1,0 +1,1 @@
+window.CONFIG_JSON = '$CONFIG_JSON';

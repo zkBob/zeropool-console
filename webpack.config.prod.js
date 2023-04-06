@@ -18,5 +18,5 @@ module.exports = merge(common, {
             }
         ],
     },
-    plugins: [/*new CompressionPlugin({ exclude: 'env.js' })*/s]
+    plugins: [new CompressionPlugin({ exclude: 'env.js' })]
 });
