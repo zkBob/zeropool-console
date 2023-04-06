@@ -1,31 +1,20 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
-import { EthereumClient, PolkadotClient, Client as NetworkClient } from 'zeropool-support-js';
-import { init, ZkBobClient, HistoryRecord,
-        TransferConfig, FeeAmount, TxType,
-        PoolLimits, InitLibCallback,
-        TreeState, EphemeralAddress, SyncStat, TreeNode,
-        ServiceVersion,
+import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
+import { AccountConfig, ClientConfig, ProverMode,
+         ZkBobClient, HistoryRecord,
+         TransferConfig, TransferRequest, FeeAmount, TxType,
+         PoolLimits,
+         TreeState, EphemeralAddress, SyncStat, TreeNode,
+         ServiceVersion,
+         accountId,
         } from 'zkbob-client-js';
+import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
-import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils';
-import { NetworkType } from 'zkbob-client-js/lib/network-type';
-import { EvmNetwork } from 'zkbob-client-js/lib/networks/evm';
-import { PolkadotNetwork } from 'zkbob-client-js/lib/networks/polkadot';
-
-import { TransferRequest } from 'zkbob-client-js/lib/client';
-import { ProverMode } from 'zkbob-client-js/lib/config';
 import { v4 as uuidv4 } from 'uuid';
+import { env } from './environment';
 
-
-function isEvmBased(network: string): boolean {
-    return ['ethereum', 'aurora', 'xdai', 'polygon', 'sepolia', 'goerli'].includes(network);
-}
-
-function isSubstrateBased(network: string): boolean {
-    return ['polkadot', 'kusama'].includes(network);
-}
 
 interface AccountStorage {
     get(accountName: string, field: string): string | null;
@@ -41,122 +30,246 @@ class LocalAccountStorage implements AccountStorage {
     }
 }
 
-// TODO: Extract timeout management code
+export enum InitAccountState {
+    ClientInitializing = 1,
+    AccountlessClientReady = 2,
+    AccountInitializing = 3,
+    FullClientReady = 4,
+    Failed = 5
+}
+
+export interface InitAccountStatus {
+    state: InitAccountState;
+    error?: Error | undefined;
+}
+
+export type InitAccountCallback = (status: InitAccountStatus) => void;
+
 export default class Account {
-    readonly accountName: string;
+    accountName: string;
     private storage: AccountStorage;
+    public provider: HDWalletProvider;
     public client: NetworkClient;
-    private zpClient: ZkBobClient;
+    private zpClient?: ZkBobClient;
+    private zpClientPromise?: Promise<ZkBobClient>;
+    private initError?: Error;
+    private tokenSymbols: {[poolName: string]: string} = {};
+
+    private config: ClientConfig;
+
+    public initCallback?: InitAccountCallback;
     
+    public accountId: string;
     public supportId: string;
 
-    constructor(accountName: string) {
-        this.accountName = accountName;
+    constructor(callback?: InitAccountCallback) {
+        this.initCallback = callback;
         this.storage = new LocalAccountStorage();
+        
+        this.supportId = uuidv4();
 
-        if (process.env.NODE_ENV === 'development') {
-            console.log('Dev environment, using local env variables.');
-            NETWORK = process.env.NETWORK;
-            CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
-            TOKEN_ADDRESS = process.env.TOKEN_ADDRESS;
-            MINTER_ADDRESS = process.env.MINTER_ADDRESS;
-            RELAYER_URL = process.env.RELAYER_URL;
-            RPC_URL = process.env.RPC_URL;
-            TRANSACTION_URL = process.env.TRANSACTION_URL;
-            TOKEN_SYMBOL = process.env.TOKEN_SYMBOL;
-            SHIELDED_TOKEN_SYMBOL = process.env.SHIELDED_TOKEN_SYMBOL;
-            DELEGATED_PROVER_URL = process.env.DELEGATED_PROVER_URL;
-            CLOUD_API_ENDPOINT = process.env.CLOUD_API_ENDPOINT;
-            GIFTCARD_REDEMPTION_URL = process.env.GIFTCARD_REDEMPTION_URL;
-        }
+        this.config = {
+            pools: env.pools,
+            chains: env.chains,
+            snarkParams: env.globalSnarks,
+            supportId: this.supportId,
+            forcedMultithreading: undefined,
+        };
+
+        if (this.initCallback) this.initCallback({ state: InitAccountState.ClientInitializing });
+
+        this.zpClientPromise = ZkBobClient.create(this.config, env.defaultPool);
+
+        this.zpClientPromise.then((zpClient) => {
+            this.zpClient = zpClient;
+            this.initError = undefined;
+            if (this.initCallback) this.initCallback({ state: InitAccountState.AccountlessClientReady });
+        }).catch((err) => {
+            console.error(`Cannot initialize zk client: ${err.message}`);
+            this.zpClient = undefined;
+            this.initError = err;
+            if (this.initCallback) this.initCallback({ state: InitAccountState.Failed, error: err });
+        }).finally(() => {
+            this.zpClientPromise = undefined;
+        });
     }
 
-    public async init(
+    public async attachAccount(
+        accountName: string,
         mnemonic: string,
         password: string,
         isNewAcc: boolean,
-        loadingCallback: InitLibCallback | undefined = undefined
     ): Promise<void> {
-        const snarkParamsConfig = {
-            transferParamsUrl: './assets/transfer_params.bin',
-            treeParamsUrl: './assets/tree_params.bin',
-            transferVkUrl: './assets/transfer_verification_key.json',
-            treeVkUrl: './assets/tree_verification_key.json',
-        };
 
-        const { worker } = await init(snarkParamsConfig, RELAYER_URL, loadingCallback);
+        // waiting when accountless client will initialized (or failed)
+        await this.zpClientPromise;
 
-        let client, network;
-        if (isEvmBased(NETWORK)) {
-            const provider = new HDWalletProvider({
-                mnemonic,
-                providerOrUrl: RPC_URL,
-            });
-            client = new EthereumClient(provider, { transactionUrl: TRANSACTION_URL });
-            client.gasMultiplier = 1.2; // increase gas
-            network = new EvmNetwork(RPC_URL);
-        } else if (isSubstrateBased(NETWORK)) {
-            client = await PolkadotClient.create(mnemonic, { rpcUrl: RPC_URL, transactionUrl: TRANSACTION_URL });
-            network = new PolkadotNetwork();
-        } else {
-            throw new Error(`Unknown network ${NETWORK}`);
+        if (this.initCallback) this.initCallback({ state: InitAccountState.AccountInitializing });
+
+        if (!this.zpClient) {
+            if (this.initCallback) this.initCallback({ state: InitAccountState.Failed, error: this.initError });
+            return;
         }
 
-        const networkType = NETWORK as NetworkType;
-        if (networkType === undefined) {
-            throw new Error(`Network ${NETWORK} is unsupported by client library`);
+        const sk = deriveSpendingKeyZkBob(mnemonic);
+        const pool = await this.getCurrentPool();
+        const birthindex = isNewAcc ? -1 : undefined;
+        const proverMode = this.config.pools[pool].delegatedProverUrls.length > 0 ? 
+                                ProverMode.DelegatedWithFallback : 
+                                ProverMode.Local;
+        const accountConf: AccountConfig = { sk, pool, birthindex, proverMode };
+
+        this.createL1Client(pool, mnemonic);
+        
+        try {
+            await this.zpClient?.login(accountConf);
+            this.accountId = accountId(accountConf);
+        } catch (err) {
+            this.initError = err;
+            if (this.initCallback) this.initCallback({ state: InitAccountState.Failed, error: err });
+            return;
         }
 
-        const sk = deriveSpendingKeyZkBob(mnemonic, networkType);
-        this.client = client;
+        this.initError = undefined;
+        if (this.initCallback) this.initCallback({ state: InitAccountState.FullClientReady });
 
-        this.supportId = uuidv4();
-
-        const bulkConfigUrl = `./assets/zkbob-${NETWORK}-coldstorage.cfg`
-
-        this.zpClient = await ZkBobClient.create({
-            sk,
-            worker,
-            tokens: {
-                [TOKEN_ADDRESS]: {
-                    poolAddress: CONTRACT_ADDRESS,
-                    relayerUrl: RELAYER_URL,
-                    coldStorageConfigPath: bulkConfigUrl,
-                    birthindex: isNewAcc ? -1 : undefined,
-                    proverMode: ProverMode.Local,
-                    delegatedProverUrl: DELEGATED_PROVER_URL,
-                }
-            },
-            networkName: NETWORK,
-            network,
-            supportId: this.supportId,
-        });
-
-        this.storage.set(this.accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
+        this.storage.set(accountName, 'seed', await AES.encrypt(mnemonic, password).toString());
+        this.accountName = accountName;
     }
 
-    public async unlockAccount(
+    public async attachExistingAccount(
+        accountName: string,
         password: string,
-        loadingCallback: InitLibCallback | undefined = undefined
     ) {
-        let seed = this.decryptSeed(password);
-        await this.init(seed, password, false, loadingCallback);
+        let seed = this.decryptSeed(accountName, password);
+        await this.attachAccount(accountName, seed, password, false);
     }
 
-    public getSeed(password: string): string {
-        return this.decryptSeed(password);
+    public async detachAccount() {
+        if (!this.zpClient) {
+            return;
+        }
+
+        await this.zpClient.logout();
+        this.accountName = undefined;
+        this.accountId = '';
+    }
+
+    private async createL1Client(poolName: string, mnemonic: string) {
+        // Initialize L1 network client (to interact with the native blockchain)
+        if(this.client) {
+            const curChainId = await this.client.getChainId();
+            const newChainId = env.pools[poolName].chainId;
+            if (newChainId != curChainId) {
+                this.provider.engine.stop();
+                delete this.client;
+                delete this.provider;
+            }
+        }
+
+        if (!this.client) {
+            const curChainId = String(env.pools[poolName].chainId);
+            const rpcURLs = env.chains[curChainId].rpcUrls;
+            const transactionUrl = env.blockExplorerUrls[curChainId].tx;
+
+            this.provider = new HDWalletProvider({
+                mnemonic,
+                providerOrUrl: rpcURLs[0],  // TODO: check URL count
+            });
+            const client = new EthereumClient(this.provider, { transactionUrl });
+            client.gasMultiplier = 1.2; // increase default gas
+            this.client = client;
+        }
+
+        // Request token symbol if needed
+        let attemptsNum = 3;
+        while(!this.tokenSymbols[poolName] && attemptsNum-- > 0) {
+            try {
+                this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
+                console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
+            } catch(err) {
+                console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
+            }
+        }
+    }
+
+    public getCurrentPool(): string {
+        return this.getZpClient().currentPool();
+    }
+
+    public getPools(): string[] {
+        return this.getZpClient().availabePools();
+    }
+
+    public getTokenAddr(): string {
+        return env.pools[this.getCurrentPool()].tokenAddress;
+    }
+
+    public getPoolAddr(): string {
+        return env.pools[this.getCurrentPool()].poolAddress;
+    }
+
+    public getDelegatedProverUrls(): string[] {
+        return env.pools[this.getCurrentPool()].delegatedProverUrls
+    }
+
+    public tokenSymbol(): string {
+        return this.tokenSymbols[this.getCurrentPool()] ?? 'UNK';
+    }
+    
+    public shTokenSymbol(): string {
+        return `sh${this.tokenSymbol()}`;
+    }
+
+    public async switchPool(poolAlias: string, password: string): Promise<void> {
+        const mnemonic = this.decryptSeed(this.accountName, password)
+        await this.createL1Client(poolAlias, mnemonic);
+        return this.getZpClient().switchToPool(poolAlias);
+    }
+
+    public getSeed(accountName: string, password: string): string {
+        return this.decryptSeed(accountName, password);
+    }
+
+    private decryptSeed(accountName: string, password: string): string {
+        const cipherText = this.storage.get(accountName, 'seed');
+        let seed;
+        try {
+            seed = AES.decrypt(cipherText, password).toString(Utf8);
+            if (!bip39.validateMnemonic(seed)) throw new Error('invalid mnemonic');
+        } catch (_) {
+            throw new Error('Incorrect password');
+        }
+
+        return seed;
     }
 
     public isInitialized(): boolean {
         return !!this.client;
     }
 
-    public isAccountPresent(): boolean {
-        return !!this.storage.get(this.accountName, 'seed');
+    public hasActiveAccount(): boolean {
+        return (this.zpClient && this.zpClient.hasAccount() && this.accountName !== undefined);
+    }
+
+    public isAccountPresent(accountName?: string): boolean {
+        return !!this.storage.get(accountName ?? this.accountName, 'seed');
+    }
+
+    private getZpClient(): ZkBobClient {
+        if (!this.zpClient) {
+            const errMsg = this.initError ? `(client init failed: ${this.initError.message})` : '(unknown error)';
+            throw new Error(`ZkAccount is not ready currently ${errMsg}`);
+        }
+        return this.zpClient;
+    }
+
+    public networkName(): string {
+        return this.getZpClient().networkName();
     }
 
     public nativeSymbol(): string {
-        switch(NETWORK) {
+        switch(this.networkName()) {
             case 'ethereum': return 'ETH';
             case 'xdai': return 'XDAI';
             case 'aurora': return 'AURORA';
@@ -176,37 +289,41 @@ export default class Account {
     }
 
     public async genShieldedAddress(): Promise<string> {
-        return await this.zpClient.generateAddress(TOKEN_ADDRESS);
+        return await this.getZpClient().generateAddress();
+    }
+
+    public async genBurnerAddress(seed: Uint8Array): Promise<string> {
+        return await this.getZpClient().genBurnerAddress(seed);
     }
 
     public async isMyAddress(shieldedAddress: string): Promise<boolean> {
-        return await this.zpClient.isMyAddress(TOKEN_ADDRESS, shieldedAddress);
+        return await this.getZpClient().isMyAddress(shieldedAddress);
     }
 
     public async getShieldedBalances(updateState: boolean = true): Promise<[bigint, bigint, bigint]> {
-        const balances = this.zpClient.getBalances(TOKEN_ADDRESS, updateState);
+        const balances = this.getZpClient().getBalances(updateState);
 
         return balances;
     }
 
     public async getOptimisticTotalBalance(updateState: boolean = true): Promise<bigint> {
-        const pendingBalance = this.zpClient.getOptimisticTotalBalance(TOKEN_ADDRESS, updateState);
+        const pendingBalance = this.getZpClient().getOptimisticTotalBalance(updateState);
 
         return pendingBalance;
     }
 
     // wei -> Gwei
-    public weiToShielded(amountWei: bigint): bigint {
-        return this.zpClient.weiToShieldedAmount(TOKEN_ADDRESS, amountWei);
+    public async weiToShielded(amountWei: bigint): Promise<bigint> {
+        return await this.getZpClient().weiToShieldedAmount(amountWei);
     }
 
     // Gwei -> wei
-    public shieldedToWei(amountShielded: bigint): bigint {
-        return this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded);
+    public async shieldedToWei(amountShielded: bigint): Promise<bigint> {
+        return await this.getZpClient().shieldedAmountToWei(amountShielded);
     }
 
     // ^tokens|wei -> wei
-    public humanToWei(amount: string): bigint {
+    public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
             return BigInt(this.client.toBaseUnit(amount.substr(1)));
         }
@@ -215,18 +332,18 @@ export default class Account {
     }
 
     // ^tokens|wei -> Gwei
-    public humanToShielded(amount: string): bigint {
-        return this.weiToShielded(this.humanToWei(amount));
+    public async humanToShielded(amount: string): Promise<bigint> {
+        return await this.weiToShielded(await this.humanToWei(amount));
     }
 
     // Gwei -> tokens
-    public shieldedToHuman(amountShielded: bigint): string {
-        return this.weiToHuman(this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amountShielded));
+    public async shieldedToHuman(amountShielded: bigint): Promise<string> {
+        return this.weiToHuman(await this.getZpClient().shieldedAmountToWei(amountShielded));
 
     }
 
     // wei -> tokens
-    public weiToHuman(amountWei: bigint): string {
+    public async weiToHuman(amountWei: bigint): Promise<string> {
         return this.client.fromBaseUnit(amountWei.toString());
     }
 
@@ -239,89 +356,90 @@ export default class Account {
     }
 
     public async getInternalState(): Promise<any> {
-        return this.zpClient.rawState(TOKEN_ADDRESS);
+        return this.getZpClient().rawState();
     }
 
     public async getLocalTreeState(index?: bigint): Promise<TreeState> {
-        return await this.zpClient.getLocalState(TOKEN_ADDRESS, index);
+        return await this.getZpClient().getLocalState(index);
     }
 
     public async getRelayerTreeState(): Promise<TreeState> {
-        return this.zpClient.getRelayerState(TOKEN_ADDRESS);
+        return this.getZpClient().getRelayerState();
     }
 
     public async getRelayerOptimisticTreeState(): Promise<TreeState> {
-        return this.zpClient.getRelayerOptimisticState(TOKEN_ADDRESS);
+        return this.getZpClient().getRelayerOptimisticState();
     }
 
     public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
-        return this.zpClient.getTreeStartIndex(TOKEN_ADDRESS);
+        return this.getZpClient().getTreeStartIndex();
     }
 
     public async getPoolTreeState(index?: bigint): Promise<TreeState> {
-        return this.zpClient.getPoolState(TOKEN_ADDRESS, index);
+        return this.getZpClient().getPoolState(index);
     }
 
     public async getTreeLeftSiblings(index: bigint): Promise<TreeNode[]> {
-        return await this.zpClient.getLeftSiblings(TOKEN_ADDRESS, index);
+        return await this.getZpClient().getLeftSiblings(index);
     }
 
     public async getStatFullSync(): Promise<SyncStat | undefined> {
-        return this.zpClient.getStatFullSync();
+        return this.getZpClient().getStatFullSync();
     }
 
     public async getAverageTimePerTx(): Promise<number | undefined> {
-        return this.zpClient.getAverageTimePerTx();
+        return this.getZpClient().getAverageTimePerTx();
     }
 
     public async getEphemeralAddress(index: number): Promise<EphemeralAddress> {
-        return this.zpClient.getEphemeralAddress(TOKEN_ADDRESS, index);
+        return this.getZpClient().getEphemeralAddress(index);
     }
 
     public async getNonusedEphemeralIndex(): Promise<number> {
-        return this.zpClient.getNonusedEphemeralIndex(TOKEN_ADDRESS);
+        return this.getZpClient().getNonusedEphemeralIndex();
     }
 
     public async getUsedEphemeralAddresses(): Promise<EphemeralAddress[]> {
-        return this.zpClient.getUsedEphemeralAddresses(TOKEN_ADDRESS);
+        return this.getZpClient().getUsedEphemeralAddresses();
     }
 
     public async getEphemeralAddressInTxCount(index: number): Promise<number> {
-        return this.zpClient.getEphemeralAddressInTxCount(TOKEN_ADDRESS, index);
+        return this.getZpClient().getEphemeralAddressInTxCount(index);
     }
 
     public async getEphemeralAddressOutTxCount(index: number): Promise<number> {
-        return this.zpClient.getEphemeralAddressOutTxCount(TOKEN_ADDRESS, index);
+        return this.getZpClient().getEphemeralAddressOutTxCount(index);
     }
 
     public async getEphemeralAddressPrivateKey(index: number): Promise<string> {
-        return this.zpClient.getEphemeralAddressPrivateKey(TOKEN_ADDRESS, index);
+        return this.getZpClient().getEphemeralAddressPrivateKey(index);
     }
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
-        return this.zpClient.getAllHistory(TOKEN_ADDRESS, updateState);
+        return this.getZpClient().getAllHistory(updateState);
     }
 
     public async rollback(index: bigint): Promise<bigint> {
-        return this.zpClient.rollbackState(TOKEN_ADDRESS, index);
+        return this.getZpClient().rollbackState(index);
     }
 
     public async syncState(): Promise<boolean> {
-        return this.zpClient.updateState(TOKEN_ADDRESS);
+        return this.getZpClient().updateState();
     }
 
     public async cleanInternalState(): Promise<void> {
-        return this.zpClient.cleanState(TOKEN_ADDRESS);
+        return this.getZpClient().cleanState();
     }
 
     // TODO: Support multiple tokens
     public async getTokenBalance(): Promise<string> {
-        return await this.client.getTokenBalance(TOKEN_ADDRESS);
+        return await this.client.getTokenBalance(this.getTokenAddr());
     }
 
     public async mint(amount: bigint): Promise<string> {
-        if (MINTER_ADDRESS) {
-            return await this.client.mint(MINTER_ADDRESS, amount.toString());
+        const minterAddr = env.minters[this.getCurrentPool()];
+        if (minterAddr) {
+            return await this.client.mint(minterAddr, amount.toString());
         } else {
             throw new Error('Cannot find the minter address. Most likely that token is not for test');
         }
@@ -332,14 +450,14 @@ export default class Account {
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        return await this.client.transferToken(TOKEN_ADDRESS, to, amount.toString());
+        return await this.client.transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
-        return await this.zpClient.getTransactionParts(TOKEN_ADDRESS, transfers, fee, false);
+        return await this.getZpClient().getTransactionParts(transfers, fee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -348,56 +466,59 @@ export default class Account {
             addr = await this.client.getAddress();
         }
 
-        return await this.zpClient.getLimits(TOKEN_ADDRESS, addr, false);
+        return await this.getZpClient().getLimits(addr, false);
     }
 
     public async minTxAmount(): Promise<bigint> {
-        return await this.zpClient.minTxAmount();
+        return await this.getZpClient().minTxAmount();
      }
     public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
-        return await this.zpClient.calcMaxAvailableTransfer(TOKEN_ADDRESS, false);
+        return await this.getZpClient().calcMaxAvailableTransfer(false);
     }
 
     public async minFee(amount: bigint, txType: TxType): Promise<bigint> {
-        return await this.zpClient.atomicTxFee(TOKEN_ADDRESS);
+        return await this.getZpClient().atomicTxFee();
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
-        return await this.zpClient.feeEstimate(TOKEN_ADDRESS, amounts, txType, updateState);
+        return await this.getZpClient().feeEstimate(amounts, txType, updateState);
     }
 
-    public getTransactionUrl(txHash: string): string {
-        return this.client.getTransactionUrl(txHash);
+    public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
+        const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
+        const txUrl = env.blockExplorerUrls[String(curChainId)].tx;
+        return txUrl.replace('{{hash}}', txHash);
+    }
+
+    public getAddressUrl(addr: string, chainId: number | undefined = undefined): string {
+        const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
+        const addrUrl = env.blockExplorerUrls[String(curChainId)].address;
+        return addrUrl.replace('{{addr}}', addr);
     }
 
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let fromAddress = null;
-        if (isSubstrateBased(NETWORK)) {
-            fromAddress = await this.client.getPublicKey();
-        }
 
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Deposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Deposit, false));
 
-            if (isEvmBased(NETWORK)) {
-                let totalApproveAmount = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + txFee.totalPerTx);
-                const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, CONTRACT_ADDRESS);
-                if (totalApproveAmount > currentAllowance) {
-                    totalApproveAmount -= currentAllowance;
-                    console.log(`Increasing allowance for the Pool (${CONTRACT_ADDRESS}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-                    await this.client.increaseAllowance(TOKEN_ADDRESS, CONTRACT_ADDRESS, totalApproveAmount.toString());
-                } else {
-                    console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
-                }
+            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + txFee.totalPerTx);
+            const currentAllowance = await this.client.allowance(this.getTokenAddr(), this.getPoolAddr());
+            if (totalApproveAmount > currentAllowance) {
+                totalApproveAmount -= currentAllowance;
+                console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
+                await this.client.increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalApproveAmount.toString());
+            } else {
+                console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
             }
 
             console.log('Making deposit...');
-            const jobId = await this.zpClient.deposit(TOKEN_ADDRESS, amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
+            const jobId = await this.getZpClient().deposit(amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId)) };
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -444,27 +565,23 @@ export default class Account {
 
     public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
-        if (isEvmBased(NETWORK)) {
-            myAddress = await this.client.getAddress();
-        } else {
-            throw Error('Permittable token deposit is supported on the EVM networks only');
-        }
+        myAddress = await this.client.getAddress();
         
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.BridgeDeposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittable(TOKEN_ADDRESS, amount, async (deadline, value, salt) => {
-                const dataToSign = await this.createPermittableDepositData(TOKEN_ADDRESS, '1', myAddress, CONTRACT_ADDRESS, value, deadline, salt);
+            jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
+                const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
                 return this.client.signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -474,24 +591,20 @@ export default class Account {
 
     public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
         let myAddress = null;
-        if (isEvmBased(NETWORK)) {
-            myAddress = await this.client.getAddress();
-        } else {
-            throw Error('Permittable token deposit is supported on the EVM networks only');
-        }
+        myAddress = await this.client.getAddress();
         
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.BridgeDeposit, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.zpClient.depositPermittableEphemeral(TOKEN_ADDRESS, amount, index, txFee.totalPerTx);
+            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, txFee.totalPerTx);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
-            return {jobId, txHash: (await this.zpClient.waitJobTxHash(TOKEN_ADDRESS, jobId))};
+            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -501,45 +614,43 @@ export default class Account {
 
     // returns txHash in promise
     public async directDeposit(to: string, amount: bigint): Promise<string> {
-        const ddFee = (await this.zpClient.directDepositFee(TOKEN_ADDRESS));
-        const amountWithFeeWei = this.zpClient.shieldedAmountToWei(TOKEN_ADDRESS, amount + ddFee);
+        const ddFee = (await this.getZpClient().directDepositFee());
+        const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
-        const ddContract = await this.client.getDirectDepositContract(CONTRACT_ADDRESS);
+        const ddContract = await this.client.getDirectDepositContract(this.getPoolAddr());
 
-        if (isEvmBased(NETWORK)) {
-            let totalApproveAmount = amountWithFeeWei;
-            const currentAllowance = await this.client.allowance(TOKEN_ADDRESS, ddContract);
-            if (totalApproveAmount > currentAllowance) {
-                totalApproveAmount -= currentAllowance;
-                console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL})`);
-                await this.client.increaseAllowance(TOKEN_ADDRESS, ddContract, totalApproveAmount.toString());
-            } else {
-                console.log(`Current allowance (${this.weiToHuman(currentAllowance)} ${TOKEN_SYMBOL}) is greater or equal than needed (${this.weiToHuman(totalApproveAmount)} ${TOKEN_SYMBOL}). Skipping approve`);
-            }
+        let totalApproveAmount = amountWithFeeWei;
+        const currentAllowance = await this.client.allowance(this.getTokenAddr(), ddContract);
+        if (totalApproveAmount > currentAllowance) {
+            totalApproveAmount -= currentAllowance;
+            console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
+            await this.client.increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
+        } else {
+            console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
         }
 
         console.log('Making direct deposit...');
-        return await this.client.directDeposit(CONTRACT_ADDRESS, amountWithFeeWei.toString(), to);
+        return await this.client.directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
     }
 
     // returns txHash in promise
     public async approveAllowance(spender: string, amount: bigint): Promise<string> {
-        console.log(`Approving allowance for ${spender} to spend our tokens (${this.weiToHuman(amount)} ${TOKEN_SYMBOL})`);
-        return await this.client.approve(TOKEN_ADDRESS, spender, amount.toString());
+        console.log(`Approving allowance for ${spender} to spend our tokens (${await this.weiToHuman(amount)} ${this.tokenSymbol()})`);
+        return await this.client.approve(this.getTokenAddr(), spender, amount.toString());
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const amounts = transfers.map((oneTransfer) => oneTransfer.amountGwei);
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, amounts, TxType.Transfer, false));
+            const txFee = (await this.getZpClient().feeEstimate(amounts, TxType.Transfer, false));
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.zpClient.transferMulti(TOKEN_ADDRESS, transfers, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -548,30 +659,18 @@ export default class Account {
     }
 
     public async withdrawShielded(amount: bigint, external_addr: string): Promise<{jobId: string, txHash: string}[]> {
-
-        let address = null;
-        if (external_addr == null) {
-            if (isEvmBased(NETWORK)) {
-                address = await this.client.getAddress();
-            }
-
-            if (isSubstrateBased(NETWORK)) {
-                address = await this.client.getPublicKey();
-            }
-        } else {
-            address = external_addr;
-        }
+        let address = external_addr ?? await this.client.getAddress();
 
         console.log('Waiting while state become ready...');
-        const ready = await this.zpClient.waitReadyToTransact(TOKEN_ADDRESS);
+        const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.zpClient.feeEstimate(TOKEN_ADDRESS, [amount], TxType.Transfer, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Transfer, false));
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.zpClient.withdrawMulti(TOKEN_ADDRESS, address, amount, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
-            return await this.zpClient.waitJobsTxHashes(TOKEN_ADDRESS, jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobIds);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
 
@@ -579,36 +678,52 @@ export default class Account {
         }
     }
 
+    public async giftCardBalance(sk: Uint8Array, birthindex?: number): Promise<bigint> {
+        const giftCardAccountConfig: AccountConfig = {
+            sk,
+            pool: this.getZpClient().currentPool(),
+            birthindex,
+            proverMode: await this.getZpClient().getProverMode(),
+        }
+        return await this.getZpClient().giftCardBalance(giftCardAccountConfig);
+    }
+
+    public async redeemGiftCard(sk: Uint8Array, birthindex?: number): Promise<{jobId: string, txHash: string}> {
+        const giftCardAccountConfig: AccountConfig = {
+            sk,
+            pool: this.getZpClient().currentPool(),
+            birthindex,
+            proverMode: await this.getZpClient().getProverMode(),
+        }
+
+        console.log('Redeeming gift-card...');
+        const jobId: string = await this.getZpClient().redeemGiftCard(giftCardAccountConfig);
+        console.log(`Please wait relayer provide txHash for job ${jobId}...`);
+
+        return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+    }
+
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
-        return await this.zpClient.verifyShieldedAddress(shieldedAddress);
+        return await this.getZpClient().verifyShieldedAddress(shieldedAddress);
     }
 
     public async setProverMode(mode: ProverMode) {
-        await this.zpClient.setProverMode(TOKEN_ADDRESS, mode);
+        await this.getZpClient().setProverMode(mode);
     }
 
-    public getProverMode(): ProverMode {
-        return this.zpClient.getProverMode(TOKEN_ADDRESS);
+    public async getProverMode(): Promise<ProverMode> {
+        return this.getZpClient().getProverMode();
     }
     
+    public async libraryVersion(): Promise<string> {
+        return this.getZpClient().getLibraryVersion();
+    }
+
     public async relayerVersion(): Promise<ServiceVersion> {
-        return await this.zpClient.getRelayerVersion(TOKEN_ADDRESS);
+        return await this.getZpClient().getRelayerVersion();
     }
 
     public async proverVersion(): Promise<ServiceVersion> {
-        return await this.zpClient.getProverVersion(TOKEN_ADDRESS);
-    }
-
-    private decryptSeed(password: string): string {
-        const cipherText = this.storage.get(this.accountName, 'seed');
-        let seed;
-        try {
-            seed = AES.decrypt(cipherText, password).toString(Utf8);
-            if (!bip39.validateMnemonic(seed)) throw new Error('invalid mnemonic');
-        } catch (_) {
-            throw new Error('Incorrect password');
-        }
-
-        return seed;
+        return await this.getZpClient().getProverVersion();
     }
 }

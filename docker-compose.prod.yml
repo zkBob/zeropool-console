@@ -4,16 +4,14 @@ services:
   zkbob-console:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: base
+      dockerfile: Dockerfile.prod
     container_name: zkbob-console
     restart: always
     ports:
-      - "3000:3000"
+      - "80:80"
     volumes:
-      - ./src:/home/node/app/src
-      - ./assets:/home/node/app/assets:ro
-      - ./client-config.json:/home/node/app/client-config.json
+      - ./assets:/usr/share/nginx/html/assets
+      - ./client-config.json:/usr/share/nginx/html/client-config.json
     environment:
       CONFIG_JSON: ./client-config.json
     command: yarn dev
