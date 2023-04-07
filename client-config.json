@@ -17,6 +17,14 @@
             "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
             "delegatedProverUrls": [],
             "coldStorageConfigPath": ""
+        },
+        "BOB-op-goerli": {
+            "chainId":420,
+            "poolAddress":"0x55B81b0730399974Ccad8AC858e766Cf54126596",
+            "tokenAddress":"0x0fA7E69b9344D6434Bd6b79c5950bb5234245a5F",
+            "relayerUrls":["https://gop-relayer.thgkjlr.website"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": ""
         }
     },
 
@@ -26,6 +34,9 @@
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
+        },
+        "420": {
+            "rpcUrls": ["https://goerli.optimism.io"]
         }
     },
 
@@ -37,6 +48,10 @@
         "5": {
             "tx": "https://goerli.etherscan.io/tx/{{hash}}",
             "address": "https://goerli.etherscan.io/address/{{addr}}"
+        },
+        "420": {
+            "tx": "https://goerli-optimism.etherscan.io/tx/{{hash}}",
+            "address": "https://goerli-optimism.etherscan.io/address/{{addr}}"
         }
     },
 
