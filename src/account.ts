@@ -46,10 +46,10 @@ export interface InitAccountStatus {
 export type InitAccountCallback = (status: InitAccountStatus) => void;
 
 export default class Account {
-    accountName: string;
+    accountName?: string;
     private storage: AccountStorage;
-    public provider: HDWalletProvider;
-    public client: NetworkClient;
+    public provider?: HDWalletProvider;
+    public client?: NetworkClient;
     private zpClient?: ZkBobClient;
     private zpClientPromise?: Promise<ZkBobClient>;
     private initError?: Error;
@@ -153,17 +153,17 @@ export default class Account {
         await this.zpClient.logout();
         this.accountName = undefined;
         this.accountId = '';
+
+        this.killL1Client();
     }
 
     private async createL1Client(poolName: string, mnemonic: string) {
         // Initialize L1 network client (to interact with the native blockchain)
         if(this.client) {
-            const curChainId = await this.client.getChainId();
+            const curChainId = await this.getClient().getChainId();
             const newChainId = env.pools[poolName].chainId;
             if (newChainId != curChainId) {
-                this.provider.engine.stop();
-                delete this.client;
-                delete this.provider;
+                this.killL1Client();
             }
         }
 
@@ -191,6 +191,12 @@ export default class Account {
                 console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
             }
         }
+    }
+
+    private async killL1Client() {
+        this.provider?.engine.stop();
+        delete this.client;
+        delete this.provider;
     }
 
     public getCurrentPool(): string {
@@ -222,6 +228,10 @@ export default class Account {
     }
 
     public async switchPool(poolAlias: string, password: string): Promise<void> {
+        if (!this.accountName) {
+            throw new Error('Cannot switch pool: account isn\'t set');
+        }
+
         const mnemonic = this.decryptSeed(this.accountName, password)
         await this.createL1Client(poolAlias, mnemonic);
         return this.getZpClient().switchToPool(poolAlias);
@@ -249,11 +259,19 @@ export default class Account {
     }
 
     public hasActiveAccount(): boolean {
-        return (this.zpClient && this.zpClient.hasAccount() && this.accountName !== undefined);
+        return (this.zpClient !== undefined && this.zpClient.hasAccount() && this.accountName !== undefined);
     }
 
-    public isAccountPresent(accountName?: string): boolean {
-        return !!this.storage.get(accountName ?? this.accountName, 'seed');
+    public isAccountPresent(accountName: string): boolean {
+        return !!this.storage.get(accountName, 'seed');
+    }
+
+    private getClient(): NetworkClient {
+        if (!this.client) {
+            const errMsg = this.initError ? `(client init failed: ${this.initError.message})` : '(unknown error)';
+            throw new Error(`NetworkClient is not ready currently (internal error)`);
+        }
+        return this.client;
     }
 
     private getZpClient(): ZkBobClient {
@@ -285,7 +303,7 @@ export default class Account {
     }
 
     public async getRegularAddress(): Promise<string> {
-        return await this.client.getAddress();
+        return await this.getClient().getAddress();
     }
 
     public async genShieldedAddress(): Promise<string> {
@@ -325,7 +343,7 @@ export default class Account {
     // ^tokens|wei -> wei
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
-            return BigInt(this.client.toBaseUnit(amount.substr(1)));
+            return BigInt(this.getClient().toBaseUnit(amount.substr(1)));
         }
 
         return BigInt(amount);
@@ -344,13 +362,13 @@ export default class Account {
 
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
-        return this.client.fromBaseUnit(amountWei.toString());
+        return this.getClient().fromBaseUnit(amountWei.toString());
     }
 
 
     public async getBalance(): Promise<[string, string]> {
-        const balance = await this.client.getBalance();
-        const readable = this.client.fromBaseUnit(balance);
+        const balance = await this.getClient().getBalance();
+        const readable = this.getClient().fromBaseUnit(balance);
 
         return [balance, readable];
     }
@@ -433,24 +451,24 @@ export default class Account {
 
     // TODO: Support multiple tokens
     public async getTokenBalance(): Promise<string> {
-        return await this.client.getTokenBalance(this.getTokenAddr());
+        return await this.getClient().getTokenBalance(this.getTokenAddr());
     }
 
     public async mint(amount: bigint): Promise<string> {
         const minterAddr = env.minters[this.getCurrentPool()];
         if (minterAddr) {
-            return await this.client.mint(minterAddr, amount.toString());
+            return await this.getClient().mint(minterAddr, amount.toString());
         } else {
             throw new Error('Cannot find the minter address. Most likely that token is not for test');
         }
     }
 
     public async transfer(to: string, amount: bigint): Promise<string> {
-        return await this.client.transfer(to, amount.toString());
+        return await this.getClient().transfer(to, amount.toString());
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        return await this.client.transferToken(this.getTokenAddr(), to, amount.toString());
+        return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
     public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
@@ -463,7 +481,7 @@ export default class Account {
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
         let addr = address;
         if (address === undefined) {
-            addr = await this.client.getAddress();
+            addr = await this.getClient().getAddress();
         }
 
         return await this.getZpClient().getLimits(addr, false);
@@ -505,17 +523,17 @@ export default class Account {
             const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Deposit, false));
 
             let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + txFee.totalPerTx);
-            const currentAllowance = await this.client.allowance(this.getTokenAddr(), this.getPoolAddr());
+            const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
                 console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
-                await this.client.increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalApproveAmount.toString());
+                await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalApproveAmount.toString());
             } else {
                 console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
             }
 
             console.log('Making deposit...');
-            const jobId = await this.getZpClient().deposit(amount, (data) => this.client.sign(data), fromAddress, txFee.totalPerTx);
+            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
             return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
@@ -528,9 +546,9 @@ export default class Account {
     
 
     private async createPermittableDepositData(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
-        const tokenName = await this.client.getTokenName(tokenAddress);
-        const chainId = await this.client.getChainId();
-        const nonce = await this.client.getTokenNonce(tokenAddress);
+        const tokenName = await this.getClient().getTokenName(tokenAddress);
+        const chainId = await this.getClient().getChainId();
+        const nonce = await this.getClient().getTokenNonce(tokenAddress);
 
         const domain = {
             name: tokenName,
@@ -564,8 +582,7 @@ export default class Account {
     }
 
     public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
-        let myAddress = null;
-        myAddress = await this.client.getAddress();
+        let myAddress = await this.getClient().getAddress();
         
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
@@ -576,7 +593,7 @@ export default class Account {
             let jobId;
             jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
                 const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
-                return this.client.signTypedData(dataToSign)
+                return this.getClient().signTypedData(dataToSign)
             }, myAddress, txFee.totalPerTx);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
@@ -590,9 +607,6 @@ export default class Account {
     }
 
     public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
-        let myAddress = null;
-        myAddress = await this.client.getAddress();
-        
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
@@ -617,26 +631,26 @@ export default class Account {
         const ddFee = (await this.getZpClient().directDepositFee());
         const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
-        const ddContract = await this.client.getDirectDepositContract(this.getPoolAddr());
+        const ddContract = await this.getClient().getDirectDepositContract(this.getPoolAddr());
 
         let totalApproveAmount = amountWithFeeWei;
-        const currentAllowance = await this.client.allowance(this.getTokenAddr(), ddContract);
+        const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), ddContract);
         if (totalApproveAmount > currentAllowance) {
             totalApproveAmount -= currentAllowance;
             console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
-            await this.client.increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
+            await this.getClient().increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
         } else {
             console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
         }
 
         console.log('Making direct deposit...');
-        return await this.client.directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
+        return await this.getClient().directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
     }
 
     // returns txHash in promise
     public async approveAllowance(spender: string, amount: bigint): Promise<string> {
         console.log(`Approving allowance for ${spender} to spend our tokens (${await this.weiToHuman(amount)} ${this.tokenSymbol()})`);
-        return await this.client.approve(this.getTokenAddr(), spender, amount.toString());
+        return await this.getClient().approve(this.getTokenAddr(), spender, amount.toString());
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
@@ -659,7 +673,7 @@ export default class Account {
     }
 
     public async withdrawShielded(amount: bigint, external_addr: string): Promise<{jobId: string, txHash: string}[]> {
-        let address = external_addr ?? await this.client.getAddress();
+        let address = external_addr ?? await this.getClient().getAddress();
 
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();

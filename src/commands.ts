@@ -489,7 +489,7 @@ export async function getRoot(index: string) {
     try {
         localState = await this.account.getLocalTreeState(idx);
     } catch (err) {
-        this.error(`Cannot retrieve local root at index ${idx.toString()}: ${err}`);
+        this.error(`Cannot retrieve local root at index ${idx!.toString()}: ${err}`);
         return;
     }
 
