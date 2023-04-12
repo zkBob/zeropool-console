@@ -322,6 +322,10 @@ export default class Account {
         return await this.getZpClient().isMyAddress(shieldedAddress);
     }
 
+    public async zkAddressInfo(shieldedAddress: string): Promise<any> {
+        return await this.getZpClient().addressInfo(shieldedAddress);
+    }
+
     public async getShieldedBalances(updateState: boolean = true): Promise<[bigint, bigint, bigint]> {
         const balances = this.getZpClient().getBalances(updateState);
 
