@@ -83,6 +83,16 @@ export async function genShieldedAddress(number: string) {
     this.resume();
 }
 
+export async function genShieldedAddressUniversal(number: string) {
+    let addressNum = number !== undefined ? Number(number) : 1;
+    this.pause();
+    for (let i = 0; i < addressNum; i++) {
+        const address = await this.account.genShieldedAddressUniversal();
+        this.echo(`[[;gray;]${address}]`);
+    }
+    this.resume();
+}
+
 export async function shieldedAddressInfo(shieldedAddress: string) {
     const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
     this.echo(`Verifying checksum: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
@@ -1035,7 +1045,7 @@ export async function genBurnerAddress(amount: number){
     const treeIndex = (await this.account.getPoolTreeState()).index
     const mnemonic = bip39.generateMnemonic();
     const seed = deriveSpendingKeyZkBob(mnemonic)
-    const receivingAddress = await this.account.genBurnerAddress(seed)
+    const receivingAddress = await this.account.genShieldedAddressForSeed(seed)
     const transferRequests:TransferRequest[] = [ {
             destination: receivingAddress,
             amountGwei: await this.account.humanToShielded(amount.toString()) 

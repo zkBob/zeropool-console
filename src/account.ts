@@ -310,8 +310,12 @@ export default class Account {
         return await this.getZpClient().generateAddress();
     }
 
-    public async genBurnerAddress(seed: Uint8Array): Promise<string> {
-        return await this.getZpClient().genBurnerAddress(seed);
+    public async genShieldedAddressUniversal(): Promise<string> {
+        return await this.getZpClient().generateUniversalAddress();
+    }
+
+    public async genShieldedAddressForSeed(seed: Uint8Array): Promise<string> {
+        return await this.getZpClient().generateAddressForSeed(seed);
     }
 
     public async isMyAddress(shieldedAddress: string): Promise<boolean> {
