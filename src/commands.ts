@@ -116,22 +116,6 @@ export async function shieldedAddressInfo(shieldedAddress: string) {
     } catch(err) {
         this.update(-1, `Parsing address... [[;red;]${err.message}]`);
     }
-
-    /*const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
-    this.echo(`Is address valid on current pool: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
-    if(isValid) {
-        const isMy = await this.account.isMyAddress(shieldedAddress);
-        this.echo(`Is it an address derived from my SK:   ${isMy ? '[[;green;]YES]' : '[[;white;]NO]'}`)
-
-        let decoded: Uint8Array  = bs58.decode(shieldedAddress);
-        let diversifier = decoded.slice(0, 10).reverse();
-        let Gd = decoded.slice(10, -4).reverse();
-        let chksm = decoded.slice(-4)
-        this.echo(`Bytes:       [[;white;]${decoded.length}]`);
-        this.echo(`Diversifier: [[;white;]${bufToHex(diversifier)}]`);
-        this.echo(`Gd.x         [[;white;]${bufToHex(Gd)}]`);
-        this.echo(`Checksum:    [[;white;]${bufToHex(chksm)}]`);
-    }*/
 }
 
 export async function getBalance() {

@@ -65,7 +65,9 @@ Suppose you already done local running and set appropriated parameters and setti
 
 ## L2-level commands
 
-`gen-shielded-address` generate a new zkBob shielded address
+`gen-shielded-address [number]` generate a new zkBob shielded address for the current pool (or several addressed)
+
+`gen-shielded-address-generic [number]` generate a new zkBob universal shielded address (or several addressed)
 
 `get-shielded-balance` get calculated private balance (with optimistic balance)
 
