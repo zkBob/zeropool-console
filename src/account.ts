@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
-         accountId,
+         accountId
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
@@ -636,23 +636,27 @@ export default class Account {
 
     // returns txHash in promise
     public async directDeposit(to: string, amount: bigint): Promise<string> {
-        const ddFee = (await this.getZpClient().directDepositFee());
-        const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
+        if (this.verifyShieldedAddress(to)) {
+            const ddFee = (await this.getZpClient().directDepositFee());
+            const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
-        const ddContract = await this.getClient().getDirectDepositContract(this.getPoolAddr());
+            const ddContract = await this.getClient().getDirectDepositContract(this.getPoolAddr());
 
-        let totalApproveAmount = amountWithFeeWei;
-        const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), ddContract);
-        if (totalApproveAmount > currentAllowance) {
-            totalApproveAmount -= currentAllowance;
-            console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
-            await this.getClient().increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
+            let totalApproveAmount = amountWithFeeWei;
+            const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), ddContract);
+            if (totalApproveAmount > currentAllowance) {
+                totalApproveAmount -= currentAllowance;
+                console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
+                await this.getClient().increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
+            } else {
+                console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
+            }
+
+            console.log('Making direct deposit...');
+            return await this.getClient().directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
         } else {
-            console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
+            throw new Error(`Invalid zkAddress. Please check it!`)
         }
-
-        console.log('Making direct deposit...');
-        return await this.getClient().directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
     }
 
     // returns txHash in promise
