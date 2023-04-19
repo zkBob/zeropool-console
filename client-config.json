@@ -62,16 +62,19 @@
 
     "minters": {
         "BOB-sepolia": "",
-        "BOB-goerli": ""
+        "BOB-goerli": "",
+        "BOB-op-goerli": ""
     },
 
     "cloudApi": {
         "BOB-sepolia": "http://45.77.217.163:8701",
-        "BOB-goerli": ""
+        "BOB-goerli": "",
+        "BOB-op-goerli": ""
     },
 
     "redemptionUrls": {
         "BOB-sepolia": "https://staging--zkbob.netlify.app",
-        "BOB-goerli": ""
+        "BOB-goerli": "",
+        "BOB-op-goerli": ""
     }
 }

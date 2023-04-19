@@ -83,21 +83,38 @@ export async function genShieldedAddress(number: string) {
     this.resume();
 }
 
-export async function shieldedAddressInfo(shieldedAddress: string) {
-    const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
-    this.echo(`Verifying checksum: ${isValid ? '[[;green;]OK]' : '[[;red;]INCORRECT]'}`)
-    if(isValid) {
-        const isMy = await this.account.isMyAddress(shieldedAddress);
-        this.echo(`Is it my address:   ${isMy ? '[[;green;]YES]' : '[[;white;]NO]'}`)
+export async function genShieldedAddressUniversal(number: string) {
+    let addressNum = number !== undefined ? Number(number) : 1;
+    this.pause();
+    for (let i = 0; i < addressNum; i++) {
+        const address = await this.account.genShieldedAddressUniversal();
+        this.echo(`[[;gray;]${address}]`);
+    }
+    this.resume();
+}
 
-        let decoded: Uint8Array  = bs58.decode(shieldedAddress);
-        let diversifier = decoded.slice(0, 10).reverse();
-        let Gd = decoded.slice(10, -4).reverse();
-        let chksm = decoded.slice(-4)
-        this.echo(`Bytes:       [[;white;]${decoded.length}]`);
-        this.echo(`Diversifier: [[;white;]${bufToHex(diversifier)}]`);
-        this.echo(`Gd.x         [[;white;]${bufToHex(Gd)}]`);
-        this.echo(`Checksum:    [[;white;]${bufToHex(chksm)}]`);
+export async function shieldedAddressInfo(shieldedAddress: string) {
+    this.echo('Parsing address...');
+    try {
+        const components = await this.account.zkAddressInfo(shieldedAddress);
+        this.update(-1, 'Parsing address... [[;green;]OK]');
+        this.echo(`Address format:    [[;white;]${components.format}]`);
+        this.echo(`Is it derived from my SK:    ${components.derived_from_our_sk ? '[[;green;]YES]' : '[[;white;]NO]'}`);
+        const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
+        this.echo(`Is it valid on current pool: ${isValid ? '[[;green;]YES]' : '[[;red;]NO]'}`);
+        try {
+            const poolId = BigInt(components.pool_id);
+            this.echo(`Valid on the pool with ID:   [[;white;]0x${poolId.toString(16)}]`);
+        } catch(err) {
+            this.echo(`Valid on the pool with ID:   [[;white;]any pool]`);
+        }
+        
+
+        this.echo(`Diversifier: [[;white;]${components.d}] (dec)`);
+        this.echo(`Gd.x         [[;white;]${components.p_d}] (dec)`);
+        this.echo(`Checksum:    [[;white;]${bufToHex(components.checksum)}] (hex)`);
+    } catch(err) {
+        this.update(-1, `Parsing address... [[;red;]${err.message}]`);
     }
 }
 
@@ -1035,7 +1052,7 @@ export async function genBurnerAddress(amount: number){
     const treeIndex = (await this.account.getPoolTreeState()).index
     const mnemonic = bip39.generateMnemonic();
     const seed = deriveSpendingKeyZkBob(mnemonic)
-    const receivingAddress = await this.account.genBurnerAddress(seed)
+    const receivingAddress = await this.account.genShieldedAddressForSeed(seed)
     const transferRequests:TransferRequest[] = [ {
             destination: receivingAddress,
             amountGwei: await this.account.humanToShielded(amount.toString()) 
