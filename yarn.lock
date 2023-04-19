@@ -6056,11 +6056,15 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libzkbob-rs-wasm-web-mt@file:../libzkbob-rs/libzkbob-rs-wasm/web-mt":
-  version "1.1.0"
+libzkbob-rs-wasm-web-mt@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-1.2.0.tgz#4058dfc416bca9e91e293fc3cb172eba41b0f217"
+  integrity sha512-d6TElAdXjNSdYtOlWNzzjOgtyN7YF1YUHmCfmSUnOR8VXtv3AzSRuYNjGC5PKivXqWCP8KCXI8qPpsCO535mpw==
 
-"libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web":
-  version "1.1.0"
+libzkbob-rs-wasm-web@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-1.2.0.tgz#bb2f82877ca9f8a14c33f69d33e3ab38e6b1900f"
+  integrity sha512-yTKp+dV/XXhnKQSpsC2bDZrRSXHqSRPX1jRmAUP0huI2fwFToARMz75lK/nF3ZipieU4ge5JSuV2e8/ADRrQbw==
 
 lie@~3.3.0:
   version "3.3.0"
@@ -10131,9 +10135,9 @@ yargs@^13.3.2:
     y18n "^4.0.0"
     yargs-parser "^13.1.2"
 
-"zeropool-support-js@https://github.com/zkBob/zeropool-support-js#multipool-addresses":
+"zeropool-support-js@https://github.com/zkBob/zeropool-support-js#0.7.1":
   version "0.7.1"
-  resolved "https://github.com/zkBob/zeropool-support-js#4f55211c5b7a37a6299eb389ab37ebd1bbbd7a22"
+  resolved "https://github.com/zkBob/zeropool-support-js#2d8a8e227bc25a93d3a83e77aa260f7917bafc2f"
   dependencies:
     "@ethereumjs/tx" "^3.2.1"
     "@polkadot/api" "^7.11.1"
@@ -10153,8 +10157,10 @@ yargs@^13.3.2:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-"zkbob-client-js@file:../zkbob-client-js":
+zkbob-client-js@3.1.0:
   version "3.1.0"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-3.1.0.tgz#9653119ea1a6d1df726929718b758aaa55a3cd6b"
+  integrity sha512-eUhozqcu/hvw/cRcSpijfgTlmjfL25PYPsXoHhclPOsApVKT6kY19KVEzZxBVoYAr2dp8jrYLZaLBFmBAhW1qA==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@metamask/eth-sig-util" "5.0.0"
@@ -10164,8 +10170,8 @@ yargs@^13.3.2:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-3.1.0-1cc5db71-9853-4521-8ae3-b2a49d38f109-1681418563487/node_modules/libzkbob-rs/libzkbob-rs-wasm/web"
-    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-3.1.0-1cc5db71-9853-4521-8ae3-b2a49d38f109-1681418563487/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt"
+    libzkbob-rs-wasm-web "1.2.0"
+    libzkbob-rs-wasm-web-mt "1.2.0"
     regenerator-runtime "^0.13.9"
     wasm-feature-detect "^1.2.11"
     web3 "1.8.0"
