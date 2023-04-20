@@ -14,6 +14,7 @@ import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
+import { GiftCardProperties } from 'zkbob-client-js/lib/client-provider';
 
 
 interface AccountStorage {
@@ -727,6 +728,14 @@ export default class Account {
         console.log(`Please wait relayer provide txHash for job ${jobId}...`);
 
         return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+    }
+
+    public async codeForGiftCard(giftCard: GiftCardProperties): Promise<string> {
+        return this.getZpClient().codeForGiftCard(giftCard);
+    }
+
+    public async giftCardFromCode(code: string): Promise<GiftCardProperties> {
+        return this.getZpClient().giftCardFromCode(code);
     }
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {

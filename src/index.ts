@@ -74,6 +74,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'give':[c.genBurnerAddress, '<amount>', 'creates a single burner wallet with specified amount and returns redemption url and qr code'],
   'gift-card-balance': [c.giftCardBalance, '<spending_key> [birthindex]', 'retrieve gift card balance'],
   'gift-card-redeem': [c.redeemGiftCard, '<spending_key> [birthindex]', 'redeem gift card to the current account'],
+  'gift-card-code': [c.testGiftCardCodes, '', 'test case for gift card redemption code'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
     function () {
