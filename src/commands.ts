@@ -1025,14 +1025,19 @@ async function redemptionUrl(giftCard: GiftCardProperties, baseUrl: string, acco
 }
 
 async function extractGiftCard(codeOrUrl: string, account: Account): Promise<GiftCardProperties> {
-    const urlSearchParams = new URLSearchParams(codeOrUrl);
-    const searchParams = Object.fromEntries(urlSearchParams.entries());
-    if (searchParams.code) {
-        return account.giftCardFromCode(searchParams.code);
+    let giftCard: GiftCardProperties;
+    try {
+        giftCard = await account.giftCardFromCode(codeOrUrl)
+        return giftCard;
+    } catch (err) { }
+
+    const url = new URL(codeOrUrl);
+    const urlSearchParams = new URLSearchParams(url.search.slice(1));
+    if (urlSearchParams.has('code')) {
+        return await account.giftCardFromCode(urlSearchParams.get('code'));
     }
 
-    return account.giftCardFromCode(codeOrUrl);
-    
+    throw new Error('Cannot extract correct gift card from provided code or redemption URL');
 }
 
 export function qrcode(data: string): string {
@@ -1061,6 +1066,7 @@ async function zip(giftCards: GiftCard[]) {
 }
 
 export async function testGiftCardCodes() {
+    this.pause();
     this.echo('Creating a new burner wallet...')
     const birthIndex = (await this.account.getPoolTreeState()).index
     const mnemonic = bip39.generateMnemonic();
@@ -1084,6 +1090,7 @@ export async function testGiftCardCodes() {
     this.echo(`  - balance:  [[;white;]${await this.account.shieldedToHuman(gk.balance)} BOB] ${gk.balance == srcGiftCard.balance ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
     this.echo(`  - pool:     [[;white;]${gk.poolAlias}] ${gk.poolAlias == srcGiftCard.poolAlias ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
 
+    this.resume();
 }
 
 export async function generateGiftCardLocal(amount: string){
@@ -1159,19 +1166,15 @@ export async function giftCardBalance(codeOrUrl: string) {
 export async function redeemGiftCard(codeOrUrl: string) {
     const giftCard = await extractGiftCard(codeOrUrl, this.account);
 
-    printGiftCardProperties(giftCard);
+    this.echo(`Gift card properties:`);
+    this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
+    this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
+    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+    this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 
     this.pause();
     this.echo(`Redeeming gift card...`);
     const result = await this.account.redeemGiftCard(giftCard);
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     this.resume();
-}
-
-async function printGiftCardProperties(giftCard: GiftCardProperties) {
-    this.echo(`Gift card properties:`);
-    this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
-    this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
-    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
-    this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 }

@@ -74,7 +74,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
   'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url>', 'retrieve gift card balance'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
-  //'gift-card-code': [c.testGiftCardCodes, '', 'test case for gift card redemption code'],
+  'gift-card-code-test': [c.testGiftCardCodes, '', 'test case for gift card redemption code'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
     function () {
