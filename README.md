@@ -145,10 +145,10 @@ Suppose you already done local running and set appropriated parameters and setti
 
 ## Gift cards commands
 
-`gift-card-generate <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
+`gift-card-generate <balance>` generates a single giff card without any persistence other than the resulting URL/QR, transfers the specified amount of tokens from the current account to a newly generated gift card
 
-`give <amount>` generates a single burner wallet without any persistence other than the resulting URL/QR, transfers the specified amount of tokens to a newly generated wallet address
+`gift-card-generate-cloud <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
 
-`gift-card-balance <spending_key> [birthindex]` retrieves gift card balance
+`gift-card-balance <code_or_redemption_url>` retrieves gift card balance
 
-`gift-card-redeem <spending_key> [birthindex]` redeems gift card to the current account
+`gift-card-redeem <code_or_redemption_url>` redeems gift card to the current account

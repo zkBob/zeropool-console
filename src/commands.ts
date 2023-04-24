@@ -1065,34 +1065,6 @@ async function zip(giftCards: GiftCard[]) {
     return url
 }
 
-export async function testGiftCardCodes() {
-    this.pause();
-    this.echo('Creating a new burner wallet...')
-    const birthIndex = (await this.account.getPoolTreeState()).index
-    const mnemonic = bip39.generateMnemonic();
-    const sk = deriveSpendingKeyZkBob(mnemonic);
-    const balance: bigint = BigInt(1000000000);
-    const poolAlias = this.account.getCurrentPool()
-
-    const srcGiftCard: GiftCardProperties = { sk, birthIndex, balance, poolAlias}
-    const code = await this.account.codeForGiftCard(srcGiftCard);
-
-    this.echo(`Gift-card code: [[;white;]${code}]`);
-
-    const gk: GiftCardProperties = await this.account.giftCardFromCode(code);
-
-    const isSkCorrect = bufToHex(gk.sk) == bufToHex(srcGiftCard.sk) ? true : false;
-
-    this.echo(`Recovered from that code:`);
-
-    this.echo(`  - sk:       [[;white;]${bufToHex(gk.sk)}] ${isSkCorrect ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
-    this.echo(`  - birthIdx: [[;white;]${gk.birthIndex}] ${gk.birthIndex == srcGiftCard.birthIndex ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
-    this.echo(`  - balance:  [[;white;]${await this.account.shieldedToHuman(gk.balance)} BOB] ${gk.balance == srcGiftCard.balance ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
-    this.echo(`  - pool:     [[;white;]${gk.poolAlias}] ${gk.poolAlias == srcGiftCard.poolAlias ? '[[;green;]OK]' : '[[;green;]ERROR]'}`);
-
-    this.resume();
-}
-
 export async function generateGiftCardLocal(amount: string){
     const balance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();

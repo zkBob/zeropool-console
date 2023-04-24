@@ -70,11 +70,10 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'account-id': [c.getAccountId, '', 'get the client account id (indexed DB name)'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'],
-  'gift-card-generate':[c.generateGiftCardLocal, '<amount>', 'creates a single burner wallet with specified amount and returns redemption url and qr code'],
-  'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards'],
+  'gift-card-generate':[c.generateGiftCardLocal, '<balance>', 'creates a single burner wallet with specified balance and returns redemption url and qr code'],
+  'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards via cloud (you should provide cloud access token)'],
   'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url>', 'retrieve gift card balance'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
-  'gift-card-code-test': [c.testGiftCardCodes, '', 'test case for gift card redemption code'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
     function () {
