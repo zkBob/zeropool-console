@@ -14,6 +14,7 @@ import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
+import { GiftCardProperties } from 'zkbob-client-js/lib/client-provider';
 
 
 interface AccountStorage {
@@ -45,7 +46,7 @@ export interface InitAccountStatus {
 
 export type InitAccountCallback = (status: InitAccountStatus) => void;
 
-export default class Account {
+export class Account {
     accountName?: string;
     private storage: AccountStorage;
     public provider?: HDWalletProvider;
@@ -498,7 +499,7 @@ export default class Account {
     public async minTxAmount(): Promise<bigint> {
         return await this.getZpClient().minTxAmount();
      }
-    public async getMaxAvailableTransfer(amount: bigint, fee: bigint): Promise<bigint> {
+    public async getMaxAvailableTransfer(): Promise<bigint> {
         return await this.getZpClient().calcMaxAvailableTransfer(false);
     }
 
@@ -636,7 +637,7 @@ export default class Account {
 
     // returns txHash in promise
     public async directDeposit(to: string, amount: bigint): Promise<string> {
-        if (this.verifyShieldedAddress(to)) {
+        if (await this.verifyShieldedAddress(to)) {
             const ddFee = (await this.getZpClient().directDepositFee());
             const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
@@ -704,21 +705,21 @@ export default class Account {
         }
     }
 
-    public async giftCardBalance(sk: Uint8Array, birthindex?: number): Promise<bigint> {
+    public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
         const giftCardAccountConfig: AccountConfig = {
-            sk,
+            sk: giftCard.sk,
             pool: this.getZpClient().currentPool(),
-            birthindex,
+            birthindex: Number(giftCard.birthIndex),
             proverMode: await this.getZpClient().getProverMode(),
         }
         return await this.getZpClient().giftCardBalance(giftCardAccountConfig);
     }
 
-    public async redeemGiftCard(sk: Uint8Array, birthindex?: number): Promise<{jobId: string, txHash: string}> {
+    public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{jobId: string, txHash: string}> {
         const giftCardAccountConfig: AccountConfig = {
-            sk,
+            sk: giftCard.sk,
             pool: this.getZpClient().currentPool(),
-            birthindex,
+            birthindex: Number(giftCard.birthIndex),
             proverMode: await this.getZpClient().getProverMode(),
         }
 
@@ -727,6 +728,14 @@ export default class Account {
         console.log(`Please wait relayer provide txHash for job ${jobId}...`);
 
         return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+    }
+
+    public async codeForGiftCard(giftCard: GiftCardProperties): Promise<string> {
+        return this.getZpClient().codeForGiftCard(giftCard);
+    }
+
+    public async giftCardFromCode(code: string): Promise<GiftCardProperties> {
+        return this.getZpClient().giftCardFromCode(code);
     }
 
     public async verifyShieldedAddress(shieldedAddress: string): Promise<boolean> {
