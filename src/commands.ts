@@ -1021,7 +1021,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
 
 async function redemptionUrl(giftCard: GiftCardProperties, baseUrl: string, account: Account): Promise<string> {
     const code = await account.codeForGiftCard(giftCard);
-    return `${baseUrl}/?code=${code}`;
+    return `${baseUrl}/?gift-code=${code}`;
 }
 
 async function extractGiftCard(codeOrUrl: string, account: Account): Promise<GiftCardProperties> {
