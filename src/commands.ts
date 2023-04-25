@@ -1033,8 +1033,8 @@ async function extractGiftCard(codeOrUrl: string, account: Account): Promise<Gif
 
     const url = new URL(codeOrUrl);
     const urlSearchParams = new URLSearchParams(url.search.slice(1));
-    if (urlSearchParams.has('code')) {
-        return await account.giftCardFromCode(urlSearchParams.get('code'));
+    if (urlSearchParams.has('gift-code')) {
+        return await account.giftCardFromCode(urlSearchParams.get('gift-code'));
     }
 
     throw new Error('Cannot extract correct gift card from provided code or redemption URL');
