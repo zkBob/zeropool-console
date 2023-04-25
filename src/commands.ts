@@ -1,12 +1,13 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType,
-         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState,
+         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties,
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
 import { env } from './environment';
+import { Account } from './account';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -357,7 +358,7 @@ export async function depositShieldedPermittable(amount: string, times: string) 
 export async function depositShieldedPermittableEphemeral(amount: string, index: string) {
     let ephemeralIndex = index !== undefined ? Number(index) : 0;
 
-    this.echo(`Getting ephemeral acount info...`);
+    this.echo(`Getting ephemeral account info...`);
     this.pause();
     let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
     this.update(-1, `Ephemeral address [[!;;;;${this.account.getAddressUrl(ephemeralAddress.address)}]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${this.account.tokenSymbol()}`);
@@ -944,7 +945,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
-    const treeIndex = (await this.account.getPoolTreeState()).index
+    const birthIndex = (await this.account.getPoolTreeState()).index
     try {
         this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
         const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
@@ -979,8 +980,15 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const generateAddressResponseJson = await generateAddressResponse.json();
             const address = generateAddressResponseJson.address;
             console.log(`generated new account with address: ${address} `);
+
+            const giftCardProps: GiftCardProperties = {
+                sk: hexToBuf(sk, 32),
+                birthIndex,
+                balance: singleCardBalance,
+                poolAlias: this.account.getCurrentPool,
+            };
     
-            const url = redemptionUrl(sk, treeIndex, baseUrl);
+            const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
             if (Number(quantity) > 1) {
@@ -1004,33 +1012,44 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         }).join(`\n     `)}`);
         
     } catch (error) {
-        
         this.echo(`Process failed with error: [[;red;]${error.message}]`);
-
     }
     
     this.resume();
 
 }
 
-function redemptionUrl(sk: string, birthIndex: string, baseUrl: string): string {
-    return `${baseUrl}/?code=${sk}&index=${birthIndex}`
+async function redemptionUrl(giftCard: GiftCardProperties, baseUrl: string, account: Account): Promise<string> {
+    const code = await account.codeForGiftCard(giftCard);
+    return `${baseUrl}/?code=${code}`;
+}
+
+async function extractGiftCard(codeOrUrl: string, account: Account): Promise<GiftCardProperties> {
+    let giftCard: GiftCardProperties;
+    try {
+        giftCard = await account.giftCardFromCode(codeOrUrl)
+        return giftCard;
+    } catch (err) { }
+
+    const url = new URL(codeOrUrl);
+    const urlSearchParams = new URLSearchParams(url.search.slice(1));
+    if (urlSearchParams.has('code')) {
+        return await account.giftCardFromCode(urlSearchParams.get('code'));
+    }
+
+    throw new Error('Cannot extract correct gift card from provided code or redemption URL');
 }
 
 export function qrcode(data: string): string {
-
-
     const QRC = qrcodegen.QrCode;
     const qr0 = QRC.encodeText(data, QRC.Ecc.MEDIUM);
     const svg = toSvgString(qr0, 4, "#FFFFFF", "#000000");
-
 
     return svg
 }
 
 
 async function zip(giftCards: GiftCard[]) {
-
     let mainZip = new JSZip();
     giftCards.forEach(async giftCard => {
 
@@ -1046,32 +1065,50 @@ async function zip(giftCards: GiftCard[]) {
     return url
 }
 
-export async function genBurnerAddress(amount: number){
+export async function generateGiftCardLocal(amount: string){
+    const balance = await this.account.humanToShielded(amount);
+    const poolAlias = this.account.getCurrentPool();
+
     this.pause();
-    this.echo('creating a new burner wallet...')
-    const treeIndex = (await this.account.getPoolTreeState()).index
-    const mnemonic = bip39.generateMnemonic();
-    const seed = deriveSpendingKeyZkBob(mnemonic)
-    const receivingAddress = await this.account.genShieldedAddressForSeed(seed)
-    const transferRequests:TransferRequest[] = [ {
-            destination: receivingAddress,
-            amountGwei: await this.account.humanToShielded(amount.toString()) 
-        }]
-    ;
-    const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
-    const walletUrl = redemptionUrl(`0x${bufToHex(seed)}`,treeIndex, baseUrl);
-    this.update(-1, `Your burner wallet:\n${walletUrl}`);
-    this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
-        raw: true,
-        finalize: function(div) {
-          div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
-        }
-      });
-    this.echo('Sending funds...')
-    const results = await this.account.transferShielded(transferRequests);
-    this.update(-1 , `Done ${results.map((singleResult) => {
-        return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
-    }).join(`\n     `)}`);
+
+    // check is account has enough funds to deposit gift-card
+    this.echo('Checking available funds...');
+    await this.account.syncState(); 
+    const availableFunds = await this.account.getMaxAvailableTransfer();
+    if (availableFunds >= balance) {
+        this.update(-1, 'Checking available funds... [[;green;]OK]');
+
+        this.echo('Creating a new burner wallet...');
+        const birthIndex = (await this.account.getPoolTreeState()).index
+        const mnemonic = bip39.generateMnemonic();
+        const sk = deriveSpendingKeyZkBob(mnemonic)
+        const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
+        const transferRequests:TransferRequest[] = [ {
+                destination: receivingAddress,
+                amountGwei: balance 
+            }];
+        
+        const giftCardProps: GiftCardProperties = { sk, birthIndex, balance, poolAlias };
+        const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+        const walletUrl = await redemptionUrl(giftCardProps, baseUrl, this.account);
+
+        this.update(-1, `Your burner wallet:\n${walletUrl}`);
+        this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
+            raw: true,
+            finalize: function(div) {
+            div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
+            }
+        });
+
+        this.echo('Sending funds...')
+        const results = await this.account.transferShielded(transferRequests);
+        this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
+            return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
+        }).join(`\n     `)}`);
+    } else {
+        this.update(-1, 'Checking available funds... [[;red;]NOT ENOUGH FUNDS]');
+    }
+
     this.resume();
 }
 
@@ -1082,50 +1119,34 @@ function removeSvgHeader(data: string) {
     return data.replace(header,'')
 }
 
-export async function giftCardBalance(sk: string, birthIndex: string) {
-    const skBuf = hexToBuf(sk);
-    if (skBuf.length != 32) {
-        this.echo(`[[;red;]Spending key must contain 32 bytes]`);
-        return;
-    }
-    let index = 0;
-    if (birthIndex) {
-        try {
-            index = Number(birthIndex)
-            if (index % 128 != 0) throw new Error(`index error`);
-        } catch(err) {
-            this.echo(`[[;red;]Birth index must be a positive number and divided by 128]`)
-            return;
-        }
-    }
+export async function giftCardBalance(codeOrUrl: string) {
+    const giftCard = await extractGiftCard(codeOrUrl, this.account);
+    
+    this.echo(`Gift card properties:`);
+    this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
+    this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
+    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+    this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 
     this.pause();
-    this.echo(`Getting gift card balance...`);
-    const balance = await this.account.giftCardBalance(skBuf, index);
-    this.update(-1, `Gift card balance: ${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}`)
+    this.echo(`Getting actual gift card balance...`);
+    const balance = await this.account.giftCardBalance(giftCard);
+    this.update(-1, `Actual gift card balance: [[;white;]${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}]`)
     this.resume();
 }
 
-export async function redeemGiftCard(sk: string, birthIndex: string) {
-    const skBuf = hexToBuf(sk);
-    if (skBuf.length != 32) {
-        this.echo(`[[;red;]Spending key must contain 32 bytes]`);
-        return;
-    }
-    let index = 0;
-    if (birthIndex) {
-        try {
-            index = Number(birthIndex)
-            if (index % 128 != 0) throw new Error(`index error`);
-        } catch(err) {
-            this.echo(`[[;red;]Birth index must be a positive number and divided by 128]`)
-            return;
-        }
-    }
+export async function redeemGiftCard(codeOrUrl: string) {
+    const giftCard = await extractGiftCard(codeOrUrl, this.account);
+
+    this.echo(`Gift card properties:`);
+    this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
+    this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
+    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+    this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 
     this.pause();
     this.echo(`Redeeming gift card...`);
-    const result = await this.account.redeemGiftCard(skBuf, index);
+    const result = await this.account.redeemGiftCard(giftCard);
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     this.resume();
 }
