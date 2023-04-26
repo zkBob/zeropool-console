@@ -43,7 +43,9 @@ export async function switchPool(poolAlias: string, password: string) {
         return;
     }
     if (!password) {
-        this.echo(`[[;red;]Please provide account password to switch L1 account]`)
+        this.set_mask(true);
+        password = (await this.read('Enter account password to switch L1 client: ')).trim();
+        this.set_mask(false);
     }
 
 
@@ -53,17 +55,24 @@ export async function switchPool(poolAlias: string, password: string) {
     this.echo(`Current pool: ${await this.account.getCurrentPool()}`);
 }
 
-export function getSeed(password: string) {
+export async function getSeed(password: string) {
+    if (!password) {
+        this.set_mask(true);
+        password = (await this.read('Enter account password: ')).trim();
+        this.set_mask(false);
+    }
+
     const seed = this.account.getSeed(this.account.accountName, password);
     this.echo(`[[;gray;]Seed phrase: ${seed}]`);
 }
 
-export function genSeed() {
-    const seed = bip39.generateMnemonic();
-    this.echo(`[[;gray;]Generated mnemonic: ${seed}]`);
-}
+export async function getSk(password: string) {
+    if (!password) {
+        this.set_mask(true);
+        password = (await this.read('Enter account password: ')).trim();
+        this.set_mask(false);
+    }
 
-export function getSk(password: string) {
     const seed = this.account.getSeed(this.account.accountName, password);
     const sk = deriveSpendingKeyZkBob(seed);
     this.echo(`[[;gray;]Spending key: 0x${bufToHex(sk)}]`);

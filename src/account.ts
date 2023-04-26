@@ -115,9 +115,7 @@ export class Account {
         const sk = deriveSpendingKeyZkBob(mnemonic);
         const pool = await this.getCurrentPool();
         const birthindex = isNewAcc ? -1 : undefined;
-        const proverMode = this.config.pools[pool].delegatedProverUrls.length > 0 ? 
-                                ProverMode.DelegatedWithFallback : 
-                                ProverMode.Local;
+        const proverMode = this.getZpClient().getProverMode();
         const accountConf: AccountConfig = { sk, pool, birthindex, proverMode };
 
         this.createL1Client(pool, mnemonic);
