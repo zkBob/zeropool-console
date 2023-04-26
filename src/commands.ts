@@ -1084,11 +1084,16 @@ async function makeZippedReport(giftCards: GiftCard[]) {
 
 async function zipQrCodes(links: string[], account: Account): Promise<string> {
     let mainZip = new JSZip();
-    await Promise.all(links.map(async (aLink, index) => {
+    const summary = await Promise.all(links.map(async (aLink, index) => {
         const giftCardProps = await extractGiftCard(aLink, account);
         const skHash = [...new Uint8Array(sha256(giftCardProps.sk))].map(x => x.toString(16).padStart(2, '0')).join('');
-        mainZip.file(`gift-card-${giftCardProps.poolAlias}-${('0000' + index).slice(-4)}-${skHash.slice(-16)}.svg`, qrcode(aLink));
+        const qrFileName = `gift-card-${giftCardProps.poolAlias}-${('0000' + index).slice(-4)}-${skHash.slice(-16)}.svg`;
+        mainZip.file(qrFileName, qrcode(aLink));
+
+        return { url: aLink, sk: '0x' + bufToHex(giftCardProps.sk), balance: giftCardProps.balance.toString(), svg: qrFileName };
     }));
+
+    mainZip.file(`_summary.json`, JSON.stringify(summary, null, '\t'));
 
     let zipped = await mainZip.generateAsync({ type: 'blob' })
     let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
@@ -1130,12 +1135,11 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
         }
         const urlsJoined = walletUrls.join("\n");
         this.update(-1, `Your gift cards URL${walletUrls.length > 1 ? 's' : ''}:\n${urlsJoined}`);
-        const linksUrl = asDownload(urlsJoined);
         const qrUrl = await zipQrCodes(walletUrls, this.account);
-        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINK${walletUrls.length > 1 ? 'S' : ''} OR DOWNLOAD AS A] [[!;;;;${linksUrl}]TEXT FILE] [[;red;]OR AS A] [[!;;;;${qrUrl}]QR ARCHIVE]`);
+        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINK${walletUrls.length > 1 ? 'S' : ''} ABOVE OR DOWNLOAD AN] [[!;;;;${qrUrl}]QR ARCHIVE]`);
         if (qty > 1) {
             let entered: string;
-            this.echo (`[[;yellow;]Please keep in mind you'll lost your money in case of loosing links or QRs]`)
+            this.echo (`[[;yellow;]Please keep in mind you'll lost your money in case of loosing links and QRs]`);
             this.resume();
             do {
                 entered = await this.read(`[[;yellow;]Type 'YES' to confirm links\\QRs are saved and valid or 'NO' to cancel: ]`)
