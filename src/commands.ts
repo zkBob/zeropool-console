@@ -8,6 +8,7 @@ import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
 import { env } from './environment';
 import { Account } from './account';
+import sha256 from 'fast-sha256';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -1035,8 +1036,9 @@ async function extractGiftCard(codeOrUrl: string, account: Account): Promise<Gif
 
     const url = new URL(codeOrUrl);
     const urlSearchParams = new URLSearchParams(url.search.slice(1));
-    if (urlSearchParams.has('gift-code')) {
-        return await account.giftCardFromCode(urlSearchParams.get('gift-code'));
+    const code = urlSearchParams.get('gift-code');
+    if (code) {
+        return await account.giftCardFromCode(code);
     }
 
     throw new Error('Cannot extract correct gift card from provided code or redemption URL');
@@ -1054,6 +1056,7 @@ export function qrcode(data: string): string {
 function asDownload(data) {
     return window.URL.createObjectURL(new Blob([data], { type: "text/plain" }));
 }
+
 async function makeZippedReport(giftCards: GiftCard[]) {
     let mainZip = new JSZip();
     giftCards.forEach(async giftCard => {
@@ -1065,6 +1068,19 @@ async function makeZippedReport(giftCards: GiftCard[]) {
         card.svg=""
         return card
     }) }))
+    let zipped = await mainZip.generateAsync({ type: 'blob' })
+    let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
+    return url
+}
+
+async function zipQrCodes(links: string[], account: Account): Promise<string> {
+    let mainZip = new JSZip();
+    await Promise.all(links.map(async (aLink, index) => {
+        const giftCardProps = await extractGiftCard(aLink, account);
+        const skHash = [...new Uint8Array(sha256(giftCardProps.sk))].map(x => x.toString(16).padStart(2, '0')).join('');
+        mainZip.file(`gift-card-${giftCardProps.poolAlias}-${('0000' + index).slice(-4)}-${skHash.slice(-16)}.svg`, qrcode(aLink));
+    }));
+
     let zipped = await mainZip.generateAsync({ type: 'blob' })
     let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
     return url
@@ -1082,11 +1098,11 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     this.echo('Checking available funds...');
     await this.account.syncState(); 
     const availableFunds = await this.account.getMaxAvailableTransfer();
-    if (availableFunds >= cardBalance * BigInt(quantity) ) {
+    if (availableFunds >= cardBalance * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
         let  transferRequests:TransferRequest[] = [];
-        let walletUrls = [];
+        let walletUrls: string[] = [];
         this.echo(`Creating burner wallets... 0/${qty}`);
         for (let index = 0; index < qty; index++) {
             const birthIndex = (await this.account.getPoolTreeState()).index
@@ -1100,18 +1116,35 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
             this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
             const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
             const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
-            walletUrls.push(await redemptionUrl(giftCardProps, baseUrl, this.account));
-            
-            // this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
-            //     raw: true,
-            //     finalize: function(div) {
-            //     div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
-            //     }
-            // });
+            const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
+            walletUrls.push(url);
         }
         const urlsJoined = walletUrls.join("\n");
-        this.update(-1, `Your gift cards URLs:\n${urlsJoined}`);
-        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINKS OR DOWNLOAD AS A ] [[!;;;;${asDownload(urlsJoined)}]FILE]`);
+        this.update(-1, `Your gift cards URL${walletUrls.length > 1 ? 's' : ''}:\n${urlsJoined}`);
+        const linksUrl = asDownload(urlsJoined);
+        const qrUrl = await zipQrCodes(walletUrls, this.account);
+        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINK${walletUrls.length > 1 ? 'S' : ''} OR DOWNLOAD AS A] [[!;;;;${linksUrl}]TEXT FILE] [[;red;]OR AS A] [[!;;;;${qrUrl}]QR ARCHIVE]`);
+        if (qty > 1) {
+            let entered: string;
+            this.echo (`[[;yellow;]Please keep in mind you'll lost your money in case of loosing links or QRs]`)
+            this.resume();
+            do {
+                entered = await this.read(`[[;yellow;]Type 'YES' to confirm links\\QRs are saved and valid or 'NO' to cancel: ]`)
+                if (entered.toLowerCase() == 'no') {
+                    this.echo(`Gift cards generating has been cancelled. Each of them has zero balance. Please try again`);
+                    return;
+                }
+            }while(entered.toLowerCase() != 'yes');
+        } else if (qty == 1) {
+            this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
+                raw: true,
+                finalize: function(div) {
+                    div.find('#qr').html(removeSvgHeader(qrcode(walletUrls[0])));
+                }
+            });
+        }
+
+        this.pause()
         this.echo('Sending funds...');
         const results = await this.account.transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
