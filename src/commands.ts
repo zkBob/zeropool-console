@@ -987,6 +987,8 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
                 balance: singleCardBalance,
                 poolAlias: this.account.getCurrentPool,
             };
+
+            console.log("giftCardProps:", giftCardProps);
     
             const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
             const svg = qrcode(url);
@@ -997,7 +999,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         }
         this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
     
-        let zipUrl = await zip(giftCards);
+        let zipUrl = await makeZippedReport(giftCards);
         this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
         const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
             async giftCard =>  {return {
@@ -1049,7 +1051,10 @@ export function qrcode(data: string): string {
 }
 
 
-async function zip(giftCards: GiftCard[]) {
+function asDownload(data) {
+    return window.URL.createObjectURL(new Blob([data], { type: "text/plain" }));
+}
+async function makeZippedReport(giftCards: GiftCard[]) {
     let mainZip = new JSZip();
     giftCards.forEach(async giftCard => {
 
@@ -1065,8 +1070,10 @@ async function zip(giftCards: GiftCard[]) {
     return url
 }
 
-export async function generateGiftCardLocal(amount: string){
-    const balance = await this.account.humanToShielded(amount);
+export async function generateGiftCardLocal(amount: string, quantity: string){
+    
+    let qty = Number(quantity ?? 1);
+    const cardBalance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();
 
     this.pause();
@@ -1075,32 +1082,37 @@ export async function generateGiftCardLocal(amount: string){
     this.echo('Checking available funds...');
     await this.account.syncState(); 
     const availableFunds = await this.account.getMaxAvailableTransfer();
-    if (availableFunds >= balance) {
+    if (availableFunds >= cardBalance * BigInt(quantity) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
-        this.echo('Creating a new burner wallet...');
-        const birthIndex = (await this.account.getPoolTreeState()).index
-        const mnemonic = bip39.generateMnemonic();
-        const sk = deriveSpendingKeyZkBob(mnemonic)
-        const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
-        const transferRequests:TransferRequest[] = [ {
-                destination: receivingAddress,
-                amountGwei: balance 
-            }];
-        
-        const giftCardProps: GiftCardProperties = { sk, birthIndex, balance, poolAlias };
-        const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
-        const walletUrl = await redemptionUrl(giftCardProps, baseUrl, this.account);
-
-        this.update(-1, `Your burner wallet:\n${walletUrl}`);
-        this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
-            raw: true,
-            finalize: function(div) {
-            div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
-            }
-        });
-
-        this.echo('Sending funds...')
+        let  transferRequests:TransferRequest[] = [];
+        let walletUrls = [];
+        this.echo(`Creating burner wallets... 0/${qty}`);
+        for (let index = 0; index < qty; index++) {
+            const birthIndex = (await this.account.getPoolTreeState()).index
+            const mnemonic = bip39.generateMnemonic();
+            const sk = deriveSpendingKeyZkBob(mnemonic)
+            const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
+            transferRequests.push( {
+                    destination: receivingAddress,
+                    amountGwei: cardBalance 
+                });
+            this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
+            const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
+            const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+            walletUrls.push(await redemptionUrl(giftCardProps, baseUrl, this.account));
+            
+            // this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
+            //     raw: true,
+            //     finalize: function(div) {
+            //     div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
+            //     }
+            // });
+        }
+        const urlsJoined = walletUrls.join("\n");
+        this.update(-1, `Your gift cards URLs:\n${urlsJoined}`);
+        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINKS OR DOWNLOAD AS A ] [[!;;;;${asDownload(urlsJoined)}]FILE]`);
+        this.echo('Sending funds...');
         const results = await this.account.transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
             return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
