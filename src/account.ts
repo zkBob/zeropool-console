@@ -706,21 +706,29 @@ export class Account {
     }
 
     public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
+        const proverMode = this.config.pools[this.getCurrentPool()].delegatedProverUrls.length > 0 ? 
+            ProverMode.DelegatedWithFallback : 
+            ProverMode.Local;
+
         const giftCardAccountConfig: AccountConfig = {
             sk: giftCard.sk,
             pool: this.getZpClient().currentPool(),
-            birthindex: Number(giftCard.birthIndex),
-            proverMode: await this.getZpClient().getProverMode(),
+            birthindex: giftCard.birthIndex,
+            proverMode,
         }
         return await this.getZpClient().giftCardBalance(giftCardAccountConfig);
     }
 
     public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{jobId: string, txHash: string}> {
+        const proverMode = this.config.pools[this.getCurrentPool()].delegatedProverUrls.length > 0 ? 
+            ProverMode.DelegatedWithFallback : 
+            ProverMode.Local;
+
         const giftCardAccountConfig: AccountConfig = {
             sk: giftCard.sk,
             pool: this.getZpClient().currentPool(),
-            birthindex: Number(giftCard.birthIndex),
-            proverMode: await this.getZpClient().getProverMode(),
+            birthindex: giftCard.birthIndex,
+            proverMode,
         }
 
         console.log('Redeeming gift-card...');

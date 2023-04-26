@@ -945,7 +945,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
-    const birthIndex = (await this.account.getPoolTreeState()).index
+    const birthIndex = Number((await this.account.getPoolTreeState()).index);
     try {
         this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
         const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
@@ -1079,7 +1079,7 @@ export async function generateGiftCardLocal(amount: string){
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
         this.echo('Creating a new burner wallet...');
-        const birthIndex = (await this.account.getPoolTreeState()).index
+        const birthIndex = Number((await this.account.getPoolTreeState()).index);
         const mnemonic = bip39.generateMnemonic();
         const sk = deriveSpendingKeyZkBob(mnemonic)
         const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
