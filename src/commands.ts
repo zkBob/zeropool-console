@@ -8,6 +8,7 @@ import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
 import { env } from './environment';
 import { Account } from './account';
+import sha256 from 'fast-sha256';
 var pjson = require('../package.json');
 
 const bs58 = require('bs58');
@@ -43,7 +44,9 @@ export async function switchPool(poolAlias: string, password: string) {
         return;
     }
     if (!password) {
-        this.echo(`[[;red;]Please provide account password to switch L1 account]`)
+        this.set_mask(true);
+        password = (await this.read('Enter account password to switch L1 client: ')).trim();
+        this.set_mask(false);
     }
 
 
@@ -53,17 +56,24 @@ export async function switchPool(poolAlias: string, password: string) {
     this.echo(`Current pool: ${await this.account.getCurrentPool()}`);
 }
 
-export function getSeed(password: string) {
+export async function getSeed(password: string) {
+    if (!password) {
+        this.set_mask(true);
+        password = (await this.read('Enter account password: ')).trim();
+        this.set_mask(false);
+    }
+
     const seed = this.account.getSeed(this.account.accountName, password);
     this.echo(`[[;gray;]Seed phrase: ${seed}]`);
 }
 
-export function genSeed() {
-    const seed = bip39.generateMnemonic();
-    this.echo(`[[;gray;]Generated mnemonic: ${seed}]`);
-}
+export async function getSk(password: string) {
+    if (!password) {
+        this.set_mask(true);
+        password = (await this.read('Enter account password: ')).trim();
+        this.set_mask(false);
+    }
 
-export function getSk(password: string) {
     const seed = this.account.getSeed(this.account.accountName, password);
     const sk = deriveSpendingKeyZkBob(seed);
     this.echo(`[[;gray;]Spending key: 0x${bufToHex(sk)}]`);
@@ -945,7 +955,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
-    const birthIndex = (await this.account.getPoolTreeState()).index
+    const birthIndex = Number((await this.account.getPoolTreeState()).index);
     try {
         this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
         const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
@@ -987,6 +997,8 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
                 balance: singleCardBalance,
                 poolAlias: this.account.getCurrentPool,
             };
+
+            console.log("giftCardProps:", giftCardProps);
     
             const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
             const svg = qrcode(url);
@@ -997,7 +1009,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         }
         this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
     
-        let zipUrl = await zip(giftCards);
+        let zipUrl = await makeZippedReport(giftCards);
         this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
         const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
             async giftCard =>  {return {
@@ -1033,8 +1045,9 @@ async function extractGiftCard(codeOrUrl: string, account: Account): Promise<Gif
 
     const url = new URL(codeOrUrl);
     const urlSearchParams = new URLSearchParams(url.search.slice(1));
-    if (urlSearchParams.has('gift-code')) {
-        return await account.giftCardFromCode(urlSearchParams.get('gift-code'));
+    const code = urlSearchParams.get('gift-code');
+    if (code) {
+        return await account.giftCardFromCode(code);
     }
 
     throw new Error('Cannot extract correct gift card from provided code or redemption URL');
@@ -1049,7 +1062,11 @@ export function qrcode(data: string): string {
 }
 
 
-async function zip(giftCards: GiftCard[]) {
+function asDownload(data) {
+    return window.URL.createObjectURL(new Blob([data], { type: "text/plain" }));
+}
+
+async function makeZippedReport(giftCards: GiftCard[]) {
     let mainZip = new JSZip();
     giftCards.forEach(async giftCard => {
 
@@ -1065,8 +1082,28 @@ async function zip(giftCards: GiftCard[]) {
     return url
 }
 
-export async function generateGiftCardLocal(amount: string){
-    const balance = await this.account.humanToShielded(amount);
+async function zipQrCodes(links: string[], account: Account): Promise<string> {
+    let mainZip = new JSZip();
+    const summary = await Promise.all(links.map(async (aLink, index) => {
+        const giftCardProps = await extractGiftCard(aLink, account);
+        const skHash = [...new Uint8Array(sha256(giftCardProps.sk))].map(x => x.toString(16).padStart(2, '0')).join('');
+        const qrFileName = `gift-card-${giftCardProps.poolAlias}-${('0000' + index).slice(-4)}-${skHash.slice(-16)}.svg`;
+        mainZip.file(qrFileName, qrcode(aLink));
+
+        return { url: aLink, sk: '0x' + bufToHex(giftCardProps.sk), balance: giftCardProps.balance.toString(), svg: qrFileName };
+    }));
+
+    mainZip.file(`_summary.json`, JSON.stringify(summary, null, '\t'));
+
+    let zipped = await mainZip.generateAsync({ type: 'blob' })
+    let url = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
+    return url
+}
+
+export async function generateGiftCardLocal(amount: string, quantity: string){
+    
+    let qty = Number(quantity ?? 1);
+    const cardBalance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();
 
     this.pause();
@@ -1075,32 +1112,53 @@ export async function generateGiftCardLocal(amount: string){
     this.echo('Checking available funds...');
     await this.account.syncState(); 
     const availableFunds = await this.account.getMaxAvailableTransfer();
-    if (availableFunds >= balance) {
+    if (availableFunds >= cardBalance * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
-        this.echo('Creating a new burner wallet...');
-        const birthIndex = (await this.account.getPoolTreeState()).index
-        const mnemonic = bip39.generateMnemonic();
-        const sk = deriveSpendingKeyZkBob(mnemonic)
-        const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
-        const transferRequests:TransferRequest[] = [ {
-                destination: receivingAddress,
-                amountGwei: balance 
-            }];
-        
-        const giftCardProps: GiftCardProperties = { sk, birthIndex, balance, poolAlias };
-        const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
-        const walletUrl = await redemptionUrl(giftCardProps, baseUrl, this.account);
+        let  transferRequests:TransferRequest[] = [];
+        let walletUrls: string[] = [];
+        this.echo(`Creating burner wallets... 0/${qty}`);
+        const birthIndex = Number((await this.account.getPoolTreeState()).index);
+        for (let index = 0; index < qty; index++) {
+            const mnemonic = bip39.generateMnemonic();
+            const sk = deriveSpendingKeyZkBob(mnemonic)
+            const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
+            transferRequests.push( {
+                    destination: receivingAddress,
+                    amountGwei: cardBalance 
+                });
+            this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
+            const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
+            const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+            const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
+            walletUrls.push(url);
+        }
+        const urlsJoined = walletUrls.join("\n");
+        this.update(-1, `Your gift cards URL${walletUrls.length > 1 ? 's' : ''}:\n${urlsJoined}`);
+        const qrUrl = await zipQrCodes(walletUrls, this.account);
+        this.echo (`[[;red;]DON'T FORGET TO COPY THE LINK${walletUrls.length > 1 ? 'S' : ''} ABOVE OR DOWNLOAD AN] [[!;;;;${qrUrl}]QR ARCHIVE]`);
+        if (qty > 1) {
+            let entered: string;
+            this.echo (`[[;yellow;]Please keep in mind you'll lost your money in case of loosing links and QRs]`);
+            this.resume();
+            do {
+                entered = await this.read(`[[;yellow;]Type 'YES' to confirm links\\QRs are saved and valid or 'NO' to cancel: ]`)
+                if (entered.toLowerCase() == 'no') {
+                    this.echo(`Gift cards generating has been cancelled. Each of them has zero balance. Please try again`);
+                    return;
+                }
+            }while(entered.toLowerCase() != 'yes');
+        } else if (qty == 1) {
+            this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
+                raw: true,
+                finalize: function(div) {
+                    div.find('#qr').html(removeSvgHeader(qrcode(walletUrls[0])));
+                }
+            });
+        }
 
-        this.update(-1, `Your burner wallet:\n${walletUrl}`);
-        this.echo('<div style = \"width:25%\"id=\"qr\"></div>', {
-            raw: true,
-            finalize: function(div) {
-            div.find('#qr').html(removeSvgHeader(qrcode(walletUrl)));
-            }
-        });
-
-        this.echo('Sending funds...')
+        this.pause();
+        this.echo('Sending funds...');
         const results = await this.account.transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
             return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`

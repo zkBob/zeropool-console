@@ -7,7 +7,7 @@
             "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
             "relayerUrls": ["https://relayer.thgkjlr.website/"],
-            "delegatedProverUrls": [],
+            "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
             "coldStorageConfigPath": "./assets/zkbob-sepolia-coldstorage.cfg"
         },
         "BOB-goerli": {
