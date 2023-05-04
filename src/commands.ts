@@ -1,5 +1,5 @@
 import bip39 from 'bip39-light';
-import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType,
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties,
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
@@ -868,9 +868,12 @@ export async function complianceReport() {
 
     const genDate = new Date();
 
+    const tokenSymb = await this.account.tokenSymbol();
+    const shTokenSymb = await this.account.shTokenSymbol();
+
     const denominator = 1000000000;
     for (const aRecord of report) {
-        this.echo(`[[;white;]${humanReadable(aRecord, denominator)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
+        this.echo(`[[;white;]${humanReadable(aRecord, denominator, tokenSymb, shTokenSymb)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
         this.echo(`\tTx index:  ${aRecord.index}`);
 
         // Incoming transfer and direct deposit - are special cases:
@@ -925,7 +928,7 @@ export async function complianceReport() {
     this.echo('[[;white;]--------------------------------END-OF-REPORT--------------------------------]\n');
 
     let metadata: any = {};
-    metadata.userId = this.account.getAccountId();
+    metadata.userId = this.accountId;
     metadata.exportTimestamp = Math.floor(genDate.getTime() / 1000);
     metadata.startTimestamp = fromDate ? Math.floor(fromDate.getTime() / 1000) : null;
     metadata.endTimestamp = toDate ? Math.floor(toDate.getTime() / 1000) : null;
