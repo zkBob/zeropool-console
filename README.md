@@ -42,6 +42,10 @@ Suppose you already done local running and set appropriated parameters and setti
 `get-seed <password>` print the seed phrase for the current account (current password needed)
 
 `get-sk <password>` get zkBob account spending key (current password needed,
+
+`pools` list of the available pools
+
+`switch-pool <pool_alias> <password>` switch to the another pool with the current spending key
   
 ## L1-level commands
 
@@ -61,7 +65,9 @@ Suppose you already done local running and set appropriated parameters and setti
 
 ## L2-level commands
 
-`gen-shielded-address` generate a new zkBob shielded address
+`gen-shielded-address [number]` generate a new zkBob shielded address for the current pool (or several addressed)
+
+`gen-shielded-address-generic [number]` generate a new zkBob universal shielded address (or several addressed)
 
 `get-shielded-balance` get calculated private balance (with optimistic balance)
 
@@ -127,7 +133,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `reset` log out from the current account
 
-`account-id` get the current account unique id'
+`account-id` get the client account id (indexed DB name)
 
 `support-id` print current support id (changed on each library initialization)
 
@@ -141,4 +147,10 @@ Suppose you already done local running and set appropriated parameters and setti
 
 ## Gift cards commands
 
-`gift-cards <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
+`gift-card-generate <balance> [quantity]` generates a bunch of gift cards, transfer funds. allows to download redemption links or copy from output.
+
+`gift-card-generate-cloud <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
+
+`gift-card-balance <code_or_redemption_url>` retrieves gift card balance
+
+`gift-card-redeem <code_or_redemption_url>` redeems gift card to the current account
