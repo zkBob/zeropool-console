@@ -928,7 +928,7 @@ export async function complianceReport() {
     this.echo('[[;white;]--------------------------------END-OF-REPORT--------------------------------]\n');
 
     let metadata: any = {};
-    metadata.userId = this.accountId;
+    metadata.userId = this.account.accountId;
     metadata.exportTimestamp = Math.floor(genDate.getTime() / 1000);
     metadata.startTimestamp = fromDate ? Math.floor(fromDate.getTime() / 1000) : null;
     metadata.endTimestamp = toDate ? Math.floor(toDate.getTime() / 1000) : null;
@@ -948,7 +948,7 @@ export async function complianceReport() {
     }
 
     let zipFile = new JSZip();
-    zipFile.file(`report_${metadata.userId.slice(0, 8)}_${dateStrForFilename(genDate)}.json`, JSON.stringify(exportReport, replacer, space));
+    zipFile.file(`report_${metadata.userId}_${dateStrForFilename(genDate)}.json`, JSON.stringify(exportReport, replacer, space));
     let zipped = await zipFile.generateAsync({ type: 'blob' })
     let reportUrl = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
 
