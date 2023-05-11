@@ -480,12 +480,17 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
 
 export async function withdrawShielded(amount: string, address: string, times: string) {
     let txCnt = times !== undefined ? Number(times) : 1;
+    const withdrawAmount = await this.account.humanToShielded(amount);
+
+    this.echo(`You can swap few tokens into the native one ${txCnt > 1 ? '(will applied to the each tx)' : ''}`);
+    const val = await this.read('Specify amount to swap or press ENTER to skip: ');
+    const swapAmount = await this.account.humanToShielded(val ?? '0');
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded withdraw${cntStr}...`);
         this.pause();
-        const result = await this.account.withdrawShielded(await this.account.humanToShielded(amount), address);
+        const result = await this.account.withdrawShielded(withdrawAmount, address, swapAmount);
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`

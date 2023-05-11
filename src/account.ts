@@ -683,7 +683,7 @@ export class Account {
         }
     }
 
-    public async withdrawShielded(amount: bigint, external_addr: string): Promise<{jobId: string, txHash: string}[]> {
+    public async withdrawShielded(amount: bigint, external_addr: string, nativeAmount: bigint = 0n): Promise<{jobId: string, txHash: string}[]> {
         let address = external_addr ?? await this.getClient().getAddress();
 
         console.log('Waiting while state become ready...');
@@ -692,7 +692,7 @@ export class Account {
             const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Transfer, false));
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, txFee.totalPerTx);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
             return await this.getZpClient().waitJobsTxHashes(jobIds);
