@@ -509,6 +509,10 @@ export class Account {
         return await this.getZpClient().feeEstimate(amounts, txType, updateState);
     }
 
+    public async maxSwapAmount() : Promise<bigint> {
+        return await this.getZpClient().maxSupportedTokenSwap();
+    }
+
     public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
         const curChainId = chainId ?? env.pools[this.getCurrentPool()].chainId;
         const txUrl = env.blockExplorerUrls[String(curChainId)].tx;

@@ -482,10 +482,15 @@ export async function withdrawShielded(amount: string, address: string, times: s
     let txCnt = times !== undefined ? Number(times) : 1;
     const withdrawAmount = await this.account.humanToShielded(amount);
 
-    this.echo(`You can swap few tokens into the native one ${txCnt > 1 ? '(will applied to the each tx)' : ''}`);
-    this.resume();
-    const val = await this.read('Specify amount to swap or press ENTER to skip: ');
-    const swapAmount = await this.account.humanToShielded(val ?? '0');
+    let swapAmount = 0;
+    const supportedSwap = await this.account.maxSwapAmount();
+    if (supportedSwap > 0) {
+        const str = supportedSwap > (10n ** 15n) ? '>1M' : `up to ${await this.account.shieldedToHuman(supportedSwap)}`;
+        this.echo(`[[;green;]You can swap few tokens (${str} ${this.account.tokenSymbol()}) into the native ones ${txCnt > 1 ? '(will applied to the each tx)' : ''}]`);
+        this.resume();
+        const val = await this.read('Specify amount to swap or press ENTER to skip: ');
+        swapAmount = await this.account.humanToShielded(val ?? '0');
+    }
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
