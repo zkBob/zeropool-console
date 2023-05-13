@@ -483,6 +483,7 @@ export async function withdrawShielded(amount: string, address: string, times: s
     const withdrawAmount = await this.account.humanToShielded(amount);
 
     this.echo(`You can swap few tokens into the native one ${txCnt > 1 ? '(will applied to the each tx)' : ''}`);
+    this.resume();
     const val = await this.read('Specify amount to swap or press ENTER to skip: ');
     const swapAmount = await this.account.humanToShielded(val ?? '0');
 
