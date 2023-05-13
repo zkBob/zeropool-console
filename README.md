@@ -85,6 +85,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `history` print all transactions related to your account
 
+`compliance-report` generate compliance report: history + evidence of transactions ownership
+
 ## Transactions configuration
 
 `max-transfer` calculate maximum available token amount for outcoming transaction (transfer or withdrawal)

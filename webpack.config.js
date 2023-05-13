@@ -24,6 +24,7 @@ module.exports = {
             'assert': require.resolve('assert'),
             'constants': require.resolve('constants-browserify'),
             'fs': false,
+            'zlib': false,
         },
         alias: {
             process: 'process/browser.js',

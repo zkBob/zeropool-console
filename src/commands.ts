@@ -1,5 +1,5 @@
 import bip39 from 'bip39-light';
-import { EphemeralAddress, HistoryRecord, HistoryTransactionType, PoolLimits, TxType,
+import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties,
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
@@ -849,6 +849,174 @@ function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: st
     return `${dt.toLocaleString()} : ${mainPart}`;
 }
 
+export async function complianceReport() {
+    this.echo('Please specify optional report interval. To omit the bound just press Enter');
+    this.echo('Acceptable formats: ISO8601 ([[;white;]e.g. 2022-10-28 09:15:00]) or linux timestamp (e.g. [[;white;]1666937700])');
+    const fromDate = await readDate(this, '[[;green;]Enter report START date time (press Enter to skip)]: ');
+    const toDate = await readDate(this, '[[;green;]Enter report END date time (press Enter to skip)]:   ');
+    //this.update(-1, `Great! There ${requests.length==1 ? 'is' : 'are'} ${requests.length} request${requests.length==1 ? '' : 's'} collected!`);
+    const fromDescr = fromDate ? ` from ${fromDate}` : '';
+    const toDescr = toDate ? ` up to  ${toDate}` : '';
+    this.echo(`Generating compliance report${fromDescr}${toDescr}...`);
+
+    this.pause();
+
+    const report: ComplianceHistoryRecord[] = await this.account.generateComplianceReport(
+        fromDate ? fromDate.getTime() : undefined, 
+        toDate ? toDate.getTime() : undefined,
+        );
+
+    const genDate = new Date();
+
+    const tokenSymb = await this.account.tokenSymbol();
+    const shTokenSymb = await this.account.shTokenSymbol();
+
+    const denominator = 1000000000;
+    for (const aRecord of report) {
+        this.echo(`[[;white;]${humanReadable(aRecord, denominator, tokenSymb, shTokenSymb)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
+        this.echo(`\tTx index:  ${aRecord.index}`);
+
+        // Incoming transfer and direct deposit - are special cases:
+        //  - the output account for incoming transfers cannot be decrypted
+        //  - the nullifier doesn't take into account (it's not belong to us)
+        //  - the next nullifier cannot be calculated without output account
+        if (aRecord.type != HistoryTransactionType.TransferIn && 
+            aRecord.type != HistoryTransactionType.DirectDeposit) 
+        {
+            this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
+            if (aRecord.nextNullifier) {
+                this.echo(`\tNext nullifier: ${bufToHex(aRecord.nextNullifier)}`);
+            }
+
+            this.echo(`\tAccount @${aRecord.index}: ${JSON.stringify(aRecord.acc)}`);
+
+            let accEnc = aRecord.encChunks.find(obj => obj.index == aRecord.index)?.data;
+            let accKey = aRecord.ecdhKeys.find(obj => obj.index == aRecord.index)?.key;
+            if (accEnc && accKey) {
+                this.echo(`\t      encrypted: ${bufToHex(accEnc)}`);
+                this.echo(`\t      ECDH key:  ${bufToHex(accKey)}`);
+            } else {
+                this.echo(`[[;red;]Incorrect report: cannot find compliance details for account @${aRecord.index}]`);
+            }
+        }
+        
+        for (const aNote of aRecord.notes) {
+            this.echo(`\tNote    @${aNote.index}: ${JSON.stringify(aNote.note)}`);
+
+            if (aRecord.type != HistoryTransactionType.DirectDeposit) {
+                let noteEnc = aRecord.encChunks.find(obj => obj.index == aNote.index)?.data;
+                let noteKey = aRecord.ecdhKeys.find(obj => obj.index == aNote.index)?.key;
+                if (noteEnc && noteKey) {
+                    this.echo(`\t      encrypted: ${bufToHex(noteEnc)}`);
+                    this.echo(`\t      ECDH key:  ${bufToHex(noteKey)}`);
+                } else {
+                    this.echo(`[[;red;]Incorrect report: cannot find compliance details for note @${aNote.index}]`);
+                }
+            }
+        }
+
+        const inputs = aRecord.inputs;
+        if (inputs) {
+            this.echo(`\t[[;green;]Input account @${inputs.account.index}:] ${JSON.stringify(inputs.account.account)}`);
+            this.echo(`\t\t...intermediate nullifier hash: ${inputs.intermediateNullifier}`);
+            for (const aNote of inputs.notes) {
+                this.echo(`\t[[;green;]Input note    @${aNote.index}:] ${JSON.stringify(aNote.note)}`);
+            }
+        }
+    }
+
+    this.echo('[[;white;]--------------------------------END-OF-REPORT--------------------------------]\n');
+
+    let metadata: any = {};
+    metadata.userId = this.account.accountId;
+    metadata.exportTimestamp = Math.floor(genDate.getTime() / 1000);
+    metadata.startTimestamp = fromDate ? Math.floor(fromDate.getTime() / 1000) : null;
+    metadata.endTimestamp = toDate ? Math.floor(toDate.getTime() / 1000) : null;
+    metadata.recordsCount = report.length;
+
+    const exportReport = {metadata, transactions: report};
+
+    const space = 4;
+    const replacer = (key, value) => {
+        if (typeof value === 'bigint') {
+            return value.toString() + 'n';
+        } else if (value instanceof Object.getPrototypeOf(Uint8Array)) {
+            return `${bufToHex(value)}`;
+        }  else {
+            return value;
+        }
+    }
+
+    let zipFile = new JSZip();
+    zipFile.file(`report_${metadata.userId}_${dateStrForFilename(genDate)}.json`, JSON.stringify(exportReport, replacer, space));
+    let zipped = await zipFile.generateAsync({ type: 'blob' })
+    let reportUrl = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
+
+    if (fromDate) {
+        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${Math.floor(fromDate.getTime() / 1000)})`); 
+    }
+    if (toDate) {
+        this.echo(`The report time interval end:   [[;white;]${toDate.toLocaleString()}] (${Math.floor(toDate.getTime() / 1000)})`);
+    }
+    this.echo(`Records in report: [[;white;]${report.length}]`);
+    this.echo(`Report was generated at: [[;white;]${genDate.toLocaleString()}] (${Math.floor(genDate.getTime() / 1000)})`);
+
+    this.echo(`You could also [[!;;;;${reportUrl}]download raw report] now`); 
+
+    this.resume();
+    
+}
+
+function dateStrForFilename(date: Date): string {
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hour = date.getHours().toString().padStart(2, '0');
+    const min = date.getMinutes().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day}_${hour}-${min}`;
+}
+
+async function readDate(terminal: any, requestString: string): Promise<Date | null> {
+    let datetimeStr: string = '';
+    let date: Date | null = null;
+    do {
+        datetimeStr = await terminal.read(`${requestString}`);
+        if (datetimeStr == '') break;
+        datetimeStr = datetimeStr.trim();
+
+        date = new Date(datetimeStr);
+        if (!date || isNaN(date.valueOf())) {
+            // maybe user entered a timestamp?
+            let timestamp = Number(datetimeStr);
+            if (timestamp) {
+                if (timestamp < 10 ** 11) {
+                    // seconds
+                    timestamp *= 10 ** 3;
+                } else if (timestamp < 10 ** 14) {
+                    // milliseconds
+                } else if (timestamp < 10 ** 16) {
+                    // microseconds
+                    timestamp /= 10 ** 3;
+                } else {
+                    // nanoseconds
+                    timestamp /= 10 ** 6;
+                }
+                date = new Date(timestamp);
+            }
+        }
+
+        if (!date || isNaN(date.valueOf())) {
+            terminal.error(`Datetime is invalid. Use linux timestamp or ISO 8601 format (YYYY-MM-dd HH:mm:ss)`);
+            datetimeStr = '';
+            continue;
+        }
+
+    } while(datetimeStr == '');
+
+    return date;
+}
+
 export function cleanState() {
     this.pause();
     this.account.cleanInternalState();
@@ -903,6 +1071,7 @@ export async function getVersion() {
     
     this.resume();
 }
+
 class GiftCard {
     alias: string;
     cloudId: string;
