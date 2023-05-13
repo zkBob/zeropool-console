@@ -6095,11 +6095,15 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libzkbob-rs-wasm-web-mt@file:../libzkbob-rs/libzkbob-rs-wasm/web-mt-debug":
-  version "1.2.0"
+libzkbob-rs-wasm-web-mt@1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-1.3.0.tgz#b8fae3509b49fb4031f4c4ea1ecbfa58743ac36b"
+  integrity sha512-R0iq3hdJ5pLcO8jBIIE6ln9E0ewyXgYZemYXnq3g97uo8Ie/xRSQmgZXxGhF7KhBVeWdMjd66sNMxbS9l6Vihg==
 
-"libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web-debug":
-  version "1.2.0"
+libzkbob-rs-wasm-web@1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-1.3.0.tgz#a9be0b5f53f853093805324fb027eeff52db2fa5"
+  integrity sha512-vt88pW2viTHkbXFeS0Bgi621X7ccFArjd+bZDdBHKCDjKmsXkr2ZQ2neoKn4KX0jqQVvUiETmsbI4CBcP4St4w==
 
 lie@~3.3.0:
   version "3.3.0"
@@ -10197,8 +10201,10 @@ yargs@^13.3.2:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-"zkbob-client-js@file:../zkbob-client-js":
-  version "3.2.1"
+zkbob-client-js@3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-3.3.0.tgz#3659d401ac8ad1eabac47fe0b0e396a42d6f8468"
+  integrity sha512-LjcV6Z7jAsz8/QAkW+sfNixwOsMmUXgEthVEnzyYaZ+fJjHiVaHtlXOFvowFz9VXpXuh1XwUkTEcaWVcSFRIyQ==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@metamask/eth-sig-util" "5.0.0"
@@ -10209,8 +10215,8 @@ yargs@^13.3.2:
     fast-sha256 "^1.3.0"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-3.2.1-6b484fe3-15ec-4ee3-897b-7da8b210d78a-1683236092447/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-debug"
-    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-3.2.1-6b484fe3-15ec-4ee3-897b-7da8b210d78a-1683236092447/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt-debug"
+    libzkbob-rs-wasm-web "1.3.0"
+    libzkbob-rs-wasm-web-mt "1.3.0"
     regenerator-runtime "^0.13.9"
     wasm-feature-detect "^1.2.11"
     web3 "1.8.0"
