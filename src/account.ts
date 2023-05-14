@@ -2,7 +2,7 @@ import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
-         ZkBobClient, HistoryRecord,
+         ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
          TransferConfig, TransferRequest, FeeAmount, TxType,
          PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
@@ -442,6 +442,10 @@ export class Account {
 
     public async getAllHistory(updateState: boolean = true): Promise<HistoryRecord[]> {
         return this.getZpClient().getAllHistory(updateState);
+    }
+
+    public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<ComplianceHistoryRecord[]> {
+        return this.zpClient.getComplianceReport(startTimestamp, endTimestamp);
     }
 
     public async rollback(index: bigint): Promise<bigint> {
