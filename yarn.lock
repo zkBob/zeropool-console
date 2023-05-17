@@ -10202,7 +10202,7 @@ yargs@^13.3.2:
     web3-utils "^1.3.6"
 
 "zkbob-client-js@file:../zkbob-client-js":
-  version "3.2.1"
+  version "3.3.0"
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@metamask/eth-sig-util" "5.0.0"

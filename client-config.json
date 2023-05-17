@@ -1,5 +1,5 @@
 {
-    "defaultPool": "BOB-op-goerli",
+    "defaultPool": "BOB-sepolia",
 
     "pools": {
         "BOB-sepolia": {
