@@ -501,12 +501,12 @@ export class Account {
     public async minTxAmount(): Promise<bigint> {
         return await this.getZpClient().minTxAmount();
      }
-    public async getMaxAvailableTransfer(): Promise<bigint> {
-        return await this.getZpClient().calcMaxAvailableTransfer(false);
+    public async getMaxAvailableTransfer(txType: TxType): Promise<bigint> {
+        return await this.getZpClient().calcMaxAvailableTransfer(txType, false);
     }
 
-    public async minFee(amount: bigint, txType: TxType): Promise<bigint> {
-        return await this.getZpClient().atomicTxFee();
+    public async minFee(txType: TxType): Promise<bigint> {
+        return await this.getZpClient().atomicTxFee(txType);
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {

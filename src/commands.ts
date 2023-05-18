@@ -191,21 +191,29 @@ export async function approveToken(spender: string, amount: string) {
     this.resume();
 }
 
-export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
+export async function getTxParts(amount: string, requestAdditional: string) {
     let amounts: bigint[] = [];
     amounts.push(await this.account.humanToShielded(amount));
-    if (requestAdditional == '+' || fee == '+') {
+    if (requestAdditional == '+') {
         const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
         let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
         amounts = amounts.concat(convertedAmounts);
     }
 
-    let actualFee: bigint;
-    if (fee === undefined || fee == '+') {
-        actualFee = await this.account.minFee();
-    } else {
-        actualFee = await this.account.humanToShielded(fee);
-    }
+    let entered = '';
+    let txType = TxType.Transfer;
+    this.echo(`[[;yellow;]Fee for transfer and withdraw transactions may vary]`)
+    do {
+        entered = (await this.read('Please specify tx type ([t]ransfer(default) or [w]ithdraw): ')).toLowerCase();
+        if (entered == 't' || entered == 'transfer') {
+            txType = TxType.Transfer;
+        } else if (entered == 'w' || entered == 'withdraw') {
+            txType = TxType.Withdraw;
+        }
+    } while(entered != '');
+    const txName = txType == TxType.Transfer ? 'transfer' : 'withdraw';
+
+    let actualFee = await this.account.minFee(txType);
     
     this.pause();
     const result: TransferConfig[] = await this.account.getTxParts(amounts, actualFee);
@@ -216,7 +224,7 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
     }
 
     if (result.length == 0) {
-        this.echo(`Cannot create such transaction (insufficient funds or amount too small)`);
+        this.echo(`Cannot create such ${txName} transaction (insufficient funds or amount too small)`);
     } else {
         let totalFee = BigInt(0);
         for (const part of result) {
@@ -224,9 +232,9 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
         }
 
         if (result.length == 1) {
-            this.echo(`You can transfer or withdraw this amount within single transaction`);
+            this.echo(`You can ${txName} this amount within single transaction`);
         } else {
-            this.echo(`Multitransfer detected. To transfer this amount will require ${result.length} txs`);
+            this.echo(`Multitransfer detected. To ${txName} this amount will require ${result.length} txs`);
         }
         this.echo(`Fee required: ${await this.account.shieldedToHuman(totalFee)} ${this.account.shTokenSymbol()}`);
     }
@@ -327,12 +335,17 @@ export async function getLimits(address: string | undefined) {
 
 export async function getMaxAvailableTransfer() {
     this.pause();
-    const result = await this.account.getMaxAvailableTransfer();
-    const human = await this.account.shieldedToHuman(result);
-    const wei = await this.account.shieldedToWei(result);
+    const maxTransfer = await this.account.getMaxAvailableTransfer(TxType.Transfer);
+    const humanTransfer = await this.account.shieldedToHuman(maxTransfer);
+    const weiTransfer = await this.account.shieldedToWei(maxTransfer);
+    const maxWithdraw = await this.account.getMaxAvailableTransfer(TxType.Withdraw);
+    const humanWithdraw = await this.account.shieldedToHuman(maxWithdraw);
+    const weiWithdraw = await this.account.shieldedToWei(maxWithdraw);
     this.resume();
 
-    this.echo(`Max available shielded balance for outcoming transactions: [[;white;]${human} ${this.account.shTokenSymbol()}] (${wei} wei)`);
+    this.echo(`Max available shielded balance for:`);
+    this.echo(`    ...transfer: [[;white;]${humanTransfer} ${this.account.shTokenSymbol()}] (${weiTransfer} wei)`);
+    this.echo(`    ...withdraw: [[;white;]${humanWithdraw} ${this.account.shTokenSymbol()}] (${weiWithdraw} wei)`);
 }
 
 export async function depositShielded(amount: string, times: string) {
@@ -1280,7 +1293,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
     await this.account.syncState(); 
-    const availableFunds = await this.account.getMaxAvailableTransfer();
+    const availableFunds = await this.account.getMaxAvailableTransfer(TxType.Transfer);
     if (availableFunds >= cardBalance * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
