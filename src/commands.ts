@@ -119,7 +119,7 @@ export async function shieldedAddressInfo(shieldedAddress: string) {
         } catch(err) {
             this.echo(`Valid on the pool with ID:   [[;white;]any pool]`);
         }
-        
+
 
         this.echo(`Diversifier: [[;white;]${components.d}] (dec)`);
         this.echo(`Gd.x         [[;white;]${components.p_d}] (dec)`);
@@ -206,7 +206,7 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
     } else {
         actualFee = await this.account.humanToShielded(fee);
     }
-    
+
     this.pause();
     const result: TransferConfig[] = await this.account.getTxParts(amounts, actualFee);
     this.resume();
@@ -276,20 +276,14 @@ export async function estimateFeeDeposit(amount: string) {
     this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
-export async function estimateFeeTransfer(amount: string, requestAdditional: string) {
-    let amounts: bigint[] = [];
-    amounts.push(await this.account.humanToShielded(amount));
-    if (requestAdditional == '+') {
-        const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
-        let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
-        amounts = amounts.concat(convertedAmounts);
-    }
+export async function estimateFeeTransfer(...amounts: string[]) {
+    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
 
     this.pause();
-    const result = await this.account.estimateFee(amounts, TxType.Transfer, false);
+    const result = await this.account.estimateFee(amountsBN, TxType.Transfer, false);
     this.resume();
 
-    const effectiveAmount = amounts.reduce((acc, cur) => acc + cur, BigInt(0));
+    const effectiveAmount = amountsBN.reduce((acc, cur) => acc + cur, BigInt(0));
 
     this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.shTokenSymbol()}]`);
@@ -322,7 +316,7 @@ export async function getLimits(address: string | undefined) {
     this.echo(`[[;white;]Max available withdraw: ${await this.account.shieldedToHuman(result.withdraw.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
-    
+
 }
 
 export async function getMaxAvailableTransfer() {
@@ -444,7 +438,7 @@ export async function transferShielded(to: string, amount: string, times: string
             this.echo(`Done ${result.map((oneResult) => {
                 return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
             }).join(`\n     `)}`);
-            
+
         }
     };
 }
@@ -495,7 +489,7 @@ export async function withdrawShielded(amount: string, address: string, times: s
 
 export async function getInternalState() {
     const state = await this.account.getInternalState();
-    
+
     for (const [index, tx] of state.txs) {
         this.echo(`${index}: ${JSON.stringify(tx)}`);
     }
@@ -575,7 +569,7 @@ export async function getLeftSiblings(index: string) {
         this.error(`Cannot get siblings: ${err}`);
         return;
     }
-    
+
     this.echo(' height | index       | value');
     this.echo('-------------------------------------------------------------------------------------------------------');
     siblings.forEach(aNode => {
@@ -824,7 +818,7 @@ function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: st
         }
 
         if (record.type == HistoryTransactionType.Deposit) {
-            mainPart = `${statusMark}DEPOSITED  ${Number(totalAmount) / denominator} ${tokenSymb} FROM ${record.actions[0].from}`;      
+            mainPart = `${statusMark}DEPOSITED  ${Number(totalAmount) / denominator} ${tokenSymb} FROM ${record.actions[0].from}`;
         } else if (record.type == HistoryTransactionType.TransferIn) {
             mainPart = `${statusMark}RECEIVED   ${Number(totalAmount) / denominator} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.TransferOut) {
@@ -862,7 +856,7 @@ export async function complianceReport() {
     this.pause();
 
     const report: ComplianceHistoryRecord[] = await this.account.generateComplianceReport(
-        fromDate ? fromDate.getTime() : undefined, 
+        fromDate ? fromDate.getTime() : undefined,
         toDate ? toDate.getTime() : undefined,
         );
 
@@ -880,8 +874,8 @@ export async function complianceReport() {
         //  - the output account for incoming transfers cannot be decrypted
         //  - the nullifier doesn't take into account (it's not belong to us)
         //  - the next nullifier cannot be calculated without output account
-        if (aRecord.type != HistoryTransactionType.TransferIn && 
-            aRecord.type != HistoryTransactionType.DirectDeposit) 
+        if (aRecord.type != HistoryTransactionType.TransferIn &&
+            aRecord.type != HistoryTransactionType.DirectDeposit)
         {
             this.echo(`\tNullifier: ${bufToHex(aRecord.nullifier)}`);
             if (aRecord.nextNullifier) {
@@ -899,7 +893,7 @@ export async function complianceReport() {
                 this.echo(`[[;red;]Incorrect report: cannot find compliance details for account @${aRecord.index}]`);
             }
         }
-        
+
         for (const aNote of aRecord.notes) {
             this.echo(`\tNote    @${aNote.index}: ${JSON.stringify(aNote.note)}`);
 
@@ -953,7 +947,7 @@ export async function complianceReport() {
     let reportUrl = window.URL.createObjectURL(new Blob([zipped], { type: "application/zip" }));
 
     if (fromDate) {
-        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${Math.floor(fromDate.getTime() / 1000)})`); 
+        this.echo(`The report time interval start: [[;white;]${fromDate.toLocaleString()}] (${Math.floor(fromDate.getTime() / 1000)})`);
     }
     if (toDate) {
         this.echo(`The report time interval end:   [[;white;]${toDate.toLocaleString()}] (${Math.floor(toDate.getTime() / 1000)})`);
@@ -961,10 +955,10 @@ export async function complianceReport() {
     this.echo(`Records in report: [[;white;]${report.length}]`);
     this.echo(`Report was generated at: [[;white;]${genDate.toLocaleString()}] (${Math.floor(genDate.getTime() / 1000)})`);
 
-    this.echo(`You could also [[!;;;;${reportUrl}]download raw report] now`); 
+    this.echo(`You could also [[!;;;;${reportUrl}]download raw report] now`);
 
     this.resume();
-    
+
 }
 
 function dateStrForFilename(date: Date): string {
@@ -1050,7 +1044,7 @@ export async function getVersion() {
     this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
     this.echo(`Client library  version: [[;white;]${await this.account.libraryVersion()}]`);
     this.echo(`Current relayer version: ...fetching...`);
-    
+
     try {
         const ver = await this.account.relayerVersion();
         this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
@@ -1068,7 +1062,7 @@ export async function getVersion() {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
         }
     }
-    
+
     this.resume();
 }
 
@@ -1097,7 +1091,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     this.pause();
     const cloudUrl = env.cloudApi[this.account.getCurrentPool()];
     console.log("cloudUrl = ", cloudUrl)
-    
+
     const singleCardBalance = await this.account.humanToShielded(cardBalance)
     const requiredTotalSum = singleCardBalance * BigInt(quantity);
     await this.account.syncState();
@@ -1145,14 +1139,14 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             const cloudId = signupResponseJson.accountId;
 
             if(!cloudId) throw new Error("sign up response is invalid")
-    
+
             const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
 
             if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
 
             const exportJson = await exportResponse.json();
             let sk = `0x${exportJson.sk}`;
-    
+
             const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
 
             if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
@@ -1168,7 +1162,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             };
 
             console.log("giftCardProps:", giftCardProps);
-    
+
             const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
@@ -1177,13 +1171,13 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             }
         }
         this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
-    
+
         let zipUrl = await makeZippedReport(giftCards);
-        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);    
+        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);
         const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
             async giftCard =>  {return {
                 destination: giftCard.address,
-                amountGwei: await this.account.humanToShielded(cardBalance) 
+                amountGwei: await this.account.humanToShielded(cardBalance)
             }
         } ));
         const result = await this.account.transferShielded(transferRequests);
@@ -1191,11 +1185,11 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
             return `[job #${singleTxResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
         }).join(`\n     `)}`);
-        
+
     } catch (error) {
         this.echo(`Process failed with error: [[;red;]${error.message}]`);
     }
-    
+
     this.resume();
 
 }
@@ -1270,7 +1264,7 @@ async function zipQrCodes(links: string[], account: Account): Promise<string> {
 }
 
 export async function generateGiftCardLocal(amount: string, quantity: string){
-    
+
     let qty = Number(quantity ?? 1);
     const cardBalance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();
@@ -1279,7 +1273,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
 
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
-    await this.account.syncState(); 
+    await this.account.syncState();
     const availableFunds = await this.account.getMaxAvailableTransfer();
     if (availableFunds >= cardBalance * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
@@ -1294,7 +1288,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
             const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
             transferRequests.push( {
                     destination: receivingAddress,
-                    amountGwei: cardBalance 
+                    amountGwei: cardBalance
                 });
             this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
             const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
@@ -1346,19 +1340,24 @@ function removeSvgHeader(data: string) {
     return data.replace(header,'')
 }
 
-export async function giftCardBalance(codeOrUrl: string) {
-    const giftCard = await extractGiftCard(codeOrUrl, this.account);
-    
-    this.echo(`Gift card properties:`);
-    this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
-    this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
-    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
-    this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
-
+export async function giftCardBalance(...codeOrUrls: string[]) {
     this.pause();
-    this.echo(`Getting actual gift card balance...`);
-    const balance = await this.account.giftCardBalance(giftCard);
-    this.update(-1, `Actual gift card balance: [[;white;]${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}]`)
+    if (codeOrUrls.length > 1) {
+        this.echo(`Checking balance of ${codeOrUrls.length} gift cards...`);
+    }
+    for (let codeOrUrl of codeOrUrls) {
+        const giftCard = await extractGiftCard(codeOrUrl, this.account);
+
+        this.echo(`Gift card properties:`);
+        this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
+        this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
+        this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+        this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
+
+        this.echo(`Getting actual gift card balance...`);
+        const balance = await this.account.giftCardBalance(giftCard);
+        this.update(-1, `Actual gift card balance: [[;white;]${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}]`)
+    }
     this.resume();
 }
 

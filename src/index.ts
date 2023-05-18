@@ -73,7 +73,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'version': [ c.getVersion, '', 'get console and relayer versions'],
   'gift-card-generate':[c.generateGiftCardLocal, '<balance>', 'creates a single burner wallet with specified balance and returns redemption url and qr code'],
   'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards via cloud (you should provide cloud access token)'],
-  'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url>', 'retrieve gift card balance'],
+  'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url> [code_or_redemption_url2 code_or_redemption_url3 ...]', 'retrieve gift cards balances'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
   'help': [
