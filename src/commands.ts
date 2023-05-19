@@ -1345,10 +1345,13 @@ export async function giftCardBalance(...codeOrUrls: string[]) {
     if (codeOrUrls.length > 1) {
         this.echo(`Checking balance of ${codeOrUrls.length} gift cards...`);
     }
+
+    let redeemedCnt = 0;
+    let cardsBalance = 0n;
     for (let codeOrUrl of codeOrUrls) {
         const giftCard = await extractGiftCard(codeOrUrl, this.account);
 
-        this.echo(`Gift card properties:`);
+        this.echo(`Gift card properties:${codeOrUrls.length > 1 ? `\t\/\/ ${codeOrUrl}` : '' }`);
         this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
         this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
         this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
@@ -1357,7 +1360,19 @@ export async function giftCardBalance(...codeOrUrls: string[]) {
         this.echo(`Getting actual gift card balance...`);
         const balance = await this.account.giftCardBalance(giftCard);
         this.update(-1, `Actual gift card balance: [[;white;]${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}]`)
+
+        redeemedCnt += (balance == 0n ? 1 : 0);
+        cardsBalance += balance;
     }
+
+    if (codeOrUrls.length > 1) {
+        const redeemedCntStr = redeemedCnt > 0 ? 
+            `Found [[;white;]${redeemedCnt}] redeemed card${redeemedCnt > 1 ? 's' : ''}` :
+            'There are no redeemed cards';
+        this.echo(`\nTotal checked [[;white;]${codeOrUrls.length}] cards. ${redeemedCntStr}`);
+        this.echo(`Total cards balance: [[;white;]${await this.account.shieldedToHuman(cardsBalance)} BOB]\n`);
+    }
+
     this.resume();
 }
 
