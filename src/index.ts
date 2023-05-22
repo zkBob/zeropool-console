@@ -48,7 +48,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'history': [c.printHistory, '', 'print all transactions related to your account'],
   'compliance-report': [c.complianceReport, '', 'generate compliance report: history + evidence of transactions ownership'],
   'max-transfer': [c.getMaxAvailableTransfer, '', 'get max available token amount for outcoming transaction'],
-  'tx-amounts': [c.getTxParts, '<amount> [+]', 'get transfer component transactions'],
+  'tx-amounts': [c.getTxParts, '<amount> [amount2 amount3 ...]', 'get transfer component transactions'],
   'fee-estimate-deposit': [c.estimateFeeDeposit, '<amount>', 'estimate fee for depositing requested amount of tokens'],
   'fee-estimate-transfer': [c.estimateFeeTransfer, '<amount> [amount2 amount3 ...]', 'estimate fee for transfering requested amount of tokens'],
   'fee-estimate-withdraw': [c.estimateFeeWithdraw, '<amount>', 'estimate fee for withdrawing requested amount of tokens'],

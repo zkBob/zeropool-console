@@ -191,36 +191,31 @@ export async function approveToken(spender: string, amount: string) {
     this.resume();
 }
 
-export async function getTxParts(amount: string, requestAdditional: string) {
-    let amounts: bigint[] = [];
-    amounts.push(await this.account.humanToShielded(amount));
-    if (requestAdditional == '+') {
-        const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
-        let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
-        amounts = amounts.concat(convertedAmounts);
-    }
+export async function getTxParts(...amounts: string[]) {
+    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
 
     let entered = '';
     let txType = TxType.Transfer;
     this.echo(`[[;yellow;]Fee for transfer and withdraw transactions may vary]`)
+    this.resume();
     do {
         entered = (await this.read('Please specify tx type ([t]ransfer(default) or [w]ithdraw): ')).toLowerCase();
         if (entered == 't' || entered == 'transfer') {
             txType = TxType.Transfer;
+            break;
         } else if (entered == 'w' || entered == 'withdraw') {
             txType = TxType.Withdraw;
+            break;
         }
     } while(entered != '');
     const txName = txType == TxType.Transfer ? 'transfer' : 'withdraw';
-
-    let actualFee = await this.account.minFee(txType);
     
     this.pause();
-    const result: TransferConfig[] = await this.account.getTxParts(txType, amounts, actualFee);
+    const result: TransferConfig[] = await this.account.getTxParts(txType, amountsBN);
     this.resume();
 
     if (amounts.length > 1) {
-        this.echo(`Multi-destination request: ${ amounts.map(async a => `^${await this.account.shieldedToHuman(a)}`).join(', ') }`);
+        this.echo(`Multi-destination request: ${ amountsBN.map(async a => `^${await this.account.shieldedToHuman(a)}`).join(', ') }`);
     }
 
     if (result.length == 0) {

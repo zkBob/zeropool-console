@@ -483,11 +483,15 @@ export class Account {
         return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
-    public async getTxParts(txType: TxType, amounts: bigint[], fee: RelayerFee): Promise<Array<TransferConfig>> {
+    public async getTxParts(txType: TxType, amounts: bigint[]): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
-        return await this.getZpClient().getTransactionParts(txType, transfers, fee, false);
+
+        const relayerFee = await this.getZpClient().getRelayerFee();
+        console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+
+        return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
