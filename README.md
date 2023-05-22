@@ -151,6 +151,6 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `gift-card-generate-cloud <alias> <quantity> <balance> <token>` generates `<quantity>` cloud accounts with `<alias>_index` description using `<token>` to access admin API; generate QR codes to login into each account; makes shielded transfer of `<balance>` shBob to each created account; generates a report with account keys, redemptions urls and cloud Ids
 
-`gift-card-balance <code_or_redemption_url>` retrieves gift card balance
+`gift-card-balance <code_or_redemption_url> [code_or_redemption_url2 code_or_redemption_url3 ...]` retrieves gift cards balances
 
 `gift-card-redeem <code_or_redemption_url>` redeems gift card to the current account
