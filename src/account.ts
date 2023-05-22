@@ -7,7 +7,8 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
-         accountId
+         accountId,
+         RelayerFee
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
@@ -482,11 +483,11 @@ export class Account {
         return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
-    public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
+    public async getTxParts(txType: TxType, amounts: bigint[], fee: RelayerFee): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
-        return await this.getZpClient().getTransactionParts(transfers, fee, false);
+        return await this.getZpClient().getTransactionParts(txType, transfers, fee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -531,9 +532,11 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Deposit, false));
+            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, false);
+            const relayerFee = feeEst.relayerFee;
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
-            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + txFee.totalPerTx);
+            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
             const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
@@ -544,7 +547,7 @@ export class Account {
             }
 
             console.log('Making deposit...');
-            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, txFee.totalPerTx);
+            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, relayerFee);
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
             return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
@@ -598,14 +601,15 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making deposit...');
             let jobId;
             jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
                 const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
                 return this.getClient().signTypedData(dataToSign)
-            }, myAddress, txFee.totalPerTx);
+            }, myAddress, relayerFee);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
@@ -621,11 +625,12 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, txFee.totalPerTx);
+            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, relayerFee);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
@@ -672,11 +677,11 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const amounts = transfers.map((oneTransfer) => oneTransfer.amountGwei);
-            const txFee = (await this.getZpClient().feeEstimate(amounts, TxType.Transfer, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, relayerFee);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
             return await this.getZpClient().waitJobsTxHashes(jobIds);
@@ -693,10 +698,11 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Withdraw, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, relayerFee);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
             return await this.getZpClient().waitJobsTxHashes(jobIds);

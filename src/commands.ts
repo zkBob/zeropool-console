@@ -1,6 +1,6 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
-         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties,
+         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -216,7 +216,7 @@ export async function getTxParts(amount: string, requestAdditional: string) {
     let actualFee = await this.account.minFee(txType);
     
     this.pause();
-    const result: TransferConfig[] = await this.account.getTxParts(amounts, actualFee);
+    const result: TransferConfig[] = await this.account.getTxParts(txType, amounts, actualFee);
     this.resume();
 
     if (amounts.length > 1) {
@@ -275,40 +275,43 @@ export async function getTxParts(amount: string, requestAdditional: string) {
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Deposit, false);
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], TxType.Deposit, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.tokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeTransfer(...amounts: string[]) {
     const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
 
     this.pause();
-    const result = await this.account.estimateFee(amountsBN, TxType.Transfer, false);
+    const result: FeeAmount = await this.account.estimateFee(amountsBN, TxType.Transfer, false);
     this.resume();
 
     const effectiveAmount = amountsBN.reduce((acc, cur) => acc + cur, BigInt(0));
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.shTokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}`);
-    this.echo(`Requested amount:  [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
+    this.echo(`Requested amount:   [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeWithdraw(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, false);
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.shTokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function getLimits(address: string | undefined) {
@@ -845,10 +848,13 @@ function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: st
         }
 
         if (record.fee > 0) {
-        mainPart += `(fee = ${Number(record.fee) / denominator})`;
+            mainPart += `(fee = ${Number(record.fee) / denominator})`;
         }
     } else if (record.type == HistoryTransactionType.AggregateNotes) {
         mainPart = `${statusMark}AGGREGATE NOTES`;
+        if (record.fee > 0) {
+            mainPart += `(fee = ${Number(record.fee) / denominator})`;
+        }
     } else {
         mainPart = `incorrect history record`;
     }
