@@ -693,7 +693,7 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Transfer, false));
+            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Withdraw, false));
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, txFee.totalPerTx);
