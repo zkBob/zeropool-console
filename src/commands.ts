@@ -270,7 +270,7 @@ export async function getTxParts(...amounts: string[]) {
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], TxType.Deposit, false);
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], TxType.BridgeDeposit, false);
     this.resume();
 
     this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);

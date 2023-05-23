@@ -530,6 +530,7 @@ export class Account {
         return addrUrl.replace('{{addr}}', addr);
     }
 
+    // Here is an old deposit method (via approve allowance, not permit signature)
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let fromAddress = null;
 
