@@ -860,7 +860,7 @@ async function humanReadable(record: HistoryRecord, account: Account): Promise<s
         }
 
         if (record.fee > 0) {
-        	mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
+            mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
         }
     } else if (record.type == HistoryTransactionType.AggregateNotes) {
         mainPart = `${statusMark}AGGREGATE NOTES`;
