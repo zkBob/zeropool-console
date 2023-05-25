@@ -474,12 +474,24 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
 
 export async function withdrawShielded(amount: string, address: string, times: string) {
     let txCnt = times !== undefined ? Number(times) : 1;
+    const withdrawAmount = await this.account.humanToShielded(amount);
+
+    let swapAmount = 0;
+    const supportedSwap = await this.account.maxSwapAmount();
+    const supportedSwapWei = await this.account.shieldedToWei(supportedSwap)
+    if (supportedSwapWei > 0) {
+        const str = supportedSwapWei > (10n ** 24n) ? '>1M' : `up to ${await this.account.weiToHuman(supportedSwapWei)}`;
+        this.echo(`[[;green;]You can swap few tokens (${str} ${this.account.tokenSymbol()}) into the native ones ${txCnt > 1 ? '(will applied to the each tx)' : ''}]`);
+        this.resume();
+        const val = await this.read('Specify amount to swap or press ENTER to skip: ');
+        swapAmount = await this.account.humanToShielded(val ?? '0');
+    }
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded withdraw${cntStr}...`);
         this.pause();
-        const result = await this.account.withdrawShielded(await this.account.humanToShielded(amount), address);
+        const result = await this.account.withdrawShielded(withdrawAmount, address, swapAmount);
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
@@ -756,12 +768,10 @@ export async function printHistory() {
     const history: HistoryRecord[] = await this.account.getAllHistory();
     this.resume();
 
-    const denominator = 1000000000;
-    const tokenSymb = await this.account.tokenSymbol();
     const shTokenSymb = await this.account.shTokenSymbol();
 
     for (const tx of history) {
-        this.echo(`${humanReadable(tx, denominator, tokenSymb, shTokenSymb)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
+        this.echo(`${await humanReadable(tx, this.account)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
 
         if (tx.actions.length > 1) {
             let directions = new Map<string, {amount: bigint, notesCnt: number, isLoopback}>();
@@ -786,15 +796,17 @@ export async function printHistory() {
                 if (value.isLoopback) {
                     destDescr = `MYSELF${notesCntDescription}`;
                 }
-                this.echo(`                                  ${Number(value.amount) / denominator} ${shTokenSymb} ${prep} ${destDescr}`);
+                this.echo(`                                  ${await this.account.shieldedToHuman(value.amount)} ${shTokenSymb} ${prep} ${destDescr}`);
             }
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
     }
 }
 
-function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: string, shTokenSymb: string): string {
+async function humanReadable(record: HistoryRecord, account: Account): Promise<string> {
     let dt = new Date(record.timestamp * 1000);
+
+    //tokenSymb: string, shTokenSymb: string
 
     let mainPart: string;
     let statusMark = ``;
@@ -804,8 +816,13 @@ function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: st
         statusMark = `❌ `;
     }
 
+    const tokenSymb = await account.tokenSymbol();
+    const shTokenSymb = await account.shTokenSymbol();
+
     if (record.actions.length > 0) {
         const totalAmount = record.actions.map(({ amount }) => amount).reduce((acc, cur) => acc + cur);
+        const totalAmountStr = await account.shieldedToHuman(totalAmount);
+
         let toAddress = record.actions[0].to;
         if (record.actions.length > 1) {
             toAddress = `${record.actions.length} notes`;
@@ -818,21 +835,21 @@ function humanReadable(record: HistoryRecord, denominator: number, tokenSymb: st
         }
 
         if (record.type == HistoryTransactionType.Deposit) {
-            mainPart = `${statusMark}DEPOSITED  ${Number(totalAmount) / denominator} ${tokenSymb} FROM ${record.actions[0].from}`;
+            mainPart = `${statusMark}DEPOSITED  ${totalAmountStr} ${tokenSymb} FROM ${record.actions[0].from}`;      
         } else if (record.type == HistoryTransactionType.TransferIn) {
-            mainPart = `${statusMark}RECEIVED   ${Number(totalAmount) / denominator} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
+            mainPart = `${statusMark}RECEIVED   ${totalAmountStr} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.TransferOut) {
-            mainPart = `${statusMark}SENT       ${Number(totalAmount) / denominator} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
+            mainPart = `${statusMark}SENT       ${totalAmountStr} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'TO'} ${toAddress}`;
         } else if (record.type == HistoryTransactionType.Withdrawal) {
-            mainPart = `${statusMark}WITHDRAWN  ${Number(totalAmount) / denominator} ${shTokenSymb} TO ${toAddress}`;
+            mainPart = `${statusMark}WITHDRAWN  ${totalAmountStr} ${shTokenSymb} TO ${toAddress}`;
         } else if (record.type == HistoryTransactionType.DirectDeposit) {
-            mainPart = `${statusMark}DEPOSITED DIRECT ${Number(totalAmount) / denominator} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
+            mainPart = `${statusMark}DEPOSITED DIRECT ${totalAmountStr} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }
 
         if (record.fee > 0) {
-        mainPart += `(fee = ${Number(record.fee) / denominator})`;
+        mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
         }
     } else if (record.type == HistoryTransactionType.AggregateNotes) {
         mainPart = `${statusMark}AGGREGATE NOTES`;
@@ -862,12 +879,8 @@ export async function complianceReport() {
 
     const genDate = new Date();
 
-    const tokenSymb = await this.account.tokenSymbol();
-    const shTokenSymb = await this.account.shTokenSymbol();
-
-    const denominator = 1000000000;
     for (const aRecord of report) {
-        this.echo(`[[;white;]${humanReadable(aRecord, denominator, tokenSymb, shTokenSymb)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
+        this.echo(`[[;white;]${await humanReadable(aRecord, this.account)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
         this.echo(`\tTx index:  ${aRecord.index}`);
 
         // Incoming transfer and direct deposit - are special cases:
