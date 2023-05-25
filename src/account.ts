@@ -519,7 +519,7 @@ export class Account {
     }
 
     public async maxSwapAmount() : Promise<bigint> {
-        return await this.getZpClient().maxSupportedTokenSwap();
+        return BigInt(await this.getZpClient().maxSupportedTokenSwap());
     }
 
     public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
