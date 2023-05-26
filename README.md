@@ -91,7 +91,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `max-transfer` calculate maximum available token amount for outcoming transaction (transfer or withdrawal)
 
-`tx-amounts <amount> [amount2 amount3 ...]`, get transfer or withdrawal (will requested additionally) configuration for specified amount ant fee per transaction. Type `+` sign at the end of the command to enter the multitransfer mode
+`tx-amounts <amount> [amount2 amount3 ...]`, get transfer or withdrawal (will requested additionally) configuration for specified amount and fee per transaction. Type `+` sign at the end of the command to enter the multitransfer mode
 
 `fee-estimate-deposit <amount>` estimate fee for depositing requested amount of tokens
 
