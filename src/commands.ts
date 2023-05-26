@@ -215,7 +215,8 @@ export async function getTxParts(...amounts: string[]) {
     this.resume();
 
     if (amounts.length > 1) {
-        this.echo(`Multi-destination request: ${ amountsBN.map(async a => `^${await this.account.shieldedToHuman(a)}`).join(', ') }`);
+        const humanReadAmounts = await Promise.all(amountsBN.map(async a => `^${await this.account.shieldedToHuman(a)}`)); 
+        this.echo(`Multi-destination request: ${humanReadAmounts.join(', ')}`);
     }
 
     if (result.length == 0) {
