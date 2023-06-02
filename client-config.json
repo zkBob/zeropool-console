@@ -8,7 +8,8 @@
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
             "relayerUrls": ["https://relayer.thgkjlr.website/"],
             "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
-            "coldStorageConfigPath": "./assets/zkbob-sepolia-coldstorage.cfg"
+            "coldStorageConfigPath": "./assets/zkbob-sepolia-coldstorage.cfg",
+            "feeDecimals": 2
         },
         "BOB-goerli": {
             "chainId": 5,
@@ -16,7 +17,8 @@
             "tokenAddress": "0x97a4ab97028466FE67F18A6cd67559BAABE391b8",
             "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
             "delegatedProverUrls": [],
-            "coldStorageConfigPath": ""
+            "coldStorageConfigPath": "",
+            "feeDecimals": 1
         },
         "BOB-op-goerli": {
             "chainId":420,

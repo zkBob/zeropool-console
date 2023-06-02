@@ -7,7 +7,8 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits,
          TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion,
-         accountId
+         accountId,
+         RelayerFee
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
@@ -482,11 +483,15 @@ export class Account {
         return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
-    public async getTxParts(amounts: bigint[], fee: bigint): Promise<Array<TransferConfig>> {
+    public async getTxParts(txType: TxType, amounts: bigint[]): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
-        return await this.getZpClient().getTransactionParts(transfers, fee, false);
+
+        const relayerFee = await this.getZpClient().getRelayerFee();
+        console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+
+        return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -501,12 +506,12 @@ export class Account {
     public async minTxAmount(): Promise<bigint> {
         return await this.getZpClient().minTxAmount();
      }
-    public async getMaxAvailableTransfer(): Promise<bigint> {
-        return await this.getZpClient().calcMaxAvailableTransfer(false);
+    public async getMaxAvailableTransfer(txType: TxType): Promise<bigint> {
+        return await this.getZpClient().calcMaxAvailableTransfer(txType, false);
     }
 
-    public async minFee(amount: bigint, txType: TxType): Promise<bigint> {
-        return await this.getZpClient().atomicTxFee();
+    public async minFee(txType: TxType): Promise<bigint> {
+        return await this.getZpClient().atomicTxFee(txType);
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
@@ -514,7 +519,7 @@ export class Account {
     }
 
     public async maxSwapAmount() : Promise<bigint> {
-        return await this.getZpClient().maxSupportedTokenSwap();
+        return BigInt(await this.getZpClient().maxSupportedTokenSwap());
     }
 
     public getTransactionUrl(txHash: string, chainId: number | undefined = undefined): string {
@@ -529,15 +534,18 @@ export class Account {
         return addrUrl.replace('{{addr}}', addr);
     }
 
+    // Here is an old deposit method (via approve allowance, not permit signature)
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let fromAddress = null;
 
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Deposit, false));
+            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, false);
+            const relayerFee = feeEst.relayerFee;
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
-            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + txFee.totalPerTx);
+            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
             const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
             if (totalApproveAmount > currentAllowance) {
                 totalApproveAmount -= currentAllowance;
@@ -548,7 +556,7 @@ export class Account {
             }
 
             console.log('Making deposit...');
-            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, txFee.totalPerTx);
+            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, relayerFee);
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
             return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
@@ -602,14 +610,15 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making deposit...');
             let jobId;
             jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
                 const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
                 return this.getClient().signTypedData(dataToSign)
-            }, myAddress, txFee.totalPerTx);
+            }, myAddress, relayerFee);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
@@ -625,11 +634,12 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.BridgeDeposit, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, txFee.totalPerTx);
+            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, relayerFee);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 
@@ -676,11 +686,11 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const amounts = transfers.map((oneTransfer) => oneTransfer.amountGwei);
-            const txFee = (await this.getZpClient().feeEstimate(amounts, TxType.Transfer, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, relayerFee);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
             return await this.getZpClient().waitJobsTxHashes(jobIds);
@@ -697,10 +707,11 @@ export class Account {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const txFee = (await this.getZpClient().feeEstimate([amount], TxType.Transfer, false));
+            const relayerFee = await this.getZpClient().getRelayerFee();
+            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, txFee.totalPerTx);
+            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, relayerFee);
             console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
 
             return await this.getZpClient().waitJobsTxHashes(jobIds);

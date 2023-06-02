@@ -1,6 +1,6 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
-         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties,
+         TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
         } from 'zkbob-client-js';
 import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -191,32 +191,36 @@ export async function approveToken(spender: string, amount: string) {
     this.resume();
 }
 
-export async function getTxParts(amount: string, fee: string, requestAdditional: string) {
-    let amounts: bigint[] = [];
-    amounts.push(await this.account.humanToShielded(amount));
-    if (requestAdditional == '+' || fee == '+') {
-        const additionalAmounts: string = await this.read('Enter additional space separated amounts (e.g. \'^1 ^2.34 ^50\'): ');
-        let convertedAmounts: bigint[] = await Promise.all(additionalAmounts.trim().split(/\s+/).map(async add => await this.account.humanToShielded(add)));
-        amounts = amounts.concat(convertedAmounts);
-    }
+export async function getTxParts(...amounts: string[]) {
+    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
 
-    let actualFee: bigint;
-    if (fee === undefined || fee == '+') {
-        actualFee = await this.account.minFee();
-    } else {
-        actualFee = await this.account.humanToShielded(fee);
-    }
-
+    let entered = '';
+    let txType = TxType.Transfer;
+    this.echo(`[[;yellow;]Fee for transfer and withdraw transactions may vary]`)
+    this.resume();
+    do {
+        entered = (await this.read('Please specify tx type ([t]ransfer(default) or [w]ithdraw): ')).toLowerCase();
+        if (entered == 't' || entered == 'transfer') {
+            txType = TxType.Transfer;
+            break;
+        } else if (entered == 'w' || entered == 'withdraw') {
+            txType = TxType.Withdraw;
+            break;
+        }
+    } while(entered != '');
+    const txName = txType == TxType.Transfer ? 'transfer' : 'withdraw';
+    
     this.pause();
-    const result: TransferConfig[] = await this.account.getTxParts(amounts, actualFee);
+    const result: TransferConfig[] = await this.account.getTxParts(txType, amountsBN);
     this.resume();
 
     if (amounts.length > 1) {
-        this.echo(`Multi-destination request: ${ amounts.map(async a => `^${await this.account.shieldedToHuman(a)}`).join(', ') }`);
+        const humanReadAmounts = await Promise.all(amountsBN.map(async a => `^${await this.account.shieldedToHuman(a)}`)); 
+        this.echo(`Multi-destination request: ${humanReadAmounts.join(', ')}`);
     }
 
     if (result.length == 0) {
-        this.echo(`Cannot create such transaction (insufficient funds or amount too small)`);
+        this.echo(`Cannot create such ${txName} transaction (insufficient funds or amount too small)`);
     } else {
         let totalFee = BigInt(0);
         for (const part of result) {
@@ -224,9 +228,9 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
         }
 
         if (result.length == 1) {
-            this.echo(`You can transfer or withdraw this amount within single transaction`);
+            this.echo(`You can ${txName} this amount within single transaction`);
         } else {
-            this.echo(`Multitransfer detected. To transfer this amount will require ${result.length} txs`);
+            this.echo(`Multitransfer detected. To ${txName} this amount will require ${result.length} txs`);
         }
         this.echo(`Fee required: ${await this.account.shieldedToHuman(totalFee)} ${this.account.shTokenSymbol()}`);
     }
@@ -267,40 +271,43 @@ export async function getTxParts(amount: string, fee: string, requestAdditional:
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Deposit, false);
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], TxType.BridgeDeposit, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.tokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeTransfer(...amounts: string[]) {
     const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
 
     this.pause();
-    const result = await this.account.estimateFee(amountsBN, TxType.Transfer, false);
+    const result: FeeAmount = await this.account.estimateFee(amountsBN, TxType.Transfer, false);
     this.resume();
 
     const effectiveAmount = amountsBN.reduce((acc, cur) => acc + cur, BigInt(0));
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.shTokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}`);
-    this.echo(`Requested amount:  [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
+    this.echo(`Requested amount:   [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeWithdraw(amount: string) {
     this.pause();
-    const result = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, false);
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, false);
     this.resume();
 
-    this.echo(`Total fee est.:    [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Atomic fee:        [[;white;]${await this.account.shieldedToHuman(result.totalPerTx)} (${await this.account.shieldedToHuman(result.relayer)} + ${await this.account.shieldedToHuman(result.l1)}) ${this.account.shTokenSymbol()}]`);
-    this.echo(`Transaction count: [[;white;]${result.txCnt}]`);
-    this.echo(`Insuffic. balance: [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
+    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
+    this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
+    this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function getLimits(address: string | undefined) {
@@ -321,12 +328,17 @@ export async function getLimits(address: string | undefined) {
 
 export async function getMaxAvailableTransfer() {
     this.pause();
-    const result = await this.account.getMaxAvailableTransfer();
-    const human = await this.account.shieldedToHuman(result);
-    const wei = await this.account.shieldedToWei(result);
+    const maxTransfer = await this.account.getMaxAvailableTransfer(TxType.Transfer);
+    const humanTransfer = await this.account.shieldedToHuman(maxTransfer);
+    const weiTransfer = await this.account.shieldedToWei(maxTransfer);
+    const maxWithdraw = await this.account.getMaxAvailableTransfer(TxType.Withdraw);
+    const humanWithdraw = await this.account.shieldedToHuman(maxWithdraw);
+    const weiWithdraw = await this.account.shieldedToWei(maxWithdraw);
     this.resume();
 
-    this.echo(`Max available shielded balance for outcoming transactions: [[;white;]${human} ${this.account.shTokenSymbol()}] (${wei} wei)`);
+    this.echo(`Max available shielded balance for:`);
+    this.echo(`    ...transfer: [[;white;]${humanTransfer} ${this.account.shTokenSymbol()}] (${weiTransfer} wei)`);
+    this.echo(`    ...withdraw: [[;white;]${humanWithdraw} ${this.account.shTokenSymbol()}] (${weiWithdraw} wei)`);
 }
 
 export async function depositShielded(amount: string, times: string) {
@@ -849,10 +861,13 @@ async function humanReadable(record: HistoryRecord, account: Account): Promise<s
         }
 
         if (record.fee > 0) {
-        mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
+            mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
         }
     } else if (record.type == HistoryTransactionType.AggregateNotes) {
         mainPart = `${statusMark}AGGREGATE NOTES`;
+        if (record.fee > 0) {
+            mainPart += `(fee = ${await account.shieldedToHuman(record.fee)})`;
+        }
     } else {
         mainPart = `incorrect history record`;
     }
@@ -1287,7 +1302,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
     await this.account.syncState();
-    const availableFunds = await this.account.getMaxAvailableTransfer();
+    const availableFunds = await this.account.getMaxAvailableTransfer(TxType.Transfer);
     if (availableFunds >= cardBalance * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
