@@ -353,7 +353,8 @@ export class Account {
     // ^tokens|wei -> wei
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
-            return BigInt(this.getClient().toBaseUnit(amount.substr(1)));
+            const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
+            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substr(1)));
         }
 
         return BigInt(amount);
@@ -372,13 +373,15 @@ export class Account {
 
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
-        return this.getClient().fromBaseUnit(amountWei.toString());
+        const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
+        return await this.getClient().fromBaseUnit(tokenAddress, amountWei.toString());
     }
 
 
     public async getBalance(): Promise<[string, string]> {
+        const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
         const balance = await this.getClient().getBalance();
-        const readable = this.getClient().fromBaseUnit(balance);
+        const readable = await this.getClient().fromBaseUnit(tokenAddress, balance);
 
         return [balance, readable];
     }
