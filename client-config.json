@@ -41,7 +41,7 @@
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "minTxAmount": 50000,
-            "depositScheme": "auth"
+            "depositScheme": "usdc-polygon"
         },
         "BOB-op-goerli": {
             "chainId":420,
