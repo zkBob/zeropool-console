@@ -32,6 +32,17 @@
             "minTxAmount": 0,
             "depositScheme": "permit2"
         },
+        "USDC-goerli": {
+            "chainId": 5,
+            "poolAddress": "0xCF6446Deb67b2b56604657C67DAF54f884412531",
+            "tokenAddress": "0x28B531401Ee3f17521B3772c13EAF3f86C2Fe780",
+            "relayerUrls": ["https://goerli-usdc-relayer.thgkjlr.website"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "feeDecimals": 2,
+            "minTxAmount": 50000,
+            "depositScheme": "auth"
+        },
         "BOB-op-goerli": {
             "chainId":420,
             "poolAddress":"0x55B81b0730399974Ccad8AC858e766Cf54126596",
