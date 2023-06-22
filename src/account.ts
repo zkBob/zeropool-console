@@ -12,6 +12,7 @@ import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
+import Web3 from 'web3';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
@@ -381,7 +382,7 @@ export class Account {
     public async getBalance(): Promise<[string, string]> {
         const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
         const balance = await this.getClient().getBalance();
-        const readable = await this.getClient().fromBaseUnit(tokenAddress, balance);
+        const readable = Web3.utils.fromWei(balance);
 
         return [balance, readable];
     }

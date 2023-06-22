@@ -10173,8 +10173,9 @@ yargs@^13.3.2:
     y18n "^4.0.0"
     yargs-parser "^13.1.2"
 
-"zeropool-support-js@file:../zeropool-support-js":
+"zeropool-support-js@https://github.com/zkBob/zeropool-support-js#0.8.0":
   version "0.8.0"
+  resolved "https://github.com/zkBob/zeropool-support-js#a24aba9043112af68c77a286810972fdf5ffd189"
   dependencies:
     "@ethereumjs/tx" "^3.2.1"
     "@polkadot/api" "^7.11.1"
