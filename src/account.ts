@@ -355,7 +355,7 @@ export class Account {
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
             const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substr(1)));
+            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substring(1)));
         }
 
         return BigInt(amount);
@@ -378,11 +378,23 @@ export class Account {
         return await this.getClient().fromBaseUnit(tokenAddress, amountWei.toString());
     }
 
+    public ethWeiToHuman(amountWei: bigint): string {
+        return Web3.utils.fromWei(amountWei.toString(10), 'ether');
+    }
+
+    public humanToEthWei(amount: string): bigint {
+        if (amount.startsWith("^")) {
+            return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
+        }
+
+        return BigInt(amount);
+    }
+
 
     public async getBalance(): Promise<[string, string]> {
         const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
         const balance = await this.getClient().getBalance();
-        const readable = Web3.utils.fromWei(balance);
+        const readable = this.ethWeiToHuman(BigInt(balance));
 
         return [balance, readable];
     }
