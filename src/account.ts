@@ -4,18 +4,17 @@ import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
          TransferConfig, TransferRequest, FeeAmount, TxType,
-         PoolLimits,
-         TreeState, EphemeralAddress, SyncStat, TreeNode,
-         ServiceVersion,
-         accountId,
-         RelayerFee
+         PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
+         ServiceVersion, accountId, DepositType, SignatureType,
+         deriveSpendingKeyZkBob, GiftCardProperties
         } from 'zkbob-client-js';
-import { deriveSpendingKeyZkBob } from 'zkbob-client-js/lib/utils'
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
-import { GiftCardProperties } from 'zkbob-client-js/lib/client-provider';
+import Web3 from 'web3';
+
+const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
 
 interface AccountStorage {
@@ -227,6 +226,10 @@ export class Account {
         return `sh${this.tokenSymbol()}`;
     }
 
+    public depositScheme(): DepositType {
+        return this.config.pools[this.getCurrentPool()].depositScheme;
+    }
+
     public async switchPool(poolAlias: string, password: string): Promise<void> {
         if (!this.accountName) {
             throw new Error('Cannot switch pool: account isn\'t set');
@@ -351,7 +354,8 @@ export class Account {
     // ^tokens|wei -> wei
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
-            return BigInt(this.getClient().toBaseUnit(amount.substr(1)));
+            const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
+            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substring(1)));
         }
 
         return BigInt(amount);
@@ -370,13 +374,27 @@ export class Account {
 
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
-        return this.getClient().fromBaseUnit(amountWei.toString());
+        const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
+        return await this.getClient().fromBaseUnit(tokenAddress, amountWei.toString());
+    }
+
+    public ethWeiToHuman(amountWei: bigint): string {
+        return Web3.utils.fromWei(amountWei.toString(10), 'ether');
+    }
+
+    public humanToEthWei(amount: string): bigint {
+        if (amount.startsWith("^")) {
+            return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
+        }
+
+        return BigInt(amount);
     }
 
 
     public async getBalance(): Promise<[string, string]> {
+        const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
         const balance = await this.getClient().getBalance();
-        const readable = this.getClient().fromBaseUnit(balance);
+        const readable = this.ethWeiToHuman(BigInt(balance));
 
         return [balance, readable];
     }
@@ -534,90 +552,51 @@ export class Account {
         return addrUrl.replace('{{addr}}', addr);
     }
 
-    // Here is an old deposit method (via approve allowance, not permit signature)
     public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
-        let fromAddress = null;
-
-        console.log('Waiting while state become ready...');
-        const ready = await this.getZpClient().waitReadyToTransact();
-        if (ready) {
-            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, false);
-            const relayerFee = feeEst.relayerFee;
-            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
-
-            let totalApproveAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
-            const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
-            if (totalApproveAmount > currentAllowance) {
-                totalApproveAmount -= currentAllowance;
-                console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
-                await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalApproveAmount.toString());
-            } else {
-                console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
-            }
-
-            console.log('Making deposit...');
-            const jobId = await this.getZpClient().deposit(amount, (data) => this.getClient().sign(data), fromAddress, relayerFee);
-            console.log('Please wait relayer provide txHash for job %s...', jobId);
-
-            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId)) };
-        } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
-
-            throw Error('State is not ready for transact');
-        }
-    }
-    
-
-    private async createPermittableDepositData(tokenAddress: string, version: string, owner: string, spender: string, value: bigint, deadline: bigint, salt: string) {
-        const tokenName = await this.getClient().getTokenName(tokenAddress);
-        const chainId = await this.getClient().getChainId();
-        const nonce = await this.getClient().getTokenNonce(tokenAddress);
-
-        const domain = {
-            name: tokenName,
-            version: version,
-            chainId: chainId,
-            verifyingContract: tokenAddress,
-        };
-
-        const types = {
-          EIP712Domain: [
-            { name: 'name', type: 'string' },
-            { name: 'version', type: 'string' },
-            { name: 'chainId', type: 'uint256' },
-            { name: 'verifyingContract', type: 'address' },
-          ],
-          Permit: [
-              { name: "owner", type: "address" },
-              { name: "spender", type: "address" },
-              { name: "value", type: "uint256" },
-              { name: "nonce", type: "uint256" },
-              { name: "deadline", type: "uint256" },
-              { name: "salt", type: "bytes32" }
-            ],
-        };
-
-        const message = { owner, spender, value: value.toString(), nonce, deadline: deadline.toString(), salt };
-
-        const data = { types, primaryType: "Permit", domain, message };
-
-        return data;
-    }
-
-    public async depositShieldedPermittable(amount: bigint): Promise<{jobId: string, txHash: string}> {
         let myAddress = await this.getClient().getAddress();
         
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const relayerFee = await this.getZpClient().getRelayerFee();
+
+            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, false);
+            const relayerFee = feeEst.relayerFee;
             console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+                        
+            const depositScheme = this.config.pools[this.getCurrentPool()].depositScheme;
+            let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
+            if (depositScheme == DepositType.Approve) {
+                // check a token approvement if needed (in case of approve deposit scheme)
+                const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
+                if (totalNeededAmount > currentAllowance) {
+                    totalNeededAmount -= currentAllowance;
+                    console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
+                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount.toString());
+                } else {
+                    console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
+                }
+            } else if (depositScheme == DepositType.PermitV2) {
+                const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), PERMIT2_CONTRACT);
+                if (totalNeededAmount > currentAllowance) {
+                    const maxTokensAmount = 2n ** 256n - 1n;
+                    console.log(`Approving Permit2 contract (${PERMIT2_CONTRACT}) to spend max amount of our tokens`);
+                    await this.getClient().approve(this.getTokenAddr(), PERMIT2_CONTRACT, maxTokensAmount.toString());
+                } else {
+                    console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
+                }
+            }
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.getZpClient().depositPermittable(amount, async (deadline, value, salt) => {
-                const dataToSign = await this.createPermittableDepositData(this.getTokenAddr(), '1', myAddress, this.getPoolAddr(), value, deadline, salt);
-                return this.getClient().signTypedData(dataToSign)
+            jobId = await this.getZpClient().deposit(amount, async (signingRequest) => {
+                switch (signingRequest.type) {
+                    case SignatureType.TypedDataV4:
+                        return this.getClient().signTypedData(signingRequest.data);
+                    case SignatureType.PersonalSign:
+                        return this.getClient().sign(signingRequest.data);
+                    default:
+                        throw new Error(`Signing request with unknown type`);
+                }
             }, myAddress, relayerFee);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
@@ -630,7 +609,7 @@ export class Account {
         }
     }
 
-    public async depositShieldedPermittableEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
+    public async depositShieldedEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
@@ -639,7 +618,7 @@ export class Account {
 
             console.log('Making deposit...');
             let jobId;
-            jobId = await this.getZpClient().depositPermittableEphemeral(amount, index, relayerFee);
+            jobId = await this.getZpClient().depositEphemeral(amount, index, relayerFee);
 
             console.log('Please wait relayer complete the job %s...', jobId);
 

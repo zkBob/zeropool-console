@@ -1,8 +1,9 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
+         deriveSpendingKeyZkBob
         } from 'zkbob-client-js';
-import { deriveSpendingKeyZkBob, bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
+import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
@@ -170,7 +171,7 @@ export async function mint(amount: string) {
 export async function transfer(to: string, amount: string) {
     this.pause();
     this.echo(`Transfering ${this.account.nativeSymbol()}... `);
-    const txHash = await this.account.transfer(to, await this.account.humanToWei(amount));
+    const txHash = await this.account.transfer(to, this.account.humanToEthWei(amount));
     this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
@@ -346,32 +347,19 @@ export async function depositShielded(amount: string, times: string) {
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
-        this.echo(`Performing shielded deposit${cntStr}...`);
-        this.pause();
-        const result = await this.account.depositShielded(await this.account.humanToShielded(amount));
-        this.resume();
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
-    }
-}
-
-export async function depositShieldedPermittable(amount: string, times: string) {
-    let txCnt = times !== undefined ? Number(times) : 1;
-
-    for (let i = 0; i < txCnt; i++) {
-        let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
-        this.echo(`Performing shielded deposit with permittable token${cntStr}...`);
+        this.echo(`Performing shielded deposit [${this.account.depositScheme()} scheme]${cntStr}...`);
         this.pause();
 
         // Due to the fact that the console is a test tool, we doesn't check address balance here
         // we should get ability to test relayer's behaviour
-        const result = await this.account.depositShieldedPermittable(await this.account.humanToShielded(amount));
+        const result = await this.account.depositShielded(await this.account.humanToShielded(amount));
 
         this.resume();
         this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
     }
 }
 
-export async function depositShieldedPermittableEphemeral(amount: string, index: string) {
+export async function depositShieldedEphemeral(amount: string, index: string) {
     let ephemeralIndex = index !== undefined ? Number(index) : 0;
 
     this.echo(`Getting ephemeral account info...`);
@@ -380,8 +368,8 @@ export async function depositShieldedPermittableEphemeral(amount: string, index:
     this.update(-1, `Ephemeral address [[!;;;;${this.account.getAddressUrl(ephemeralAddress.address)}]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${this.account.tokenSymbol()}`);
 
     // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
-    this.echo(`Performing shielded deposit with permittable token from ephemeral address [[;white;]#${ephemeralIndex}]...`);
-    const result = await this.account.depositShieldedPermittableEphemeral(await this.account.humanToShielded(amount), ephemeralIndex);
+    this.echo(`Performing shielded deposit from ephemeral address [[;white;]#${ephemeralIndex}] [${this.account.depositScheme()} scheme]...`);
+    const result = await this.account.depositShieldedEphemeral(await this.account.humanToShielded(amount), ephemeralIndex);
     this.resume();
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
@@ -692,7 +680,7 @@ export async function getEphemeral(index: string) {
     this.echo(`Index: [[;white;]${addr.index}]`);
     this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
     this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
-    this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Native balance:     [[;white;]${await this.account.ethWeiToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
     this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
     this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
     this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
@@ -714,7 +702,7 @@ export async function getEphemeralUsed() {
         this.echo(`Index: [[;white;]${addr.index}]`);
         this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
         this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
-        this.echo(`  Native balance:     [[;white;]${await this.account.shieldedToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Native balance:     [[;white;]${await this.account.ethWeiToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
         this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
         this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
         this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);

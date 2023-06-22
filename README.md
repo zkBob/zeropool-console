@@ -71,11 +71,9 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `get-shielded-balance` get calculated private balance (with optimistic balance)
 
-`deposit-shielded <amount> [times]` deposit some tokens into zk-account (approving allowance scheme which require native coins presenting on the balance to cover token approve transaction fee). Specify `times` numeric value to repeat the operation several times
+`deposit-shielded <amount> [times]` deposit some tokens into zk-account (depends on deposit scheme, you may need a few native coins). Specify `times` numeric value to repeat the operation several times
 
-`deposit-shielded-permittable <amount> [times]` deposit some tokens into zk-account (permit scheme, no native coins needed). Specify `times` numeric value to repeat the operation several times
-
-`deposit-shielded-permittable-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
+`deposit-shielded-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
 
 `direct-deposit <shielded address> <amount> [times]` send tokens to the pool directly to receive it on the specified zkAddress. Specify `times` numeric value to repeat the operation several times
 
