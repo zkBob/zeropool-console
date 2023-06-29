@@ -1,7 +1,8 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
-         deriveSpendingKeyZkBob
+         deriveSpendingKeyZkBob,
+         DirectDepositType
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -158,6 +159,19 @@ export async function getTokenBalance() {
     const balanceWei = await this.account.getTokenBalance();
     const human = await this.account.weiToHuman(balanceWei);
     this.echo(`Token balance: [[;white;]${human} ${this.account.tokenSymbol()}] (${balanceWei} wei)`);
+}
+
+export async function getTokenAllowance(spender: string) {
+    this.pause();
+    const tokenAddress = this.account.getTokenAddr();
+    this.echo(`Checking [[!;;;;${this.account.getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${this.account.getAddressUrl(spender)}]${spender}]... `);
+    const allowance = await this.account.getTokenAllowance(spender);
+    if (allowance == 0n) {
+        this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
+    } else {
+        this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.shTokenSymbol()}]`);
+    }
+    this.resume();
 }
 
 export async function mint(amount: string) {
@@ -374,19 +388,37 @@ export async function depositShieldedEphemeral(amount: string, index: string) {
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
 
-export async function directDeposit(to: string, amount: string, times: string) {
-    if ((await this.account.verifyShieldedAddress(to))) {
-        let txCnt = times !== undefined ? Number(times) : 1;
-        for (let i = 0; i < txCnt; i++) {
-            let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
-            this.echo(`Performing direct deposit${cntStr}...`);
-            this.pause();
-            const txHash = await this.account.directDeposit(to, await this.account.humanToShielded(amount));
-            this.resume();
-            this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
-        }
-    } else {
-        this.error(`Shielded address ${to} is invalid. Please check it!`);
+export async function directDeposit(amount: string, times: string) {
+    let txCnt = times !== undefined ? Number(times) : 1;
+    for (let i = 0; i < txCnt; i++) {
+        let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
+        this.echo(`Performing direct deposit${cntStr}...`);
+        this.pause();
+        const txHash = await this.account.directDeposit(await this.account.humanToShielded(amount));
+        this.resume();
+        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    }
+}
+
+export async function directDepositNative(amount: string, times: string) {
+    const curPool = await this.account.getCurrentPool();
+    const poolEnv = env.pools[curPool];
+    if (!poolEnv.isNative) {
+        this.error(`The current pool (${curPool}) doesn't support native direct deposits`);
+        return;
+    }
+
+    let txCnt = times !== undefined ? Number(times) : 1;
+    for (let i = 0; i < txCnt; i++) {
+        let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
+        this.echo(`Performing native direct deposit${cntStr}...`);
+        this.pause();
+        const txHash = await this.account.directDeposit(
+            await this.account.humanToShielded(amount),
+            DirectDepositType.Native
+        );
+        this.resume();
+        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     }
 }
 

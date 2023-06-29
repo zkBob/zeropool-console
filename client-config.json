@@ -30,7 +30,8 @@
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "minTxAmount": 0,
-            "depositScheme": "permit2"
+            "depositScheme": "permit2",
+            "isNative": true
         },
         "USDC-goerli": {
             "chainId": 5,

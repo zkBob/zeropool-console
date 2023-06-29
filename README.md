@@ -55,6 +55,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `get-token-balance` get the linked account balance (tokens)
 
+`get-token-allowance <spender>` check token allowance to spend by provided address
+
 `testnet-mint <amount>` mint some unshielded tokens (available on testnets only)
 
 `transfer <to> <amount>` transfer native coins to the destination L1 address
@@ -75,7 +77,9 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `deposit-shielded-ephemeral <amount> <index>` deposit some tokens from the internal ephemeral address (permit scheme)
 
-`direct-deposit <shielded address> <amount> [times]` send tokens to the pool directly to receive it on the specified zkAddress. Specify `times` numeric value to repeat the operation several times
+`direct-deposit <amount> [times]` send tokens to the pool directly to receive it on own account. Additional approve transaction will be initiated if needed. Specify `times` numeric value to repeat the operation several times
+
+`direct-deposit-native <amount> [times]` send native coins to the pool directly to wrap and receive it on own account. Additional approve transaction will be initiated if needed. Specify `times` numeric value to repeat the operation several times
 
 `transfer-shielded <shielded address> <amount> [times | +]` move shielded tokens to the another zkBob account (inside a pool). You can specify `times` numeric value to repeat the operation several times ***OR*** enter the multitransfer mode with adding `+` sign at the end of the command
 
