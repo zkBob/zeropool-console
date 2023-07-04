@@ -13,7 +13,7 @@ import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 import Web3 from 'web3';
-import { DirectDepositType } from 'zkbob-client-js/lib/dd';
+import { DirectDepositType, DirectDeposit } from 'zkbob-client-js/lib/dd';
 import { PreparedTransaction } from 'zkbob-client-js/lib/networks/network';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
@@ -466,7 +466,11 @@ export class Account {
     }
 
     public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<ComplianceHistoryRecord[]> {
-        return this.zpClient.getComplianceReport(startTimestamp, endTimestamp);
+        return this.getZpClient().getComplianceReport(startTimestamp, endTimestamp);
+    }
+
+    public async getPendingDirectDeposits(): Promise<DirectDeposit[]> {
+        return this.getZpClient().getPendingDDs();
     }
 
     public async rollback(index: bigint): Promise<bigint> {
@@ -647,7 +651,8 @@ export class Account {
             const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), ddContract);
             if (totalApproveAmount > currentAllowance) {
                 console.log(`Approving allowance for ${ddContract} to spend max amount of our tokens`);
-                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, amount.toString());
+                const maxTokensAmount = 2n ** 256n - 1n;
+                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount.toString());
                 console.log(`Approve txHash: ${txHash}`);
             } else {
                 console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);

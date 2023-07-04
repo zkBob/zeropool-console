@@ -89,6 +89,8 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `compliance-report` generate compliance report: history + evidence of transactions ownership
 
+`pending-dd` print pending direct deposits for the account
+
 ## Transactions configuration
 
 `max-transfer` calculate maximum available token amount for outcoming transaction (transfer or withdrawal)

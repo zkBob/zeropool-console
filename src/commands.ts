@@ -2,7 +2,8 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DirectDepositType
+         DirectDepositType,
+         DirectDeposit
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -797,6 +798,7 @@ export async function getProverInfo() {
 
 export async function printHistory() {
     this.pause();
+    const dds: Promise<DirectDeposit[]> = this.account.getPendingDirectDeposits();
     const history: HistoryRecord[] = await this.account.getAllHistory();
     this.resume();
 
@@ -833,6 +835,18 @@ export async function printHistory() {
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
     }
+
+    if ((await dds).length > 0) {
+        this.echo(`[[;green;]---------------- PENDING DIRECT DEPOSITS ----------------]`);
+        for (const aDD of (await dds)) {
+            this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+        }
+    };
+}
+
+async function ddHumanReadable(dd: DirectDeposit, account: Account): Promise<string> {
+    const amount = await account.shieldedToHuman(dd.amount)
+    return `DD #${dd.id.toString()} to ${dd.destination} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
 }
 
 async function humanReadable(record: HistoryRecord, account: Account): Promise<string> {
@@ -1057,6 +1071,16 @@ async function readDate(terminal: any, requestString: string): Promise<Date | nu
     } while(datetimeStr == '');
 
     return date;
+}
+
+export async function pendingDD() {
+    this.echo(`Fetching pending direct deposits...`);
+    this.pause();
+    const dds: DirectDeposit[] = await this.account.getPendingDirectDeposits();
+    for (const aDD of dds) {
+        this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+    }
+    this.resume();
 }
 
 export function cleanState() {
