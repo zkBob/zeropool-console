@@ -768,8 +768,6 @@ export async function printHistory() {
     const history: HistoryRecord[] = await this.account.getAllHistory();
     this.resume();
 
-    const shTokenSymb = await this.account.shTokenSymbol();
-
     for (const tx of history) {
         this.echo(`${await humanReadable(tx, this.account)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
 
@@ -796,6 +794,8 @@ export async function printHistory() {
                 if (value.isLoopback) {
                     destDescr = `MYSELF${notesCntDescription}`;
                 }
+
+                const shTokenSymb = await this.account.shTokenSymbol(tx.timestamp);
                 this.echo(`                                  ${await this.account.shieldedToHuman(value.amount)} ${shTokenSymb} ${prep} ${destDescr}`);
             }
         }
@@ -816,8 +816,8 @@ async function humanReadable(record: HistoryRecord, account: Account): Promise<s
         statusMark = `❌ `;
     }
 
-    const tokenSymb = await account.tokenSymbol();
-    const shTokenSymb = await account.shTokenSymbol();
+    const tokenSymb = await account.tokenSymbol(record.timestamp);
+    const shTokenSymb = await account.shTokenSymbol(record.timestamp);
 
     if (record.actions.length > 0) {
         const totalAmount = record.actions.map(({ amount }) => amount).reduce((acc, cur) => acc + cur);
