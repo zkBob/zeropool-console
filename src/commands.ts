@@ -338,6 +338,9 @@ export async function getLimits(address: string | undefined) {
     this.echo(`[[;gray;]...pool limit:          ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;white;]Max available withdraw: ${await this.account.shieldedToHuman(result.withdraw.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;white;]Max available DD:       ${await this.account.shieldedToHuman(result.dd.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...single operation:    ${await this.account.shieldedToHuman(result.dd.components.singleOperation)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...address daily limit: ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.available)} / ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
 
 }
