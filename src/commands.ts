@@ -1285,13 +1285,18 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     const cardBalance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();
 
+    this.echo(`[[;green;]You can add extra funds to cover the relayer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
+    this.resume();
+    const val = await this.read(`Specify extra funds for the ${qty > 1 ? 'EACH ' : ''}gift-card or press ENTER to leave it zero: `);
+    const extraFundsForFee = await this.account.humanToShielded(val ?? '0');
+
     this.pause();
 
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
     await this.account.syncState();
     const availableFunds = await this.account.getMaxAvailableTransfer(TxType.Transfer);
-    if (availableFunds >= cardBalance * BigInt(qty) ) {
+    if (availableFunds >= (cardBalance + extraFundsForFee) * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
         let  transferRequests:TransferRequest[] = [];
@@ -1304,7 +1309,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
             const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
             transferRequests.push( {
                     destination: receivingAddress,
-                    amountGwei: cardBalance
+                    amountGwei: cardBalance + extraFundsForFee
                 });
             this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
             const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
