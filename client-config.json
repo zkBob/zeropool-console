@@ -32,7 +32,8 @@
             "coldStorageConfigPath": "",
             "minTxAmount": 0,
             "depositScheme": "permit2",
-            "isNative": true
+            "isNative": true,
+            "ddSubgraph": "zkbob-eth-goerli"
         },
         "USDC-goerli": {
             "chainId": 5,
@@ -53,7 +54,8 @@
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "depositScheme": "permit"
+            "depositScheme": "permit",
+            "ddSubgraph": "zkbob-bob-goerli-opt"
         }
     },
 
