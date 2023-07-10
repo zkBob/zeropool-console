@@ -1,7 +1,9 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
-         deriveSpendingKeyZkBob
+         deriveSpendingKeyZkBob,
+         DirectDepositType,
+         DirectDeposit
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -158,6 +160,19 @@ export async function getTokenBalance() {
     const balanceWei = await this.account.getTokenBalance();
     const human = await this.account.weiToHuman(balanceWei);
     this.echo(`Token balance: [[;white;]${human} ${this.account.tokenSymbol()}] (${balanceWei} wei)`);
+}
+
+export async function getTokenAllowance(spender: string) {
+    this.pause();
+    const tokenAddress = this.account.getTokenAddr();
+    this.echo(`Checking [[!;;;;${this.account.getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${this.account.getAddressUrl(spender)}]${spender}]... `);
+    const allowance = await this.account.getTokenAllowance(spender);
+    if (allowance == 0n) {
+        this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
+    } else {
+        this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.shTokenSymbol()}]`);
+    }
+    this.resume();
 }
 
 export async function mint(amount: string) {
@@ -323,6 +338,9 @@ export async function getLimits(address: string | undefined) {
     this.echo(`[[;gray;]...pool limit:          ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;white;]Max available withdraw: ${await this.account.shieldedToHuman(result.withdraw.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;white;]Max available DD:       ${await this.account.shieldedToHuman(result.dd.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...single operation:    ${await this.account.shieldedToHuman(result.dd.components.singleOperation)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...address daily limit: ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.available)} / ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.total)} ${this.account.shTokenSymbol()}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
 
 }
@@ -374,19 +392,37 @@ export async function depositShieldedEphemeral(amount: string, index: string) {
     this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
 }
 
-export async function directDeposit(to: string, amount: string, times: string) {
-    if ((await this.account.verifyShieldedAddress(to))) {
-        let txCnt = times !== undefined ? Number(times) : 1;
-        for (let i = 0; i < txCnt; i++) {
-            let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
-            this.echo(`Performing direct deposit${cntStr}...`);
-            this.pause();
-            const txHash = await this.account.directDeposit(to, await this.account.humanToShielded(amount));
-            this.resume();
-            this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
-        }
-    } else {
-        this.error(`Shielded address ${to} is invalid. Please check it!`);
+export async function directDeposit(amount: string, times: string) {
+    let txCnt = times !== undefined ? Number(times) : 1;
+    for (let i = 0; i < txCnt; i++) {
+        let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
+        this.echo(`Performing direct deposit${cntStr}...`);
+        this.pause();
+        const txHash = await this.account.directDeposit(await this.account.humanToShielded(amount));
+        this.resume();
+        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    }
+}
+
+export async function directDepositNative(amount: string, times: string) {
+    const curPool = await this.account.getCurrentPool();
+    const poolEnv = env.pools[curPool];
+    if (!poolEnv.isNative) {
+        this.error(`The current pool (${curPool}) doesn't support native direct deposits`);
+        return;
+    }
+
+    let txCnt = times !== undefined ? Number(times) : 1;
+    for (let i = 0; i < txCnt; i++) {
+        let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
+        this.echo(`Performing native direct deposit${cntStr}...`);
+        this.pause();
+        const txHash = await this.account.directDeposit(
+            await this.account.humanToShielded(amount),
+            DirectDepositType.Native
+        );
+        this.resume();
+        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
     }
 }
 
@@ -765,10 +801,9 @@ export async function getProverInfo() {
 
 export async function printHistory() {
     this.pause();
+    const dds: Promise<DirectDeposit[]> = this.account.getPendingDirectDeposits();
     const history: HistoryRecord[] = await this.account.getAllHistory();
     this.resume();
-
-    const shTokenSymb = await this.account.shTokenSymbol();
 
     for (const tx of history) {
         this.echo(`${await humanReadable(tx, this.account)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
@@ -796,11 +831,25 @@ export async function printHistory() {
                 if (value.isLoopback) {
                     destDescr = `MYSELF${notesCntDescription}`;
                 }
+
+                const shTokenSymb = await this.account.shTokenSymbol(tx.timestamp);
                 this.echo(`                                  ${await this.account.shieldedToHuman(value.amount)} ${shTokenSymb} ${prep} ${destDescr}`);
             }
         }
         //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
     }
+
+    if ((await dds).length > 0) {
+        this.echo(`[[;green;]---------------- PENDING DIRECT DEPOSITS ----------------]`);
+        for (const aDD of (await dds)) {
+            this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+        }
+    };
+}
+
+async function ddHumanReadable(dd: DirectDeposit, account: Account): Promise<string> {
+    const amount = await account.shieldedToHuman(dd.amount)
+    return `DD #${dd.id.toString()} to ${dd.destination} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
 }
 
 async function humanReadable(record: HistoryRecord, account: Account): Promise<string> {
@@ -816,8 +865,8 @@ async function humanReadable(record: HistoryRecord, account: Account): Promise<s
         statusMark = `❌ `;
     }
 
-    const tokenSymb = await account.tokenSymbol();
-    const shTokenSymb = await account.shTokenSymbol();
+    const tokenSymb = await account.tokenSymbol(record.timestamp);
+    const shTokenSymb = await account.shTokenSymbol(record.timestamp);
 
     if (record.actions.length > 0) {
         const totalAmount = record.actions.map(({ amount }) => amount).reduce((acc, cur) => acc + cur);
@@ -1025,6 +1074,16 @@ async function readDate(terminal: any, requestString: string): Promise<Date | nu
     } while(datetimeStr == '');
 
     return date;
+}
+
+export async function pendingDD() {
+    this.echo(`Fetching pending direct deposits...`);
+    this.pause();
+    const dds: DirectDeposit[] = await this.account.getPendingDirectDeposits();
+    for (const aDD of dds) {
+        this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+    }
+    this.resume();
 }
 
 export function cleanState() {
@@ -1285,13 +1344,18 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     const cardBalance = await this.account.humanToShielded(amount);
     const poolAlias = this.account.getCurrentPool();
 
+    this.echo(`[[;green;]You can add extra funds to cover the relayer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
+    this.resume();
+    const val = await this.read(`Specify extra funds for the ${qty > 1 ? 'EACH ' : ''}gift-card or press ENTER to leave it zero: `);
+    const extraFundsForFee = await this.account.humanToShielded(val ?? '0');
+
     this.pause();
 
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
     await this.account.syncState();
     const availableFunds = await this.account.getMaxAvailableTransfer(TxType.Transfer);
-    if (availableFunds >= cardBalance * BigInt(qty) ) {
+    if (availableFunds >= (cardBalance + extraFundsForFee) * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
         let  transferRequests:TransferRequest[] = [];
@@ -1304,7 +1368,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
             const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
             transferRequests.push( {
                     destination: receivingAddress,
-                    amountGwei: cardBalance
+                    amountGwei: cardBalance + extraFundsForFee
                 });
             this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
             const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
