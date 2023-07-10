@@ -21,6 +21,7 @@
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "depositScheme": "usdc-polygon"
+            "ddSubgraph": "zkbob-bob-goerli"
         },
         "WETH-goerli": {
             "chainId": 5,
@@ -30,7 +31,9 @@
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "minTxAmount": 0,
-            "depositScheme": "permit2"
+            "depositScheme": "permit2",
+            "isNative": true,
+            "ddSubgraph": "zkbob-eth-goerli"
         },
         "USDC-goerli": {
             "chainId": 5,
@@ -51,7 +54,8 @@
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "depositScheme": "permit"
+            "depositScheme": "permit",
+            "ddSubgraph": "zkbob-bob-goerli-opt"
         }
     },
 

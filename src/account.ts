@@ -13,6 +13,8 @@ import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 import Web3 from 'web3';
+import { DirectDepositType, DirectDeposit } from 'zkbob-client-js/lib/dd';
+import { PreparedTransaction } from 'zkbob-client-js/lib/networks/network';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
@@ -481,7 +483,11 @@ export class Account {
     }
 
     public async generateComplianceReport(startTimestamp: number | undefined, endTimestamp: number | undefined): Promise<ComplianceHistoryRecord[]> {
-        return this.zpClient.getComplianceReport(startTimestamp, endTimestamp);
+        return this.getZpClient().getComplianceReport(startTimestamp, endTimestamp);
+    }
+
+    public async getPendingDirectDeposits(): Promise<DirectDeposit[]> {
+        return this.getZpClient().getPendingDDs();
     }
 
     public async rollback(index: bigint): Promise<bigint> {
@@ -496,9 +502,12 @@ export class Account {
         return this.getZpClient().cleanState();
     }
 
-    // TODO: Support multiple tokens
     public async getTokenBalance(): Promise<string> {
         return await this.getClient().getTokenBalance(this.getTokenAddr());
+    }
+
+    public async getTokenAllowance(spender: string): Promise<bigint> {
+        return await this.getClient().allowance(this.getTokenAddr(), spender);
     }
 
     public async mint(amount: bigint): Promise<string> {
@@ -648,28 +657,39 @@ export class Account {
     }
 
     // returns txHash in promise
-    public async directDeposit(to: string, amount: bigint): Promise<string> {
-        if (await this.verifyShieldedAddress(to)) {
-            const ddFee = (await this.getZpClient().directDepositFee());
-            const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
+    public async directDeposit(amount: bigint, ddType: DirectDepositType = DirectDepositType.Token): Promise<string> {
+        const ddFee = (await this.getZpClient().directDepositFee());
+        const amountWithFeeWei = await this.getZpClient().shieldedAmountToWei(amount + ddFee);
 
-            const ddContract = await this.getClient().getDirectDepositContract(this.getPoolAddr());
+        const ddContract = await this.getClient().getDirectDepositContract(this.getPoolAddr());
 
+        if (ddType == DirectDepositType.Token) {
             let totalApproveAmount = amountWithFeeWei;
             const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), ddContract);
             if (totalApproveAmount > currentAllowance) {
-                totalApproveAmount -= currentAllowance;
-                console.log(`Increasing allowance for the direct deposit contact (${ddContract}) to spend our tokens (+ ${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()})`);
-                await this.getClient().increaseAllowance(this.getTokenAddr(), ddContract, totalApproveAmount.toString());
+                console.log(`Approving allowance for ${ddContract} to spend max amount of our tokens`);
+                const maxTokensAmount = 2n ** 256n - 1n;
+                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount.toString());
+                console.log(`Approve txHash: ${txHash}`);
             } else {
                 console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
             }
-
-            console.log('Making direct deposit...');
-            return await this.getClient().directDeposit(this.getPoolAddr(), amountWithFeeWei.toString(), to);
-        } else {
-            throw new Error(`Invalid zkAddress. Please check it!`)
         }
+
+        console.log('Making direct deposit...');
+
+        let txHash = '';
+        await this.getZpClient().directDeposit(
+            ddType,
+            await this.getRegularAddress(),
+            amount,
+            async (tx: PreparedTransaction) => {
+                txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data);
+                return txHash;
+            }
+        );
+
+        return txHash;
     }
 
     // returns txHash in promise
