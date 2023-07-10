@@ -220,12 +220,29 @@ export class Account {
         return env.pools[this.getCurrentPool()].delegatedProverUrls
     }
 
-    public tokenSymbol(): string {
+    public tokenSymbol(timestamp: number | undefined = undefined): string {
+        if (timestamp !== undefined) {
+            const migrationConf = env.migrations[this.getCurrentPool()];
+            if (migrationConf) {
+                const oldTokens = migrationConf.oldTokens;
+                if (oldTokens) {
+                    for (const oldTokenName of Object.keys(oldTokens)) {
+                        const oldConfig = oldTokens[oldTokenName];
+                        if (timestamp >= (oldConfig.firstTimestamp ?? 0) &&
+                            timestamp < oldConfig.lastTimestamp) 
+                        {
+                            return oldTokenName;
+                        }
+                    }
+                }
+            }
+        }
+
         return this.tokenSymbols[this.getCurrentPool()] ?? 'UNK';
     }
     
-    public shTokenSymbol(): string {
-        return `sh${this.tokenSymbol()}`;
+    public shTokenSymbol(timestamp: number | undefined = undefined): string {
+        return `sh${this.tokenSymbol(timestamp)}`;
     }
 
     public depositScheme(): DepositType {

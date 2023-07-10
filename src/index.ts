@@ -310,9 +310,9 @@ jQuery(async function ($) {
     prompt: function () {
       if (this.account) {
         if (this.account.accountName) {
-          return `[[;gray;]${this.account.accountName}(${this.account.networkName()})>] `;
+          return `[[;gray;]${this.account.accountName}(${this.account.getCurrentPool()})>] `;
         } else {
-          return `[[;gray;]${this.account.networkName()}>] `;
+          return `[[;gray;]${this.account.getCurrentPool()}>] `;
         }
       } else {
         return '';
