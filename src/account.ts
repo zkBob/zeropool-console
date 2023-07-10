@@ -739,17 +739,7 @@ export class Account {
     }
 
     public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
-        const proverMode = this.config.pools[this.getCurrentPool()].delegatedProverUrls.length > 0 ? 
-            ProverMode.DelegatedWithFallback : 
-            ProverMode.Local;
-
-        const giftCardAccountConfig: AccountConfig = {
-            sk: giftCard.sk,
-            pool: this.getZpClient().currentPool(),
-            birthindex: giftCard.birthIndex,
-            proverMode,
-        }
-        return await this.getZpClient().giftCardBalance(giftCardAccountConfig);
+        return await this.getZpClient().giftCardBalance(giftCard);
     }
 
     public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{jobId: string, txHash: string}> {
@@ -757,15 +747,8 @@ export class Account {
             ProverMode.DelegatedWithFallback : 
             ProverMode.Local;
 
-        const giftCardAccountConfig: AccountConfig = {
-            sk: giftCard.sk,
-            pool: this.getZpClient().currentPool(),
-            birthindex: giftCard.birthIndex,
-            proverMode,
-        }
-
         console.log('Redeeming gift-card...');
-        const jobId: string = await this.getZpClient().redeemGiftCard(giftCardAccountConfig);
+        const jobId: string = await this.getZpClient().redeemGiftCard(giftCard, proverMode);
         console.log(`Please wait relayer provide txHash for job ${jobId}...`);
 
         return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
