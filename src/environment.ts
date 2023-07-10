@@ -1,5 +1,11 @@
 import { Chains, Pools, SnarkConfigParams } from 'zkbob-client-js';
 
+export interface TokenMigrationConfig {
+    tokenAddress: string;
+    firstTimestamp?: number;
+    lastTimestamp: number;
+}
+
 export interface ConsoleConfig {
     defaultPool: string;
     pools: Pools;
@@ -9,6 +15,9 @@ export interface ConsoleConfig {
     minters: {[poolName: string]: string };
     cloudApi: {[poolName: string]: string };
     redemptionUrls: {[poolName: string]: string };
+    migrations: {[poolName: string]: {
+        oldTokens: {[oldTokenName: string]: TokenMigrationConfig}
+    }};
 }
 
 export const env = await readConfig();
