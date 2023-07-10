@@ -79,7 +79,7 @@ Suppose you already done local running and set appropriated parameters and setti
 
 `direct-deposit <amount> [times]` send tokens to the pool directly to receive it on own account. Additional approve transaction will be initiated if needed. Specify `times` numeric value to repeat the operation several times
 
-`direct-deposit-native <amount> [times]` send native coins to the pool directly to wrap and receive it on own account. Additional approve transaction will be initiated if needed. Specify `times` numeric value to repeat the operation several times
+`direct-deposit-native <amount> [times]` send native coins to the pool directly to wrap and receive it on own account. Specify `times` numeric value to repeat the operation several times
 
 `transfer-shielded <shielded address> <amount> [times | +]` move shielded tokens to the another zkBob account (inside a pool). You can specify `times` numeric value to repeat the operation several times ***OR*** enter the multitransfer mode with adding `+` sign at the end of the command
 
