@@ -1,7 +1,8 @@
 import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
-         deriveSpendingKeyZkBob
+         deriveSpendingKeyZkBob,
+         DepositType
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -272,11 +273,12 @@ export async function getTxParts(...amounts: string[]) {
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], TxType.BridgeDeposit, false);
+    const txType = env.pools[this.account.getCurrentPool()].depositScheme == DepositType.Approve ? TxType.Deposit : TxType.BridgeDeposit;
+    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], txType, false);
     this.resume();
 
     this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(txType == TxType.Deposit ? result.relayerFee.fee.deposit : result.relayerFee.fee.permittableDeposit)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
@@ -292,7 +294,7 @@ export async function estimateFeeTransfer(...amounts: string[]) {
     const effectiveAmount = amountsBN.reduce((acc, cur) => acc + cur, BigInt(0));
 
     this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee.transfer)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
     this.echo(`Requested amount:   [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
@@ -305,7 +307,7 @@ export async function estimateFeeWithdraw(amount: string) {
     this.resume();
 
     this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${await this.account.shieldedToHuman(result.relayerFee.fee.withdrawal)} per tx + ${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte) ${this.account.tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
