@@ -525,7 +525,7 @@ export class Account {
         return await this.getZpClient().minTxAmount();
      }
     public async getMaxAvailableTransfer(txType: TxType, swapAmount?: bigint): Promise<bigint> {
-        return await this.getZpClient().calcMaxAvailableTransfer(txType, swapAmount, false);
+        return await this.getZpClient().calcMaxAvailableTransfer(txType, undefined, swapAmount, false);
     }
 
     public async minFee(txType: TxType): Promise<bigint> {

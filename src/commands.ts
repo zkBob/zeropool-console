@@ -403,9 +403,9 @@ export async function getMaxAvailableTransfer() {
     this.resume();
 
     this.echo(`Max available shielded balance for:`);
-    this.echo(`    ...transfer:           [[;white;]${humanTransfer} ${this.account.shTokenSymbol()}] (${weiTransfer} wei)`);
-    this.echo(`    ...withdraw:           [[;white;]${humanWithdraw} ${this.account.shTokenSymbol()}] (${weiWithdraw} wei)`);
-    this.echo(`    ...withdraw with swap: [[;white;]${humanWithdrawSwap} ${this.account.shTokenSymbol()}] (${weiWithdrawSwap} wei)`);
+    this.echo(`    ...transfer:      [[;white;]${humanTransfer} ${this.account.shTokenSymbol()}] (${weiTransfer} wei)`);
+    this.echo(`    ...withdraw:      [[;white;]${humanWithdraw} ${this.account.shTokenSymbol()}] (${weiWithdraw} wei)`);
+    this.echo(`    ...withdraw+swap: [[;white;]${humanWithdrawSwap} ${this.account.shTokenSymbol()}] (${weiWithdrawSwap} wei)`);
 }
 
 export async function depositShielded(amount: string, times: string) {
