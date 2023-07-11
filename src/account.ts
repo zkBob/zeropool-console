@@ -501,7 +501,7 @@ export class Account {
         return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
     }
 
-    public async getTxParts(txType: TxType, amounts: bigint[]): Promise<Array<TransferConfig>> {
+    public async getTxParts(txType: TxType, amounts: bigint[], swapAmount?: bigint): Promise<Array<TransferConfig>> {
         const transfers: TransferRequest[] = amounts.map((oneAmount, index) => {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
@@ -509,7 +509,7 @@ export class Account {
         const relayerFee = await this.getZpClient().getRelayerFee();
         console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
 
-        return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, false);
+        return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, swapAmount, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -524,16 +524,16 @@ export class Account {
     public async minTxAmount(): Promise<bigint> {
         return await this.getZpClient().minTxAmount();
      }
-    public async getMaxAvailableTransfer(txType: TxType): Promise<bigint> {
-        return await this.getZpClient().calcMaxAvailableTransfer(txType, false);
+    public async getMaxAvailableTransfer(txType: TxType, swapAmount?: bigint): Promise<bigint> {
+        return await this.getZpClient().calcMaxAvailableTransfer(txType, swapAmount, false);
     }
 
     public async minFee(txType: TxType): Promise<bigint> {
         return await this.getZpClient().atomicTxFee(txType);
     }
 
-    public async estimateFee(amounts: bigint[], txType: TxType, updateState: boolean = true): Promise<FeeAmount> {
-        return await this.getZpClient().feeEstimate(amounts, txType, updateState);
+    public async estimateFee(amounts: bigint[], txType: TxType, swapAmount: bigint = 0n, updateState: boolean = true): Promise<FeeAmount> {
+        return await this.getZpClient().feeEstimate(amounts, txType, swapAmount, updateState);
     }
 
     public async maxSwapAmount() : Promise<bigint> {
@@ -559,7 +559,7 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
 
-            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, false);
+            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, 0n, false);
             const relayerFee = feeEst.relayerFee;
             console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
                         
