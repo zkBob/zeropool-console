@@ -31,6 +31,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'get-address': [c.getAddress, '', 'get your native address'],
   'get-balance': [c.getBalance, '', 'fetch and print native account balance'],
   'get-token-balance': [c.getTokenBalance, '', 'get token balance (unshielded)'],
+  'get-token-allowance': [c.getTokenAllowance, ' <spender>', 'check token allowance to spend by provided address'],
   'testnet-mint': [c.mint, ' <amount>', 'mint some unshielded tokens'],
   'transfer': [c.transfer, ' <to> <amount>', ' transfer native coins to the destination'],
   'transfer-token': [c.transferToken, ' <to> <amount>', 'transfer unshielded tokens to the destination account'],
@@ -40,12 +41,14 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'get-shielded-balance': [c.getShieldedBalance, '', 'get calculated private balance'],
   'deposit-shielded': [c.depositShielded, '<amount> [times]', 'shield some tokens [via permit]'],
   'deposit-shielded-ephemeral': [c.depositShieldedEphemeral, '<amount> <index>', 'shield some tokens from the internal ephemeral address [via permit]'],
-  'direct-deposit': [c.directDeposit, '<shielded address> <amount> [times]', 'send tokens to the pool directly to receive it on the specified zkAddress'],
+  'direct-deposit': [c.directDeposit, '<amount> [times]', 'send tokens to the pool directly to receive it on own account'],
+  'direct-deposit-native': [c.directDepositNative, '<amount> [times]', 'send native coins to the pool directly to wrap and receive it on own account'],
   'transfer-shielded': [c.transferShielded, '<shielded address> <amount> [times | +]', 'move shielded tokens to the another zkBob address (inside a pool)'],
   'transfer-shielded-multinote': [c.transferShieldedMultinote, '<shielded address> <amount> <count> [times]', 'send a set of (notes) to the single address'],
   'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if the address is ommited)'],
   'history': [c.printHistory, '', 'print all transactions related to your account'],
   'compliance-report': [c.complianceReport, '', 'generate compliance report: history + evidence of transactions ownership'],
+  'pending-dd': [c.pendingDD, '', 'print pending direct deposits for the account'],
   'max-transfer': [c.getMaxAvailableTransfer, '', 'get max available token amount for outcoming transaction'],
   'tx-amounts': [c.getTxParts, '<amount> [amount2 amount3 ...]', 'get transfer component transactions'],
   'fee-estimate-deposit': [c.estimateFeeDeposit, '<amount>', 'estimate fee for depositing requested amount of tokens'],
@@ -70,7 +73,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'account-id': [c.getAccountId, '', 'get the client account id (indexed DB name)'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
   'version': [ c.getVersion, '', 'get console and relayer versions'],
-  'gift-card-generate':[c.generateGiftCardLocal, '<balance>', 'creates a single burner wallet with specified balance and returns redemption url and qr code'],
+  'gift-card-generate':[c.generateGiftCardLocal, '<balance> [quantity]', 'generates a bunch of gift cards from the local account'],
   'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards via cloud (you should provide cloud access token)'],
   'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url> [code_or_redemption_url2 code_or_redemption_url3 ...]', 'retrieve gift cards balances'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
@@ -307,9 +310,9 @@ jQuery(async function ($) {
     prompt: function () {
       if (this.account) {
         if (this.account.accountName) {
-          return `[[;gray;]${this.account.accountName}(${this.account.networkName()})>] `;
+          return `[[;gray;]${this.account.accountName}(${this.account.getCurrentPool()})>] `;
         } else {
-          return `[[;gray;]${this.account.networkName()}>] `;
+          return `[[;gray;]${this.account.getCurrentPool()}>] `;
         }
       } else {
         return '';
