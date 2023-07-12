@@ -348,6 +348,8 @@ export async function estimateFeeTransfer(...amounts: string[]) {
 }
 
 export async function estimateFeeWithdraw(amount: string) {
+    const amountSh = await this.account.humanToShielded(amount);
+
     this.resume();
     let swapAmount = 0n;
     let entered = '';
@@ -362,7 +364,7 @@ export async function estimateFeeWithdraw(amount: string) {
     } while(entered != '');
 
     this.pause();
-    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount)], TxType.Withdraw, swapAmount, false);
+    const result: FeeAmount = await this.account.estimateFee([amountSh], TxType.Withdraw, swapAmount, false);
     this.resume();
 
     let perTx = '';
@@ -374,7 +376,7 @@ export async function estimateFeeWithdraw(amount: string) {
     if (result.relayerFee.oneByteFee > 0n) {
         perByte = `${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
     }
-    if (result.relayerFee.nativeConvertFee > 0n) {
+    if (result.relayerFee.nativeConvertFee > 0n && swapAmount > 0n) {
         swapFee = `${await this.account.shieldedToHuman(result.relayerFee.nativeConvertFee)} swap`;
     }
     const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);

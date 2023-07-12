@@ -533,7 +533,7 @@ export class Account {
         });
 
         const relayerFee = await this.getZpClient().getRelayerFee();
-        console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+        console.info(`Using relayer fee: base = ${txType == TxType.Transfer ? relayerFee.fee.transfer : relayerFee.fee.withdrawal}, perByte = ${relayerFee.oneByteFee}${swapAmount ? `swap = ${relayerFee.nativeConvertFee}` : ''}`);
 
         return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, swapAmount, false);
     }
@@ -585,11 +585,12 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
 
-            const feeEst = await this.getZpClient().feeEstimate([amount], TxType.Deposit, 0n, false);
-            const relayerFee = feeEst.relayerFee;
-            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
-                        
             const depositScheme = this.config.pools[this.getCurrentPool()].depositScheme;
+
+            const feeEst = await this.getZpClient().feeEstimate([amount], depositScheme == DepositType.Approve ? TxType.Deposit : TxType.BridgeDeposit, 0n, false);
+            const relayerFee = feeEst.relayerFee;
+            console.info(`Using relayer fee: base = ${depositScheme == DepositType.Approve  ? relayerFee.fee.deposit : relayerFee.fee.permittableDeposit}, perByte = ${relayerFee.oneByteFee}`);
+                        
             let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
             if (depositScheme == DepositType.Approve) {
                 // check a token approvement if needed (in case of approve deposit scheme)
@@ -640,7 +641,8 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const relayerFee = await this.getZpClient().getRelayerFee();
-            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+            const depositScheme = this.config.pools[this.getCurrentPool()].depositScheme;
+            console.info(`Using relayer fee: base = ${depositScheme == DepositType.Approve  ? relayerFee.fee.deposit : relayerFee.fee.permittableDeposit}, perByte = ${relayerFee.oneByteFee}`);
 
             console.log('Making deposit...');
             let jobId;
@@ -703,7 +705,7 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const relayerFee = await this.getZpClient().getRelayerFee();
-            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+            console.info(`Using relayer fee: base = ${relayerFee.fee.transfer}, perByte = ${relayerFee.oneByteFee}`);
             
             console.log('Making transfer...');
             const jobIds: string[] = await this.getZpClient().transferMulti(transfers, relayerFee);
@@ -724,7 +726,7 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const relayerFee = await this.getZpClient().getRelayerFee();
-            console.info(`Using relayer fee: base = ${relayerFee.fee}, perByte = ${relayerFee.oneByteFee}`);
+            console.info(`Using relayer fee: base = ${relayerFee.fee.withdrawal}, perByte = ${relayerFee.oneByteFee}${nativeAmount ? `swap = ${relayerFee.nativeConvertFee}` : ''}`);
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, relayerFee);
