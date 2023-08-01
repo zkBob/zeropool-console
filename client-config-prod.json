@@ -7,7 +7,7 @@
             "tokenAddress": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
             "relayerUrls": ["https://relayer-mvp.zkbob.com"],
             "delegatedProverUrls": ["https://remoteprover-mvp.zkbob.com/"],
-            "coldStorageConfigPath": "./assets/zkbob-polygon-coldstorage.cfg",
+            "coldStorageConfigPath": "./assets/coldstorage/zkbob-polygon-coldstorage.cfg",
 	    "feeDecimals": 2,
 	    "depositScheme": "usdc-polygon",
 	    "ddSubgraph": "zkbob-usdc-polygon"
@@ -56,7 +56,7 @@
     },
     "globalSnarks": {
         "transferParamsUrl": "./assets/transfer_params_prod.bin",
-        "transferVkUrl": "./assets/transfer_verification_prod.json"
+        "transferVkUrl": "./assets/transfer_verification_key_prod.json"
     },
     "minters": {
         "USDM-polygon": "",
