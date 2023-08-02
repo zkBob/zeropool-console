@@ -1167,9 +1167,11 @@ export async function pendingDD() {
     this.resume();
 }
 
-export function cleanState() {
+export async function cleanState() {
     this.pause();
-    this.account.cleanInternalState();
+    await this.account.cleanInternalState();
+    const localState = await this.account.getLocalTreeState();
+    this.echo(`New index:  [[;white;]${localState.index.toString()}]`);
     this.resume();
 }
 
