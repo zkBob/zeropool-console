@@ -760,7 +760,10 @@ export async function getStateSyncStatistic() {
 
     if (fullSyncStat !== undefined) {
         this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
-        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(1)} msec/tx]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(2)} msec/tx]`);
+        //writeStateTime
+        const dbTimePerTx = fullSyncStat.writeStateTime / (fullSyncStat.txCount - fullSyncStat.cdnTxCnt);
+        this.echo(`  DB saving time:     [[;white;]${fullSyncStat.writeStateTime / 1000} sec (${dbTimePerTx.toFixed(3)} msec/tx)]`);
         this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
         this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
         this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
