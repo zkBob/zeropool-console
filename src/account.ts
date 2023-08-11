@@ -6,7 +6,8 @@ import { AccountConfig, ClientConfig, ProverMode,
          TransferConfig, TransferRequest, FeeAmount, TxType,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
-         deriveSpendingKeyZkBob, GiftCardProperties
+         deriveSpendingKeyZkBob, GiftCardProperties,
+         ClientStateCallback
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -494,8 +495,16 @@ export class Account {
         return this.getZpClient().rollbackState(index);
     }
 
-    public async syncState(): Promise<boolean> {
-        return this.getZpClient().updateState();
+    public async syncState(callback?: ClientStateCallback): Promise<boolean> {
+        if (callback) {
+            this.getZpClient().stateCallback = callback;
+        }
+        const isReadyToTransact = await this.getZpClient().updateState();
+        if (callback) {
+            this.getZpClient().stateCallback = undefined;
+        }
+
+        return isReadyToTransact;
     }
 
     public async cleanInternalState(): Promise<void> {

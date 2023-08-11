@@ -8,7 +8,7 @@
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
             "relayerUrls": ["https://relayer.thgkjlr.website/"],
             "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
-            "coldStorageConfigPath": "./assets/zkbob-sepolia-coldstorage.cfg",
+            "coldStorageConfigPath": "./assets/coldstorage/zkbob-sepolia-coldstorage.cfg",
             "feeDecimals": 2,
             "depositScheme": "permit"
         },
@@ -61,7 +61,7 @@
 
     "chains": {
         "11155111": {
-            "rpcUrls": ["https://rpc.sepolia.org"]
+            "rpcUrls": ["https://eth-sepolia-public.unifra.io", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]

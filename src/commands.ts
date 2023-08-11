@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit
+         DepositType, DirectDepositType, DirectDeposit, ClientState
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -728,9 +728,24 @@ export async function rollback(index: string) {
 export async function syncState() {
     this.pause();
     const curState: TreeState = await this.account.getLocalTreeState();
-    this.echo(`Starting sync from index: [[;white;]${curState.index}]`);
+    const title = `Starting sync from index: [[;white;]${curState.index}]`;
+    this.echo(title);
 
-    const isReadyToTransact = await this.account.syncState();
+    const isReadyToTransact = await this.account.syncState((state: ClientState, progress?: number) => {
+        switch (state) {
+            case ClientState.StateUpdating:
+                this.update(-1, `${title} [[;green;](in progress)]`);
+                break;
+            case ClientState.StateUpdatingContinuous:
+                this.update(-1, `${title} [[;green;](${(progress * 100).toFixed(0)} %)]`);
+                break;
+            case ClientState.FullMode:
+                this.update(-1, `${title} ✅`);
+                break;
+            default:
+                this.update(-1, `${title} [[;red;](unknown state)]`);
+        }
+    });
 
     const newState: TreeState = await this.account.getLocalTreeState();
     this.echo(`Finished sync at index:   [[;white;]${newState.index}]`);
@@ -745,7 +760,10 @@ export async function getStateSyncStatistic() {
 
     if (fullSyncStat !== undefined) {
         this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
-        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(1)} msec/tx]`);
+        this.echo(`  average speed:      [[;white;]${fullSyncStat.timePerTx.toFixed(2)} msec/tx]`);
+        //writeStateTime
+        const dbTimePerTx = fullSyncStat.writeStateTime / (fullSyncStat.txCount - fullSyncStat.cdnTxCnt);
+        this.echo(`  DB saving time:     [[;white;]${fullSyncStat.writeStateTime / 1000} sec (${dbTimePerTx.toFixed(3)} msec/tx)]`);
         this.echo(`  total number of tx: [[;white;]${fullSyncStat.txCount}]`);
         this.echo(`  number of tx [CDN]: [[;white;]${fullSyncStat.cdnTxCnt}]`);
         this.echo(`  decrypted items:    [[;white;]${fullSyncStat.decryptedLeafs}]`);
@@ -1152,9 +1170,11 @@ export async function pendingDD() {
     this.resume();
 }
 
-export function cleanState() {
+export async function cleanState() {
     this.pause();
-    this.account.cleanInternalState();
+    await this.account.cleanInternalState();
+    const localState = await this.account.getLocalTreeState();
+    this.echo(`New index:  [[;white;]${localState.index.toString()}]`);
     this.resume();
 }
 
