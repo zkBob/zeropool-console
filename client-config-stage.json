@@ -10,7 +10,8 @@
             "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
             "coldStorageConfigPath": "./assets/coldstorage/zkbob-sepolia-coldstorage.cfg",
             "feeDecimals": 2,
-            "depositScheme": "permit"
+            "depositScheme": "permit",
+            "ddSubgraph": "https://api.studio.thegraph.com/query/50398/zkbob-bob-sepolia/version/latest"
         },
         "BOB2USDC-goerli": {
             "chainId": 5,
