@@ -7,14 +7,14 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback
+         ClientStateCallback, DirectDeposit
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 import Web3 from 'web3';
-import { DirectDepositType, DirectDeposit } from 'zkbob-client-js/lib/dd';
+import { DirectDepositType } from 'zkbob-client-js/lib/dd';
 import { PreparedTransaction } from 'zkbob-client-js/lib/networks/network';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
