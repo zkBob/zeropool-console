@@ -926,14 +926,23 @@ export async function printHistory() {
     if ((await dds).length > 0) {
         this.echo(`[[;green;]---------------- PENDING DIRECT DEPOSITS ----------------]`);
         for (const aDD of (await dds)) {
-            this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+            this.echo(`⌛ ${await ddHumanReadable(aDD, this.account)}`);
         }
     };
 }
 
 async function ddHumanReadable(dd: DirectDeposit, account: Account): Promise<string> {
     const amount = await account.shieldedToHuman(dd.amount)
-    return `DD #${dd.id.toString()} to ${dd.destination} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
+    let paymentInfo = '';
+    if (dd.payment && dd.payment.token && dd.payment.sender) {
+        // Payment link extra info
+        let noteStr = '';
+        if (dd.payment.note) {
+            noteStr = ` (${Buffer.from(dd.payment.note).toString()})`;
+        }
+        paymentInfo = ` PAYMENT LINK${noteStr}`;
+    }
+    return `DD #${dd.id.toString()} FROM ${dd.sender}${paymentInfo} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
 }
 
 async function humanReadable(record: HistoryRecord, account: Account): Promise<string> {
@@ -976,7 +985,17 @@ async function humanReadable(record: HistoryRecord, account: Account): Promise<s
         } else if (record.type == HistoryTransactionType.Withdrawal) {
             mainPart = `${statusMark}WITHDRAWN  ${totalAmountStr} ${shTokenSymb} TO ${toAddress}`;
         } else if (record.type == HistoryTransactionType.DirectDeposit) {
-            mainPart = `${statusMark}DEPOSITED DIRECT ${totalAmountStr} ${shTokenSymb} ${record.actions.length > 1 ? 'IN' : 'ON'} ${toAddress}`;
+            const senderInfo = ` FROM ${record.actions[0].from}`
+            let paymentInfo = '';
+            if (record.extraInfo && record.extraInfo.token && record.extraInfo.sender) {
+                // Payment link extra info
+                let noteStr = '';
+                if (record.extraInfo.note) {
+                    noteStr = ` (${Buffer.from(record.extraInfo.note).toString()})`;
+                }
+                paymentInfo = ` PAYMENT LINK${noteStr}`;
+            }
+            mainPart = `${statusMark}DEPOSITED DIRECT ${totalAmountStr} ${shTokenSymb}${record.actions.length > 1 ? ` IN ${toAddress}` : ''}${senderInfo}${paymentInfo}`;
         } else {
             mainPart = `${statusMark}UNKNOWN TRANSACTION TYPE (${record.type})`
         }
@@ -1165,7 +1184,7 @@ export async function pendingDD() {
     this.pause();
     const dds: DirectDeposit[] = await this.account.getPendingDirectDeposits();
     for (const aDD of dds) {
-        this.echo(`${await ddHumanReadable(aDD, this.account)}`);
+        this.echo(`⌛ ${await ddHumanReadable(aDD, this.account)}`);
     }
     this.resume();
 }
