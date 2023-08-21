@@ -1,7 +1,17 @@
 {
-    "defaultPool": "BOB-sepolia",
+    "defaultPool": "USDT-shasta",
 
     "pools": {
+        "USDT-shasta": {
+            "chainId": 2494104990,
+            "poolAddress": "TAvd8FSccLpjsBECeFaqASCLr4UZZJamzG",
+            "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
+            "relayerUrls": ["https://relayer.thgkjlr.website/"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "feeDecimals": 2,
+            "depositScheme": "approve"
+        },
         "BOB-sepolia": {
             "chainId": 11155111,
             "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
@@ -63,6 +73,9 @@
     "chains": {
         "11155111": {
             "rpcUrls": ["https://eth-sepolia-public.unifra.io", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
+        },
+        "2494104990": {
+            "rpcUrls": ["https://api.shasta.trongrid.io"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
