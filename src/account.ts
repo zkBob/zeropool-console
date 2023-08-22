@@ -1,6 +1,6 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
-import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
+import { Client as NetworkClient, ClientFactory } from 'zeropool-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
          TransferConfig, TransferRequest, FeeAmount, TxType,
@@ -174,13 +174,15 @@ export class Account {
             const rpcURLs = env.chains[curChainId].rpcUrls;
             const transactionUrl = env.blockExplorerUrls[curChainId].tx;
 
-            this.provider = new HDWalletProvider({
+            /*this.provider = new HDWalletProvider({
                 mnemonic,
                 providerOrUrl: rpcURLs[0],  // TODO: check URL count
             });
+            
             const client = new EthereumClient(this.provider, { transactionUrl });
-            client.gasMultiplier = 1.2; // increase default gas
-            this.client = client;
+            client.gasMultiplier = 1.2; // increase default gas*/
+            //chainId: number, rpcUrl: string, mnemonic: string, config: Config
+            this.client = ClientFactory.createClient(Number(curChainId), rpcURLs[0], mnemonic, { transactionUrl });
         }
 
         // Request token symbol if needed
@@ -196,9 +198,8 @@ export class Account {
     }
 
     private async killL1Client() {
-        this.provider?.engine.stop();
+        this.client?.haltClient();
         delete this.client;
-        delete this.provider;
     }
 
     public getCurrentPool(): string {
@@ -375,7 +376,7 @@ export class Account {
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
             const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substring(1)));
+            return BigInt(await this.getClient().toBaseTokenUnit(tokenAddress, amount.substring(1)));
         }
 
         return BigInt(amount);
@@ -389,25 +390,30 @@ export class Account {
     // Gwei -> tokens
     public async shieldedToHuman(amountShielded: bigint): Promise<string> {
         return this.weiToHuman(await this.getZpClient().shieldedAmountToWei(amountShielded));
-
     }
 
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
         const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-        return await this.getClient().fromBaseUnit(tokenAddress, amountWei.toString());
+        return await this.getClient().fromBaseTokenUnit(tokenAddress, amountWei.toString());
     }
 
     public ethWeiToHuman(amountWei: bigint): string {
-        return Web3.utils.fromWei(amountWei.toString(10), 'ether');
+        //return Web3.utils.fromWei(amountWei.toString(10), 'ether');
+        return this.getClient().fromBaseUnit(amountWei.toString(10));
     }
 
     public humanToEthWei(amount: string): bigint {
         if (amount.startsWith("^")) {
-            return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
+            //return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
+            return BigInt(this.getClient().toBaseUnit(amount));
         }
 
         return BigInt(amount);
+    }
+
+    public baseUnit(): string {
+        return this.getClient().baseUnit();
     }
 
 

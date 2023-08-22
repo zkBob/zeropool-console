@@ -17,7 +17,7 @@
   ],
   "dependencies": {
     "@ribpay/qr-code-generator": "^1.0.6",
-    "@truffle/hdwallet-provider": "2.0.9",
+    "@truffle/hdwallet-provider": "2.1.13",
     "assert": "^2.0.0",
     "bip39-light": "^1.0.7",
     "bn.js": "^5.1.3",
@@ -38,7 +38,7 @@
     "tslib": "^2.3.1",
     "uuid": "^9.0.0",
     "web3": "^1.7.1",
-    "zeropool-support-js": "https://github.com/zkBob/zeropool-support-js#0.9.0",
+    "zeropool-support-js": "file:../zeropool-support-js",
     "zkbob-client-js": "file:../zkbob-client-js"
   },
   "devDependencies": {

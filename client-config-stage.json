@@ -1,17 +1,7 @@
 {
-    "defaultPool": "USDT-shasta",
+    "defaultPool": "BOB-sepolia",
 
     "pools": {
-        "USDT-shasta": {
-            "chainId": 2494104990,
-            "poolAddress": "TAvd8FSccLpjsBECeFaqASCLr4UZZJamzG",
-            "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
-            "relayerUrls": ["https://relayer.thgkjlr.website/"],
-            "delegatedProverUrls": [],
-            "coldStorageConfigPath": "",
-            "feeDecimals": 2,
-            "depositScheme": "approve"
-        },
         "BOB-sepolia": {
             "chainId": 11155111,
             "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
@@ -67,6 +57,16 @@
             "feeDecimals": 2,
             "depositScheme": "permit",
             "ddSubgraph": "zkbob-bob-goerli-opt"
+        },
+        "USDT-shasta": {
+            "chainId": 2494104990,
+            "poolAddress": "TAvd8FSccLpjsBECeFaqASCLr4UZZJamzG",
+            "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
+            "relayerUrls": ["https://relayer.thgkjlr.website/"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "feeDecimals": 2,
+            "depositScheme": "approve"
         }
     },
 
@@ -74,14 +74,14 @@
         "11155111": {
             "rpcUrls": ["https://eth-sepolia-public.unifra.io", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
         },
-        "2494104990": {
-            "rpcUrls": ["https://api.shasta.trongrid.io"]
-        },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
         },
         "420": {
             "rpcUrls": ["https://goerli.optimism.io"]
+        },
+        "2494104990": {
+            "rpcUrls": ["https://api.shasta.trongrid.io"]
         }
     },
 
@@ -97,6 +97,10 @@
         "420": {
             "tx": "https://goerli-optimism.etherscan.io/tx/{{hash}}",
             "address": "https://goerli-optimism.etherscan.io/address/{{addr}}"
+        },
+        "2494104990": {
+            "tx": "https://shasta.tronscan.org/#/transaction/{{hash}}",
+            "address": "https://shasta.tronscan.org/#/address/{{addr}}"
         }
     },
 
@@ -110,7 +114,8 @@
         "BOB2USDC-goerli": "",
         "WETH-goerli": "",
         "USDC-goerli": "",
-        "BOB-op-goerli": ""
+        "BOB-op-goerli": "",
+        "USDT-shasta": ""
     },
 
     "cloudApi": {
@@ -118,7 +123,8 @@
         "BOB2USDC-goerli": "",
         "WETH-goerli": "",
         "USDC-goerli": "",
-        "BOB-op-goerli": ""
+        "BOB-op-goerli": "",
+        "USDT-shasta": ""
     },
 
     "redemptionUrls": {
@@ -126,7 +132,8 @@
         "BOB2USDC-goerli": "https://staging--zkbob.netlify.app",
         "WETH-goerli": "https://staging--zkbob.netlify.app",
         "USDC-goerli": "https://staging--zkbob.netlify.app",
-        "BOB-op-goerli": "https://staging--zkbob.netlify.app"
+        "BOB-op-goerli": "https://staging--zkbob.netlify.app",
+        "USDT-shasta": "https://staging--zkbob.netlify.app"
     },
 
     "migrations": {
