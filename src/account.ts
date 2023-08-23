@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
 import Web3 from 'web3';
 import { DirectDepositType } from 'zkbob-client-js/lib/dd';
-import { PreparedTransaction } from 'zkbob-client-js/lib/networks/network';
+import { PreparedTransaction } from 'zkbob-client-js/lib/networks';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
@@ -322,6 +322,8 @@ export class Account {
             case 'polygon': return 'MATIC';
             case 'sepolia': return 'ETH';
             case 'goerli': return 'ETH';
+            case 'tron': return 'TRX';
+            case 'shasta': return 'TRX';
             default: return '';
         }
     }
@@ -399,14 +401,12 @@ export class Account {
     }
 
     public ethWeiToHuman(amountWei: bigint): string {
-        //return Web3.utils.fromWei(amountWei.toString(10), 'ether');
         return this.getClient().fromBaseUnit(amountWei.toString(10));
     }
 
     public humanToEthWei(amount: string): bigint {
         if (amount.startsWith("^")) {
-            //return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
-            return BigInt(this.getClient().toBaseUnit(amount));
+            return BigInt(this.getClient().toBaseUnit(amount.substring(1)));
         }
 
         return BigInt(amount);
@@ -701,7 +701,7 @@ export class Account {
             await this.getRegularAddress(),
             amount,
             async (tx: PreparedTransaction) => {
-                txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data);
+                txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector);
                 return txHash;
             }
         );

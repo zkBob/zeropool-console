@@ -1,5 +1,5 @@
 {
-    "defaultPool": "BOB-sepolia",
+    "defaultPool": "USDT-shasta",
 
     "pools": {
         "BOB-sepolia": {

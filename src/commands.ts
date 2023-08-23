@@ -169,7 +169,7 @@ export async function getTokenAllowance(spender: string) {
     if (allowance == 0n) {
         this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
     } else {
-        this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.shTokenSymbol()}]`);
+        this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.tokenSymbol()}]`);
     }
     this.resume();
 }
