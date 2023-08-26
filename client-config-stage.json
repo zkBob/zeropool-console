@@ -45,7 +45,8 @@
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "minTxAmount": 50000,
-            "depositScheme": "usdc-polygon"
+            "depositScheme": "usdc-polygon",
+            "ddSubgraph": "zkbob-usdc-goerli"
         },
         "BOB-op-goerli": {
             "chainId":420,
@@ -60,9 +61,9 @@
         },
         "USDT-shasta": {
             "chainId": 2494104990,
-            "poolAddress": "TAvd8FSccLpjsBECeFaqASCLr4UZZJamzG",
+            "poolAddress": "TWqCjsLMgemUsUhxiHtS3Nk3M7izpNXTKQ",
             "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
-            "relayerUrls": ["https://relayer.thgkjlr.website/"],
+            "relayerUrls": ["https://shasta-relayer.thgkjlr.website"],
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,

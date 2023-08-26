@@ -2,11 +2,11 @@
 
 USERNAME=evgenkor
 IMAGE=zkbob-console
-VERSION=3.7.0
-TAG=latest
+VERSION=3.7.0-beta3
+TAG=beta
 
 yarn build:prod && \
-docker build -f Dockerfile.prod -t $USERNAME/$IMAGE:$TAG . && \
+docker build -f Dockerfile.prod --platform linux/amd64 -t $USERNAME/$IMAGE:$TAG . && \
 docker tag $USERNAME/$IMAGE:$TAG $USERNAME/$IMAGE:$VERSION && \
 docker push $USERNAME/$IMAGE:$TAG && \
 docker push $USERNAME/$IMAGE:$VERSION
