@@ -13,7 +13,6 @@ import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
-import Web3 from 'web3';
 import { DirectDepositType } from 'zkbob-client-js/lib/dd';
 import { PreparedTransaction } from 'zkbob-client-js/lib/networks';
 
@@ -397,11 +396,11 @@ export class Account {
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
         const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-        return await this.getClient().fromBaseTokenUnit(tokenAddress, amountWei.toString());
+        return await this.getClient().fromBaseTokenUnit(tokenAddress, amountWei);
     }
 
     public ethWeiToHuman(amountWei: bigint): string {
-        return this.getClient().fromBaseUnit(amountWei.toString(10));
+        return this.getClient().fromBaseUnit(amountWei);
     }
 
     public humanToEthWei(amount: string): bigint {
@@ -422,7 +421,7 @@ export class Account {
         const balance = await this.getClient().getBalance();
         const readable = this.ethWeiToHuman(BigInt(balance));
 
-        return [balance, readable];
+        return [balance.toString(10), readable];
     }
 
     public async getInternalState(): Promise<any> {
@@ -517,7 +516,7 @@ export class Account {
         return this.getZpClient().cleanState();
     }
 
-    public async getTokenBalance(): Promise<string> {
+    public async getTokenBalance(): Promise<bigint> {
         return await this.getClient().getTokenBalance(this.getTokenAddr());
     }
 
@@ -528,18 +527,18 @@ export class Account {
     public async mint(amount: bigint): Promise<string> {
         const minterAddr = env.minters[this.getCurrentPool()];
         if (minterAddr) {
-            return await this.getClient().mint(minterAddr, amount.toString());
+            return await this.getClient().mint(minterAddr, amount);
         } else {
             throw new Error('Cannot find the minter address. Most likely that token is not for test');
         }
     }
 
     public async transfer(to: string, amount: bigint): Promise<string> {
-        return await this.getClient().transfer(to, amount.toString());
+        return await this.getClient().transfer(to, amount);
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
+        return await this.getClient().transferToken(this.getTokenAddr(), to, amount);
     }
 
     public async getTxParts(txType: TxType, amounts: bigint[], swapAmount?: bigint): Promise<Array<TransferConfig>> {
@@ -613,7 +612,7 @@ export class Account {
                 if (totalNeededAmount > currentAllowance) {
                     totalNeededAmount -= currentAllowance;
                     console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
-                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount.toString());
+                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
                 }
@@ -622,7 +621,7 @@ export class Account {
                 if (totalNeededAmount > currentAllowance) {
                     const maxTokensAmount = 2n ** 256n - 1n;
                     console.log(`Approving Permit2 contract (${PERMIT2_CONTRACT}) to spend max amount of our tokens`);
-                    await this.getClient().approve(this.getTokenAddr(), PERMIT2_CONTRACT, maxTokensAmount.toString());
+                    await this.getClient().approve(this.getTokenAddr(), PERMIT2_CONTRACT, maxTokensAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
                 }
@@ -686,7 +685,7 @@ export class Account {
             if (totalApproveAmount > currentAllowance) {
                 console.log(`Approving allowance for ${ddContract} to spend max amount of our tokens`);
                 const maxTokensAmount = 2n ** 256n - 1n;
-                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount.toString());
+                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount);
                 console.log(`Approve txHash: ${txHash}`);
             } else {
                 console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
@@ -712,7 +711,7 @@ export class Account {
     // returns txHash in promise
     public async approveAllowance(spender: string, amount: bigint): Promise<string> {
         console.log(`Approving allowance for ${spender} to spend our tokens (${await this.weiToHuman(amount)} ${this.tokenSymbol()})`);
-        return await this.getClient().approve(this.getTokenAddr(), spender, amount.toString());
+        return await this.getClient().approve(this.getTokenAddr(), spender, amount);
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
