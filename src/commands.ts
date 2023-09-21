@@ -963,7 +963,8 @@ async function ddHumanReadable(dd: DirectDeposit, account: Account): Promise<str
         }
         paymentInfo = ` PAYMENT LINK${noteStr}`;
     }
-    return `DD #${dd.id.toString()} FROM ${dd.sender}${paymentInfo} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
+    const ddSender = dd.sender && dd.sender != '' ? dd.sender : dd.fallback;
+    return `DD #${dd.id.toString()} FROM ${ddSender}${paymentInfo} for [[;white;]${amount} ${account.tokenSymbol()}] [[!;;;;${account.getTransactionUrl(dd.queueTxHash)}]${dd.queueTxHash}]`;
 }
 
 async function humanReadable(record: HistoryRecord, account: Account): Promise<string> {
