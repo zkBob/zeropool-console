@@ -61,7 +61,7 @@
         },
         "USDT-shasta": {
             "chainId": 2494104990,
-            "poolAddress": "TWqCjsLMgemUsUhxiHtS3Nk3M7izpNXTKQ",
+            "poolAddress": "TLTyi81NhoeGfsq8Ef1STDYs6E7HFSAruV",
             "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
             "relayerUrls": ["https://shasta-relayer.thgkjlr.website"],
             "delegatedProverUrls": [],
