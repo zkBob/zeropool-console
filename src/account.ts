@@ -629,6 +629,7 @@ export class Account {
 
             console.log('Making deposit...');
             let jobId;
+            const blockNumber = await this.getClient().getBlockNumber().catch(() => undefined);
             jobId = await this.getZpClient().deposit(amount, async (signingRequest) => {
                 switch (signingRequest.type) {
                     case SignatureType.TypedDataV4:
@@ -638,7 +639,7 @@ export class Account {
                     default:
                         throw new Error(`Signing request with unknown type`);
                 }
-            }, myAddress, relayerFee);
+            }, myAddress, relayerFee, blockNumber);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
@@ -702,7 +703,8 @@ export class Account {
             async (tx: PreparedTransaction) => {
                 txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector);
                 return txHash;
-            }
+            },
+            await this.getClient().getBlockNumber().catch(() => undefined),
         );
 
         return txHash;
