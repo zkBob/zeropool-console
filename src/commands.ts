@@ -162,16 +162,20 @@ export async function getTokenBalance() {
 }
 
 export async function getTokenAllowance(spender: string) {
-    this.pause();
-    const tokenAddress = this.account.getTokenAddr();
-    this.echo(`Checking [[!;;;;${this.account.getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${this.account.getAddressUrl(spender)}]${spender}]... `);
-    const allowance = await this.account.getTokenAllowance(spender);
-    if (allowance == 0n) {
-        this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
+    if (spender && this.account.validateNativeAddress(spender)) {
+        this.pause();
+        const tokenAddress = this.account.getTokenAddr();
+        this.echo(`Checking [[!;;;;${this.account.getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${this.account.getAddressUrl(spender)}]${spender}]... `);
+        const allowance = await this.account.getTokenAllowance(spender);
+        if (allowance == 0n) {
+            this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
+        } else {
+            this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.tokenSymbol()}]`);
+        }
+        this.resume();
     } else {
-        this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.tokenSymbol()}]`);
+        this.echo(`[[;red;]Invalid address provided: ${spender}]`);
     }
-    this.resume();
 }
 
 export async function mint(amount: string) {
@@ -183,27 +187,39 @@ export async function mint(amount: string) {
 }
 
 export async function transfer(to: string, amount: string) {
-    this.pause();
-    this.echo(`Transfering ${this.account.nativeSymbol()}... `);
-    const txHash = await this.account.transfer(to, this.account.humanToEthWei(amount));
-    this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
-    this.resume();
+    if (to && this.account.validateNativeAddress(to)) {
+        this.pause();
+        this.echo(`Transfering ${this.account.nativeSymbol()}... `);
+        const txHash = await this.account.transfer(to, this.account.humanToEthWei(amount));
+        this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.resume();
+    } else {
+        this.echo(`[[;red;]Invalid address provided: ${to}]`);
+    }
 }
 
 export async function transferToken(to: string, amount: string) {
-    this.pause();
-    this.echo(`Transfering ${this.account.tokenSymbol()}... `);
-    const txHash = await this.account.transferToken(to, await this.account.humanToWei(amount));
-    this.update(-1, `Transfering ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
-    this.resume();
+    if (to && this.account.validateNativeAddress(to)) {
+        this.pause();
+        this.echo(`Transfering ${this.account.tokenSymbol()}... `);
+        const txHash = await this.account.transferToken(to, await this.account.humanToWei(amount));
+        this.update(-1, `Transfering ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.resume();
+    } else {
+        this.echo(`[[;red;]Invalid address provided: ${to}]`);
+    }
 }
 
 export async function approveToken(spender: string, amount: string) {
-    this.pause();
-    this.echo(`Approving ${this.account.tokenSymbol()}... `);
-    const txHash = await this.account.approveAllowance(spender, await this.account.humanToWei(amount));
-    this.update(-1, `Approving ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
-    this.resume();
+    if (spender && this.account.validateNativeAddress(spender)) {
+        this.pause();
+        this.echo(`Approving ${this.account.tokenSymbol()}... `);
+        const txHash = await this.account.approveAllowance(spender, await this.account.humanToWei(amount));
+        this.update(-1, `Approving ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.resume();
+    } else {
+        this.echo(`[[;red;]Invalid address provided: ${spender}]`);
+    }
 }
 
 export async function getTxParts(...amounts: string[]) {

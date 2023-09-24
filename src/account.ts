@@ -327,6 +327,10 @@ export class Account {
         }
     }
 
+    public validateNativeAddress(address: string): boolean {
+        return this.getClient().validateAddress(address);
+    }
+
     public async getRegularAddress(): Promise<string> {
         return await this.getClient().getAddress();
     }
