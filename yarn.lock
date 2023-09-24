@@ -13032,8 +13032,10 @@ yocto-queue@^0.1.0:
     web3-eth-contract "^1.3.1"
     web3-utils "^1.3.6"
 
-"zkbob-client-js@file:../zkbob-client-js":
-  version "5.3.0-beta4"
+zkbob-client-js@5.3.0-beta5:
+  version "5.3.0-beta5"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-5.3.0-beta5.tgz#25b1378af4e1a01b961cd5b86e7405d010a9108f"
+  integrity sha512-yjpQ11/+81Xjw1tDiVzwNrKeTyWtpsA+PDwrIIG6OooZFYil0E8JSwxPRplTGX/vED2xCQOHKFEcahQx25/bWg==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@graphprotocol/client-cli" "3.0.0"
