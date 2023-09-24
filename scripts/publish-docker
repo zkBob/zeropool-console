@@ -2,8 +2,6 @@
 
 USERNAME=evgenkor
 IMAGE=zkbob-console
-VERSION=3.7.0-beta5
-TAG=beta
 
 yarn build:prod && \
 docker build -f Dockerfile.prod --platform linux/amd64 -t $USERNAME/$IMAGE:$TAG . && \
