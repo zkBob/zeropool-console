@@ -74,7 +74,7 @@
 
     "chains": {
         "11155111": {
-            "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia-public.unifra.io", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
+            "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia-public.unifra.io", "https://rpc.sepolia.org"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]

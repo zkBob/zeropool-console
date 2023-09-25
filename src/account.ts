@@ -173,26 +173,15 @@ export class Account {
             const rpcURLs = env.chains[curChainId].rpcUrls;
             const transactionUrl = env.blockExplorerUrls[curChainId].tx;
 
-            /*this.provider = new HDWalletProvider({
-                mnemonic,
-                providerOrUrl: rpcURLs[0],  // TODO: check URL count
-            });
-            
-            const client = new EthereumClient(this.provider, { transactionUrl });
-            client.gasMultiplier = 1.2; // increase default gas*/
-            //chainId: number, rpcUrl: string, mnemonic: string, config: Config
             this.client = ClientFactory.createClient(Number(curChainId), rpcURLs[0], mnemonic, { transactionUrl });
         }
 
         // Request token symbol if needed
-        let attemptsNum = 3;
-        while(!this.tokenSymbols[poolName] && attemptsNum-- > 0) {
-            try {
-                this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
-                console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
-            } catch(err) {
-                console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
-            }
+        try {
+            this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
+            console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
+        } catch(err) {
+            console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
         }
     }
 
