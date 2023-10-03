@@ -1,4 +1,4 @@
-import { Chains, Pools, SnarkConfigParams } from 'zkbob-client-js';
+import { Chains, Pools, SnarkConfigParams, Parameters } from 'zkbob-client-js';
 
 export interface TokenMigrationConfig {
     tokenAddress: string;
@@ -10,8 +10,8 @@ export interface ConsoleConfig {
     defaultPool: string;
     pools: Pools;
     chains: Chains;
+    parameters: Parameters;
     blockExplorerUrls: {[chainId: string]: {tx: string, address: string} };
-    globalSnarks: SnarkConfigParams;
     minters: {[poolName: string]: string };
     cloudApi: {[poolName: string]: string };
     redemptionUrls: {[poolName: string]: string };

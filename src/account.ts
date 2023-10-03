@@ -75,7 +75,7 @@ export class Account {
         this.config = {
             pools: env.pools,
             chains: env.chains,
-            snarkParams: env.globalSnarks,
+            parameters: env.parameters,
             supportId: this.supportId,
             forcedMultithreading: undefined,
         };
