@@ -10,7 +10,8 @@ export interface ConsoleConfig {
     defaultPool: string;
     pools: Pools;
     chains: Chains;
-    parameters: Parameters;
+    globalSnarks?: SnarkConfigParams;
+    snarkParamsSet?: Parameters;
     blockExplorerUrls: {[chainId: string]: {tx: string, address: string} };
     minters: {[poolName: string]: string };
     cloudApi: {[poolName: string]: string };

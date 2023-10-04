@@ -111,7 +111,7 @@
             "rpcUrls": ["https://rpc.ankr.com/optimism", "https://mainnet.optimism.io"]
         },
         "11155111": {
-            "rpcUrls": ["https://eth-sepolia-public.unifra.io", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
+            "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia.public.blastapi.io", "https://rpc.sepolia.org"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
@@ -121,7 +121,7 @@
         }
     },
 
-    "parameters": {
+    "snarkParamsSet": {
         "stage": {
             "transferParamsUrl": "./assets/transfer_params.bin",
             "transferVkUrl": "./assets/transfer_verification_key.json"
