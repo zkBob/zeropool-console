@@ -41,7 +41,6 @@
         },
         "BOB-sepolia": {
             "chainId": 11155111,
-            "parameters": "stage",
             "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
             "relayerUrls": ["https://relayer.thgkjlr.website/"],
@@ -53,7 +52,6 @@
         },
         "BOB2USDC-goerli": {
             "chainId": 5,
-            "parameters": "stage",
             "poolAddress": "0x49661694a71B3Dab9F25E86D5df2809B170c56E6",
             "tokenAddress": "0x28B531401Ee3f17521B3772c13EAF3f86C2Fe780",
             "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
@@ -65,7 +63,6 @@
         },
         "WETH-goerli": {
             "chainId": 5,
-            "parameters": "stage",
             "poolAddress": "0xf9dbCF4005497e042838dE9082C817fCa790e945",
             "tokenAddress": "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
             "relayerUrls": ["https://goerli-weth-relayer.thgkjlr.website/"],
@@ -78,7 +75,6 @@
         },
         "USDC-goerli": {
             "chainId": 5,
-            "parameters": "stage",
             "poolAddress": "0xCF6446Deb67b2b56604657C67DAF54f884412531",
             "tokenAddress": "0x28B531401Ee3f17521B3772c13EAF3f86C2Fe780",
             "relayerUrls": ["https://goerli-usdc-relayer.thgkjlr.website"],
@@ -91,7 +87,6 @@
         },
         "BOB-op-goerli": {
             "chainId":420,
-            "parameters": "stage",
             "poolAddress":"0x55B81b0730399974Ccad8AC858e766Cf54126596",
             "tokenAddress":"0x0fA7E69b9344D6434Bd6b79c5950bb5234245a5F",
             "relayerUrls":["https://gop-relayer.thgkjlr.website"],
@@ -121,11 +116,12 @@
         }
     },
 
+    "globalSnarks": {
+        "transferParamsUrl": "./assets/transfer_params.bin",
+        "transferVkUrl": "./assets/transfer_verification_key.json"
+    },
+
     "snarkParamsSet": {
-        "stage": {
-            "transferParamsUrl": "./assets/transfer_params.bin",
-            "transferVkUrl": "./assets/transfer_verification_key.json"
-        },
         "prod": {
             "transferParamsUrl": "./assets/transfer_params_prod.bin",
             "transferVkUrl": "./assets/transfer_verification_key_prod.json"
