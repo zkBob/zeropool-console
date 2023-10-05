@@ -601,6 +601,11 @@ export async function withdrawShielded(amount: string, address: string, times: s
     }
 }
 
+export async function forcedExit(address: string) {
+    this.echo(`Forced Exit: implementation in progress...`);
+    
+}
+
 export async function getInternalState() {
     const state = await this.account.getInternalState();
 

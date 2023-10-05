@@ -42,6 +42,13 @@ export enum InitAccountState {
     Failed = 5
 }
 
+export enum ForcedExitState {
+    NotStarted = 0,
+    Commited,
+    Completed,
+    Canceled,
+}
+
 export interface InitAccountStatus {
     state: InitAccountState;
     error?: Error | undefined;
@@ -748,6 +755,27 @@ export class Account {
             throw Error('State is not ready for transact');
         }
     }
+
+    public async isAccountDead(): Promise<boolean> {
+        // TODO: check last nullifier
+        return false;
+    }
+
+    public async forcedExitState(): Promise<ForcedExitState> {
+        // TODO: check last nullifier
+        return ForcedExitState.NotStarted;
+    }
+
+    public async initiateForcedExit(address: string): Promise<number> {
+        // TODO: commitForcedExit
+        throw new Error('unimplemented');
+    }
+
+    public async executeForcedExit(address: string): Promise<number> {
+        // TODO: executeForcedExit
+        throw new Error('unimplemented');
+    }
+
 
     public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
         return await this.getZpClient().giftCardBalance(giftCard);
