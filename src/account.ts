@@ -1,6 +1,6 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
-import { Client as NetworkClient, ClientFactory } from 'zeropool-support-js';
+import { Client as NetworkClient, ClientFactory } from 'zkbob-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
          TransferConfig, TransferRequest, FeeAmount, TxType,
