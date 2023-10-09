@@ -1,21 +1,20 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
-import { EthereumClient, Client as NetworkClient } from 'zeropool-support-js';
+import { Client as NetworkClient, ClientFactory } from 'zkbob-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
          TransferConfig, TransferRequest, FeeAmount, TxType,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback
+         ClientStateCallback, DirectDeposit
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from './environment';
-import Web3 from 'web3';
-import { DirectDepositType, DirectDeposit } from 'zkbob-client-js/lib/dd';
-import { PreparedTransaction } from 'zkbob-client-js/lib/networks/network';
+import { DirectDepositType } from 'zkbob-client-js/lib/dd';
+import { PreparedTransaction } from 'zkbob-client-js/lib/networks';
 
 const PERMIT2_CONTRACT = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
@@ -174,31 +173,21 @@ export class Account {
             const rpcURLs = env.chains[curChainId].rpcUrls;
             const transactionUrl = env.blockExplorerUrls[curChainId].tx;
 
-            this.provider = new HDWalletProvider({
-                mnemonic,
-                providerOrUrl: rpcURLs[0],  // TODO: check URL count
-            });
-            const client = new EthereumClient(this.provider, { transactionUrl });
-            client.gasMultiplier = 1.2; // increase default gas
-            this.client = client;
+            this.client = ClientFactory.createClient(Number(curChainId), rpcURLs[0], mnemonic, { transactionUrl });
         }
 
         // Request token symbol if needed
-        let attemptsNum = 3;
-        while(!this.tokenSymbols[poolName] && attemptsNum-- > 0) {
-            try {
-                this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
-                console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
-            } catch(err) {
-                console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
-            }
+        try {
+            this.tokenSymbols[poolName] = await this.client.getTokenName(env.pools[poolName].tokenAddress);
+            console.log(`Retrieved token symbol for ${poolName}: ${this.tokenSymbols[poolName]}`)
+        } catch(err) {
+            console.warn(`Cannot retrieve token symbol for ${poolName}: ${err.message}`);
         }
     }
 
     private async killL1Client() {
-        this.provider?.engine.stop();
+        this.client?.haltClient();
         delete this.client;
-        delete this.provider;
     }
 
     public getCurrentPool(): string {
@@ -321,8 +310,14 @@ export class Account {
             case 'polygon': return 'MATIC';
             case 'sepolia': return 'ETH';
             case 'goerli': return 'ETH';
+            case 'tron': return 'TRX';
+            case 'shasta': return 'TRX';
             default: return '';
         }
+    }
+
+    public validateNativeAddress(address: string): boolean {
+        return this.getClient().validateAddress(address);
     }
 
     public async getRegularAddress(): Promise<string> {
@@ -375,7 +370,7 @@ export class Account {
     public async humanToWei(amount: string): Promise<bigint> {
         if (amount.startsWith("^")) {
             const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-            return BigInt(await this.getClient().toBaseUnit(tokenAddress, amount.substring(1)));
+            return BigInt(await this.getClient().toBaseTokenUnit(tokenAddress, amount.substring(1)));
         }
 
         return BigInt(amount);
@@ -389,25 +384,28 @@ export class Account {
     // Gwei -> tokens
     public async shieldedToHuman(amountShielded: bigint): Promise<string> {
         return this.weiToHuman(await this.getZpClient().shieldedAmountToWei(amountShielded));
-
     }
 
     // wei -> tokens
     public async weiToHuman(amountWei: bigint): Promise<string> {
         const tokenAddress = this.config.pools[this.getCurrentPool()].tokenAddress;
-        return await this.getClient().fromBaseUnit(tokenAddress, amountWei.toString());
+        return await this.getClient().fromBaseTokenUnit(tokenAddress, amountWei);
     }
 
     public ethWeiToHuman(amountWei: bigint): string {
-        return Web3.utils.fromWei(amountWei.toString(10), 'ether');
+        return this.getClient().fromBaseUnit(amountWei);
     }
 
     public humanToEthWei(amount: string): bigint {
         if (amount.startsWith("^")) {
-            return BigInt(Web3.utils.toWei(amount.substring(1), 'ether'));
+            return BigInt(this.getClient().toBaseUnit(amount.substring(1)));
         }
 
         return BigInt(amount);
+    }
+
+    public baseUnit(): string {
+        return this.getClient().baseUnit();
     }
 
 
@@ -416,7 +414,7 @@ export class Account {
         const balance = await this.getClient().getBalance();
         const readable = this.ethWeiToHuman(BigInt(balance));
 
-        return [balance, readable];
+        return [balance.toString(10), readable];
     }
 
     public async getInternalState(): Promise<any> {
@@ -511,7 +509,7 @@ export class Account {
         return this.getZpClient().cleanState();
     }
 
-    public async getTokenBalance(): Promise<string> {
+    public async getTokenBalance(): Promise<bigint> {
         return await this.getClient().getTokenBalance(this.getTokenAddr());
     }
 
@@ -522,18 +520,18 @@ export class Account {
     public async mint(amount: bigint): Promise<string> {
         const minterAddr = env.minters[this.getCurrentPool()];
         if (minterAddr) {
-            return await this.getClient().mint(minterAddr, amount.toString());
+            return await this.getClient().mint(minterAddr, amount);
         } else {
             throw new Error('Cannot find the minter address. Most likely that token is not for test');
         }
     }
 
     public async transfer(to: string, amount: bigint): Promise<string> {
-        return await this.getClient().transfer(to, amount.toString());
+        return await this.getClient().transfer(to, amount);
     }
 
     public async transferToken(to: string, amount: bigint): Promise<string> {
-        return await this.getClient().transferToken(this.getTokenAddr(), to, amount.toString());
+        return await this.getClient().transferToken(this.getTokenAddr(), to, amount);
     }
 
     public async getTxParts(txType: TxType, amounts: bigint[], swapAmount?: bigint): Promise<Array<TransferConfig>> {
@@ -607,7 +605,7 @@ export class Account {
                 if (totalNeededAmount > currentAllowance) {
                     totalNeededAmount -= currentAllowance;
                     console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
-                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount.toString());
+                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
                 }
@@ -616,7 +614,7 @@ export class Account {
                 if (totalNeededAmount > currentAllowance) {
                     const maxTokensAmount = 2n ** 256n - 1n;
                     console.log(`Approving Permit2 contract (${PERMIT2_CONTRACT}) to spend max amount of our tokens`);
-                    await this.getClient().approve(this.getTokenAddr(), PERMIT2_CONTRACT, maxTokensAmount.toString());
+                    await this.getClient().approve(this.getTokenAddr(), PERMIT2_CONTRACT, maxTokensAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
                 }
@@ -624,6 +622,7 @@ export class Account {
 
             console.log('Making deposit...');
             let jobId;
+            const blockNumber = await this.getClient().getBlockNumber().catch(() => undefined);
             jobId = await this.getZpClient().deposit(amount, async (signingRequest) => {
                 switch (signingRequest.type) {
                     case SignatureType.TypedDataV4:
@@ -633,7 +632,7 @@ export class Account {
                     default:
                         throw new Error(`Signing request with unknown type`);
                 }
-            }, myAddress, relayerFee);
+            }, myAddress, relayerFee, blockNumber);
 
             console.log('Please wait relayer provide txHash for job %s...', jobId);
 
@@ -680,7 +679,7 @@ export class Account {
             if (totalApproveAmount > currentAllowance) {
                 console.log(`Approving allowance for ${ddContract} to spend max amount of our tokens`);
                 const maxTokensAmount = 2n ** 256n - 1n;
-                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount.toString());
+                const txHash = await this.getClient().approve(this.getTokenAddr(), ddContract, maxTokensAmount);
                 console.log(`Approve txHash: ${txHash}`);
             } else {
                 console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalApproveAmount)} ${this.tokenSymbol()}). Skipping approve`);
@@ -695,9 +694,10 @@ export class Account {
             await this.getRegularAddress(),
             amount,
             async (tx: PreparedTransaction) => {
-                txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data);
+                txHash = await this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector);
                 return txHash;
-            }
+            },
+            await this.getClient().getBlockNumber().catch(() => undefined),
         );
 
         return txHash;
@@ -706,7 +706,7 @@ export class Account {
     // returns txHash in promise
     public async approveAllowance(spender: string, amount: bigint): Promise<string> {
         console.log(`Approving allowance for ${spender} to spend our tokens (${await this.weiToHuman(amount)} ${this.tokenSymbol()})`);
-        return await this.getClient().approve(this.getTokenAddr(), spender, amount.toString());
+        return await this.getClient().approve(this.getTokenAddr(), spender, amount);
     }
 
     public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
