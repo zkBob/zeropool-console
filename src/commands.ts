@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -644,27 +644,27 @@ export async function forcedExit(address: string) {
     this.update(-1, `Forced Exit: ${isSupported ? '[[;green;]supported]' : '[[;red;]unsupported]'}`);
 
     if (isSupported) {
-        this.echo('Account state: <fetching>');
-        const isAccDead = await this.account.isAccountDead();
-        this.update(-1, `Account state: ${isAccDead ? '[[;red;]DEAD]' : '[[;green;]active]'}`);
+        this.echo('Forced exit state: <fetching>');
+        const forcedExitState: ForcedExitState = await this.account.forcedExitState();
+        switch (forcedExitState) {
+            case ForcedExitState.NotStarted:
+                this.update(-1, 'Forced exit state: [[;white;]not started]');
+                break;
+            case ForcedExitState.Commited:
+                this.update(-1, 'Forced exit state: [[;yellow;]commited]');
+                break;
+            case ForcedExitState.Completed:
+                this.update(-1, 'Forced exit state: [[;green;]completed]');
+                break;
+            case ForcedExitState.Canceled:
+                this.update(-1, 'Forced exit state: [[;red;]canceled]');
+                break;
+        }
 
-        if (!isAccDead) {
-            this.echo('Forced exit state: <fetching>');
-            const forcedExitState: ForcedExitState = await this.account.forcedExitState();
-            switch (forcedExitState) {
-                case ForcedExitState.NotStarted:
-                    this.update(-1, 'Forced exit state: [[;white;]not started]');
-                    break;
-                case ForcedExitState.Commited:
-                    this.update(-1, 'Forced exit state: [[;yellow;]commited]');
-                    break;
-                case ForcedExitState.Completed:
-                    this.update(-1, 'Forced exit state: [[;green;]completed]');
-                    break;
-                case ForcedExitState.Canceled:
-                    this.update(-1, 'Forced exit state: [[;red;]canceled]');
-                    break;
-            }
+        if (forcedExitState == ForcedExitState.NotStarted) {
+            this.echo('Sending initial forced exit transaction...');
+            const committed: CommittedForcedExit = await this.initiateForcedExit(address);
+            
         }
     }
      

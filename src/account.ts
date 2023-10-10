@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -39,13 +39,6 @@ export enum InitAccountState {
     AccountInitializing = 3,
     FullClientReady = 4,
     Failed = 5
-}
-
-export enum ForcedExitState {
-    NotStarted = 0,
-    Commited,
-    Completed,
-    Canceled,
 }
 
 export interface InitAccountStatus {
@@ -760,29 +753,28 @@ export class Account {
         return this.getZpClient().isForcedExitSupported();
     }
 
-    public async isAccountDead(): Promise<boolean> {
-        return this.getZpClient().isForcedExitCompleted();
-    }
-
     public async forcedExitState(): Promise<ForcedExitState> {
-        if (await this.getZpClient().isForcedExitCompleted()) {
-            return ForcedExitState.Completed;
-        } else if (await this.getZpClient().isForcedExitCommited()) {
-            // TODO: detect is FE canceled
-            return ForcedExitState.Commited;
-        } else {
-            return ForcedExitState.NotStarted;
-        }
+        return this.getZpClient().forcedExitState();
     }
 
-    public async initiateForcedExit(address: string): Promise<number> {
-        // TODO: commitForcedExit
-        throw new Error('unimplemented');
+    public async initiateForcedExit(address?: string): Promise<CommittedForcedExit> {
+        const myAddress = await this.getClient().getAddress();
+        return this.getZpClient().requestForcedExit(
+            myAddress,  // operator
+            address ?? myAddress, // to
+            async (tx: PreparedTransaction) => 
+                this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
     }
 
-    public async executeForcedExit(address: string): Promise<number> {
-        // TODO: executeForcedExit
-        throw new Error('unimplemented');
+    public async activeForcedExit(): Promise<CommittedForcedExit | undefined> {
+        return this.getZpClient().activeForcedExit()
+    }
+
+    public async executeForcedExit(): Promise<boolean> {
+        return this.getZpClient().executeForcedExit(async (tx: PreparedTransaction) =>
+            this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
     }
 
 
