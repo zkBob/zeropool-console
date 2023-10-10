@@ -2,14 +2,14 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
 import { env } from './environment';
-import { Account, ForcedExitState } from './account';
+import { Account } from './account';
 import sha256 from 'fast-sha256';
 var pjson = require('../package.json');
 
