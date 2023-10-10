@@ -46,6 +46,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'transfer-shielded': [c.transferShielded, '<shielded address> <amount> [times | +]', 'move shielded tokens to the another zkBob address (inside a pool)'],
   'transfer-shielded-multinote': [c.transferShieldedMultinote, '<shielded address> <amount> <count> [times]', 'send a set of (notes) to the single address'],
   'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if the address is ommited)'],
+  'forced-exit': [c.forcedExit, '', 'Withdraw funds and deactivate account (in case of relayer failure)'],
   'history': [c.printHistory, '', 'print all transactions related to your account'],
   'compliance-report': [c.complianceReport, '', 'generate compliance report: history + evidence of transactions ownership'],
   'pending-dd': [c.pendingDD, '', 'print pending direct deposits for the account'],

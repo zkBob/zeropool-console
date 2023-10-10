@@ -756,14 +756,23 @@ export class Account {
         }
     }
 
+    public async isForcedExitSupported(): Promise<boolean> {
+        return this.getZpClient().isForcedExitSupported();
+    }
+
     public async isAccountDead(): Promise<boolean> {
-        // TODO: check last nullifier
-        return false;
+        return this.getZpClient().isForcedExitCompleted();
     }
 
     public async forcedExitState(): Promise<ForcedExitState> {
-        // TODO: check last nullifier
-        return ForcedExitState.NotStarted;
+        if (await this.getZpClient().isForcedExitCompleted()) {
+            return ForcedExitState.Completed;
+        } else if (await this.getZpClient().isForcedExitCommited()) {
+            // TODO: detect is FE canceled
+            return ForcedExitState.Commited;
+        } else {
+            return ForcedExitState.NotStarted;
+        }
     }
 
     public async initiateForcedExit(address: string): Promise<number> {

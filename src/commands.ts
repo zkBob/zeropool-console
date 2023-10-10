@@ -9,7 +9,7 @@ import qrcodegen from "@ribpay/qr-code-generator";
 import { toSvgString } from "@ribpay/qr-code-generator/utils";
 import JSZip from "jszip";
 import { env } from './environment';
-import { Account } from './account';
+import { Account, ForcedExitState } from './account';
 import sha256 from 'fast-sha256';
 var pjson = require('../package.json');
 
@@ -639,8 +639,35 @@ export async function withdrawShielded(amount: string, address: string, times: s
 }
 
 export async function forcedExit(address: string) {
-    this.echo(`Forced Exit: implementation in progress...`);
-    
+    this.echo('Forced Exit: <getting info>');
+    const isSupported = await this.account.isForcedExitSupported();
+    this.update(-1, `Forced Exit: ${isSupported ? '[[;green;]supported]' : '[[;red;]unsupported]'}`);
+
+    if (isSupported) {
+        this.echo('Account state: <fetching>');
+        const isAccDead = await this.account.isAccountDead();
+        this.update(-1, `Account state: ${isAccDead ? '[[;red;]DEAD]' : '[[;green;]active]'}`);
+
+        if (!isAccDead) {
+            this.echo('Forced exit state: <fetching>');
+            const forcedExitState: ForcedExitState = await this.account.forcedExitState();
+            switch (forcedExitState) {
+                case ForcedExitState.NotStarted:
+                    this.update(-1, 'Forced exit state: [[;white;]not started]');
+                    break;
+                case ForcedExitState.Commited:
+                    this.update(-1, 'Forced exit state: [[;yellow;]commited]');
+                    break;
+                case ForcedExitState.Completed:
+                    this.update(-1, 'Forced exit state: [[;green;]completed]');
+                    break;
+                case ForcedExitState.Canceled:
+                    this.update(-1, 'Forced exit state: [[;red;]canceled]');
+                    break;
+            }
+        }
+    }
+     
 }
 
 export async function getInternalState() {
