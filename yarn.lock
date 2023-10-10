@@ -13031,10 +13031,10 @@ zkbob-client-js@5.3.0-beta7:
     web3 "1.8.0"
     web3-utils "1.8.0"
 
-zkbob-support-js@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/zkbob-support-js/-/zkbob-support-js-1.0.0.tgz#eb3e4eea38329b45c775233437abbf3b9b2afa3c"
-  integrity sha512-acj8REuFjGle8VKuyWSoSngiC1Rp7Ml11BPCXn9w9MtEcfqN+joiOCVngjFz7tKiL+po5TUr38puEnVFzcw4JA==
+zkbob-support-js@1.0.1-beta1:
+  version "1.0.1-beta1"
+  resolved "https://registry.yarnpkg.com/zkbob-support-js/-/zkbob-support-js-1.0.1-beta1.tgz#a873fd52af38b71b631dc5c8185804485959cdb4"
+  integrity sha512-1wuerFP9SxIwQq5Zsf8ypXtX7rtSft2JaSsomjrEAXUBrilFXnG9DLeh3rdOVLbWLybafGfyfpkZlbIZtOPX8A==
   dependencies:
     "@ethereumjs/tx" "^3.2.1"
     "@polkadot/api" "^7.11.1"
