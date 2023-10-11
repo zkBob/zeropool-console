@@ -1,5 +1,5 @@
 {
-    "defaultPool": "BOB-sepolia",
+    "defaultPool": "USDT-tron-private",
 
     "pools": {
         "BOB-sepolia": {
@@ -61,7 +61,7 @@
         },
         "USDT-tron-private": {
             "chainId": 2494104990,
-            "poolAddress": "TPbcYhci3WmKYuNxWXNPBvMGXeoey1cHrB",
+            "poolAddress": "TVtGa6o4KWYa6pfcd6A34xQte1FuDJPFah",
             "tokenAddress": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
             "relayerUrls": ["https://shasta-relayer.thgkjlr.website"],
             "delegatedProverUrls": [],
