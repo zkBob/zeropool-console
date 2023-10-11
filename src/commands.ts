@@ -15,16 +15,19 @@ var pjson = require('../package.json');
 
 const bs58 = require('bs58');
 
+function account(_this: any): Account {
+    return _this.account;
+}
 
 export async function currentPoolEnvironment() {
-    const curPool = await this.account.getCurrentPool();
+    const curPool = await account(this).getCurrentPool();
     const poolEnv = env.pools[curPool];
     const chainEnv = env.chains[String(poolEnv.chainId)];
 
     this.echo(`Current pool: ${curPool}`);
-    this.echo(`Chain:        ${this.account.networkName()} (${poolEnv.chainId})`)
-    this.echo(`Pool address:     [[!;;;;${this.account.getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
-    this.echo(`Token address:    [[!;;;;${this.account.getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
+    this.echo(`Chain:        ${account(this).networkName()} (${poolEnv.chainId})`)
+    this.echo(`Pool address:     [[!;;;;${account(this).getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
+    this.echo(`Token address:    [[!;;;;${account(this).getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
     this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ''}:     ${chainEnv.rpcUrls.join(', ')}`);
     this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ''}:          ${poolEnv.relayerUrls.join(', ')}`);
     this.echo(`Cold storage:     ${poolEnv.coldStorageConfigPath}`);
@@ -35,13 +38,13 @@ export async function currentPoolEnvironment() {
 }
 
 export async function getAvailablePools() {
-    const pools: string[] = await this.account.getPools();
+    const pools: string[] = await account(this).getPools();
     this.echo(`Available pools: ${pools.join(', ')}`);
 }
 
 export async function switchPool(poolAlias: string, password: string) {
     if (!poolAlias) {
-        const pools: string[] = await this.account.getPools();
+        const pools: string[] = await account(this).getPools();
         this.echo(`[[;red;]Please provide a pool alias. Currently supported: ${pools.join(', ')}]`)
         return;
     }
@@ -53,9 +56,9 @@ export async function switchPool(poolAlias: string, password: string) {
 
 
     this.pause();
-    await this.account.switchPool(poolAlias, password);
+    await account(this).switchPool(poolAlias, password);
     this.resume();
-    this.echo(`Current pool: ${await this.account.getCurrentPool()}`);
+    this.echo(`Current pool: ${await account(this).getCurrentPool()}`);
 }
 
 export async function getSeed(password: string) {
@@ -65,7 +68,7 @@ export async function getSeed(password: string) {
         this.set_mask(false);
     }
 
-    const seed = this.account.getSeed(this.account.accountName, password);
+    const seed = account(this).getSeed(account(this).accountName, password);
     this.echo(`[[;gray;]Seed phrase: ${seed}]`);
 }
 
@@ -76,21 +79,21 @@ export async function getSk(password: string) {
         this.set_mask(false);
     }
 
-    const seed = this.account.getSeed(this.account.accountName, password);
+    const seed = account(this).getSeed(account(this).accountName, password);
     const sk = deriveSpendingKeyZkBob(seed);
     this.echo(`[[;gray;]Spending key: 0x${bufToHex(sk)}]`);
 }
 
 export async function getAddress() {
-    const address = await this.account.getRegularAddress();
-    this.echo(`[[;gray;]Address:] [[!;;;;${this.account.getAddressUrl(address)}]${address}]`);
+    const address = await account(this).getRegularAddress();
+    this.echo(`[[;gray;]Address:] [[!;;;;${account(this).getAddressUrl(address)}]${address}]`);
 }
 
 export async function genShieldedAddress(number: string) {
     let addressNum = number !== undefined ? Number(number) : 1;
     this.pause();
     for (let i = 0; i < addressNum; i++) {
-        const address = await this.account.genShieldedAddress();
+        const address = await account(this).genShieldedAddress();
         this.echo(`[[;gray;]${address}]`);
     }
     this.resume();
@@ -100,7 +103,7 @@ export async function genShieldedAddressUniversal(number: string) {
     let addressNum = number !== undefined ? Number(number) : 1;
     this.pause();
     for (let i = 0; i < addressNum; i++) {
-        const address = await this.account.genShieldedAddressUniversal();
+        const address = await account(this).genShieldedAddressUniversal();
         this.echo(`[[;gray;]${address}]`);
     }
     this.resume();
@@ -109,11 +112,11 @@ export async function genShieldedAddressUniversal(number: string) {
 export async function shieldedAddressInfo(shieldedAddress: string) {
     this.echo('Parsing address...');
     try {
-        const components = await this.account.zkAddressInfo(shieldedAddress);
+        const components = await account(this).zkAddressInfo(shieldedAddress);
         this.update(-1, 'Parsing address... [[;green;]OK]');
         this.echo(`Address format:    [[;white;]${components.format}]`);
         this.echo(`Is it derived from my SK:    ${components.derived_from_our_sk ? '[[;green;]YES]' : '[[;white;]NO]'}`);
-        const isValid = await this.account.verifyShieldedAddress(shieldedAddress);
+        const isValid = await account(this).verifyShieldedAddress(shieldedAddress);
         this.echo(`Is it valid on current pool: ${isValid ? '[[;green;]YES]' : '[[;red;]NO]'}`);
         try {
             const poolId = BigInt(components.pool_id);
@@ -132,23 +135,23 @@ export async function shieldedAddressInfo(shieldedAddress: string) {
 }
 
 export async function getBalance() {
-    const [balance, readable] = await this.account.getBalance();
-    this.echo(`[[;gray;]Balance: [[;white;]${readable} ${this.account.nativeSymbol()}] (${balance} wei)]`);
+    const [balance, readable] = await account(this).getBalance();
+    this.echo(`[[;gray;]Balance: [[;white;]${readable} ${account(this).nativeSymbol()}] (${balance} wei)]`);
 }
 
 export async function getShieldedBalance() {
     this.pause();
-    const [total, acc, note] = await this.account.getShieldedBalances(true);    // update state only once
-    const optimisticBalance = await this.account.getOptimisticTotalBalance(false);
+    const [total, acc, note] = await account(this).getShieldedBalances(true);    // update state only once
+    const optimisticBalance = await account(this).getOptimisticTotalBalance(false);
 
     this.echo(`[[;gray;]
-[[;white;]Private balance: ${await this.account.shieldedToHuman(total)} ${this.account.shTokenSymbol()}]
-      - account: ${await this.account.shieldedToHuman(acc)} ${this.account.shTokenSymbol()} (${await this.account.shieldedToWei(acc)} wei)
-      - note:    ${await this.account.shieldedToHuman(note)} ${this.account.shTokenSymbol()} (${await this.account.shieldedToWei(note)} wei)
+[[;white;]Private balance: ${await account(this).shieldedToHuman(total)} ${account(this).shTokenSymbol()}]
+      - account: ${await account(this).shieldedToHuman(acc)} ${account(this).shTokenSymbol()} (${await account(this).shieldedToWei(acc)} wei)
+      - note:    ${await account(this).shieldedToHuman(note)} ${account(this).shTokenSymbol()} (${await account(this).shieldedToWei(note)} wei)
 ]`);
 
     if (total != optimisticBalance) {
-        this.echo(`[[;green;]Optimistic private balance: ${await this.account.shieldedToHuman(optimisticBalance)} ${this.account.shTokenSymbol()} (${await this.account.shieldedToWei(optimisticBalance)} wei)
+        this.echo(`[[;green;]Optimistic private balance: ${await account(this).shieldedToHuman(optimisticBalance)} ${account(this).shTokenSymbol()} (${await account(this).shieldedToWei(optimisticBalance)} wei)
 ]`);
     }
 
@@ -156,21 +159,21 @@ export async function getShieldedBalance() {
 }
 
 export async function getTokenBalance() {
-    const balanceWei = await this.account.getTokenBalance();
-    const human = await this.account.weiToHuman(balanceWei);
-    this.echo(`Token balance: [[;white;]${human} ${this.account.tokenSymbol()}] (${balanceWei} wei)`);
+    const balanceWei = await account(this).getTokenBalance();
+    const human = await account(this).weiToHuman(balanceWei);
+    this.echo(`Token balance: [[;white;]${human} ${account(this).tokenSymbol()}] (${balanceWei} wei)`);
 }
 
 export async function getTokenAllowance(spender: string) {
-    if (spender && this.account.validateNativeAddress(spender)) {
+    if (spender && account(this).validateNativeAddress(spender)) {
         this.pause();
-        const tokenAddress = this.account.getTokenAddr();
-        this.echo(`Checking [[!;;;;${this.account.getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${this.account.getAddressUrl(spender)}]${spender}]... `);
-        const allowance = await this.account.getTokenAllowance(spender);
+        const tokenAddress = account(this).getTokenAddr();
+        this.echo(`Checking [[!;;;;${account(this).getAddressUrl(tokenAddress)}]token] allowance for [[!;;;;${account(this).getAddressUrl(spender)}]${spender}]... `);
+        const allowance = await account(this).getTokenAllowance(spender);
         if (allowance == 0n) {
             this.echo(`[[;red;]There are no approved tokens for the provided address]`);    
         } else {
-            this.update(-1, `The spender can spend up to [[;white;]${await this.account.weiToHuman(allowance)} ${this.account.tokenSymbol()}]`);
+            this.update(-1, `The spender can spend up to [[;white;]${await account(this).weiToHuman(allowance)} ${account(this).tokenSymbol()}]`);
         }
         this.resume();
     } else {
@@ -181,17 +184,17 @@ export async function getTokenAllowance(spender: string) {
 export async function mint(amount: string) {
     this.pause();
     this.echo('Minting tokens... ');
-    const txHash = await this.account.mint(await this.account.humanToWei(amount));
-    this.update(-1, `Minting tokens... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+    const txHash = await account(this).mint(await account(this).humanToWei(amount));
+    this.update(-1, `Minting tokens... [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
     this.resume();
 }
 
 export async function transfer(to: string, amount: string) {
-    if (to && this.account.validateNativeAddress(to)) {
+    if (to && account(this).validateNativeAddress(to)) {
         this.pause();
-        this.echo(`Transfering ${this.account.nativeSymbol()}... `);
-        const txHash = await this.account.transfer(to, this.account.humanToEthWei(amount));
-        this.update(-1, `Transfering ${this.account.nativeSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.echo(`Transfering ${account(this).nativeSymbol()}... `);
+        const txHash = await account(this).transfer(to, account(this).humanToEthWei(amount));
+        this.update(-1, `Transfering ${account(this).nativeSymbol()}... [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
         this.resume();
     } else {
         this.echo(`[[;red;]Invalid address provided: ${to}]`);
@@ -199,11 +202,11 @@ export async function transfer(to: string, amount: string) {
 }
 
 export async function transferToken(to: string, amount: string) {
-    if (to && this.account.validateNativeAddress(to)) {
+    if (to && account(this).validateNativeAddress(to)) {
         this.pause();
-        this.echo(`Transfering ${this.account.tokenSymbol()}... `);
-        const txHash = await this.account.transferToken(to, await this.account.humanToWei(amount));
-        this.update(-1, `Transfering ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.echo(`Transfering ${account(this).tokenSymbol()}... `);
+        const txHash = await account(this).transferToken(to, await account(this).humanToWei(amount));
+        this.update(-1, `Transfering ${account(this).tokenSymbol()}... [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
         this.resume();
     } else {
         this.echo(`[[;red;]Invalid address provided: ${to}]`);
@@ -211,11 +214,11 @@ export async function transferToken(to: string, amount: string) {
 }
 
 export async function approveToken(spender: string, amount: string) {
-    if (spender && this.account.validateNativeAddress(spender)) {
+    if (spender && account(this).validateNativeAddress(spender)) {
         this.pause();
-        this.echo(`Approving ${this.account.tokenSymbol()}... `);
-        const txHash = await this.account.approveAllowance(spender, await this.account.humanToWei(amount));
-        this.update(-1, `Approving ${this.account.tokenSymbol()}... [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.echo(`Approving ${account(this).tokenSymbol()}... `);
+        const txHash = await account(this).approveAllowance(spender, await account(this).humanToWei(amount));
+        this.update(-1, `Approving ${account(this).tokenSymbol()}... [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
         this.resume();
     } else {
         this.echo(`[[;red;]Invalid address provided: ${spender}]`);
@@ -223,7 +226,7 @@ export async function approveToken(spender: string, amount: string) {
 }
 
 export async function getTxParts(...amounts: string[]) {
-    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
+    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => account(this).humanToShielded(amount)));
 
     let entered = '';
     let txType = TxType.Transfer;
@@ -254,11 +257,11 @@ export async function getTxParts(...amounts: string[]) {
     const txName = txType == TxType.Transfer ? 'transfer' : 'withdraw';
     
     this.pause();
-    const result: TransferConfig[] = await this.account.getTxParts(txType, amountsBN, swapAmount);
+    const result: TransferConfig[] = await account(this).getTxParts(txType, amountsBN, swapAmount);
     this.resume();
 
     if (amounts.length > 1) {
-        const humanReadAmounts = await Promise.all(amountsBN.map(async a => `^${await this.account.shieldedToHuman(a)}`)); 
+        const humanReadAmounts = await Promise.all(amountsBN.map(async a => `^${await account(this).shieldedToHuman(a)}`)); 
         this.echo(`Multi-destination request: ${humanReadAmounts.join(', ')}`);
     }
 
@@ -275,7 +278,7 @@ export async function getTxParts(...amounts: string[]) {
         } else {
             this.echo(`Multitransfer detected. To ${txName} this amount will require ${result.length} txs`);
         }
-        this.echo(`Fee required: ${await this.account.shieldedToHuman(totalFee)} ${this.account.shTokenSymbol()}`);
+        this.echo(`Fee required: ${await account(this).shieldedToHuman(totalFee)} ${account(this).shTokenSymbol()}`);
     }
 
     const multiTxColors = ['green', 'purple', 'yellow', 'aqua', 'olive', 'magenta', 'orange', 'pink', 'lime', 'salmon'];
@@ -285,28 +288,28 @@ export async function getTxParts(...amounts: string[]) {
     for (let i = 0; i < result.length; i++) {
         const part = result[i];
         const notes = part.outNotes;
-        const partFee = await this.account.shieldedToHuman(part.fee);
+        const partFee = await account(this).shieldedToHuman(part.fee);
         let partLimit = "";
         if (part.accountLimit > 0) {
-            partLimit = `, accountLimit = ${await this.account.shieldedToHuman(part.accountLimit)} ${this.account.shTokenSymbol()}`;
+            partLimit = `, accountLimit = ${await account(this).shieldedToHuman(part.accountLimit)} ${account(this).shTokenSymbol()}`;
         }
 
         const txTotalAmount = notes.map(note => note.amountGwei).reduce((acc, cur) => acc + cur, BigInt(0));
         if (notes.length == 0) {
-            this.echo(`TX#${i} Aggregate notes: ${await this.account.shieldedToHuman(part.inNotesBalance)} ${this.account.shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+            this.echo(`TX#${i} Aggregate notes: ${await account(this).shieldedToHuman(part.inNotesBalance)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
         } else {
             if (amounts.length > 1 || notes.length > 1) {
-                this.echo(`TX#${i} ${await this.account.shieldedToHuman(txTotalAmount)} ${this.account.shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} ${await account(this).shieldedToHuman(txTotalAmount)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
                 for (const aNote of notes) {
                     if(aNote.destination != lastDest) {
                         lastDest = aNote.destination;
                         curColorIdx = (curColorIdx + 1) % multiTxColors.length;
                     }
-                    this.echo(`     [[;${multiTxColors[curColorIdx]};]${await this.account.shieldedToHuman(aNote.amountGwei)}] ${this.account.shTokenSymbol()} -> ${aNote.destination}`);
+                    this.echo(`     [[;${multiTxColors[curColorIdx]};]${await account(this).shieldedToHuman(aNote.amountGwei)}] ${account(this).shTokenSymbol()} -> ${aNote.destination}`);
                 }
             } else {
                 const color = (notes.length == 0 ? 'gray' : 'green');
-                this.echo(`TX#${i} [[;${color};]${await this.account.shieldedToHuman(txTotalAmount)}] ${this.account.shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} [[;${color};]${await account(this).shieldedToHuman(txTotalAmount)}] ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
             }
         }
     }
@@ -314,33 +317,33 @@ export async function getTxParts(...amounts: string[]) {
 
 export async function estimateFeeDeposit(amount: string) {
     this.pause();
-    const txType = env.pools[this.account.getCurrentPool()].depositScheme == DepositType.Approve ? TxType.Deposit : TxType.BridgeDeposit;
-    const result: FeeAmount = await this.account.estimateFee([await this.account.humanToShielded(amount ?? '0')], txType, 0n, false);
+    const txType = env.pools[account(this).getCurrentPool()].depositScheme == DepositType.Approve ? TxType.Deposit : TxType.BridgeDeposit;
+    const result: FeeAmount = await account(this).estimateFee([await account(this).humanToShielded(amount ?? '0')], txType, 0n, false);
     this.resume();
 
     let perTx = '';
     let perByte = '';
     const baseFee = txType == TxType.Deposit ? result.relayerFee.fee.deposit : result.relayerFee.fee.permittableDeposit;
     if (baseFee > 0n) {
-        perTx = `${await this.account.shieldedToHuman(baseFee)} per tx`
+        perTx = `${await account(this).shieldedToHuman(baseFee)} per tx`
     }
     if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.tokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).tokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeTransfer(...amounts: string[]) {
-    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => this.account.humanToShielded(amount)));
+    const amountsBN: bigint[] = await Promise.all(amounts.map(amount => account(this).humanToShielded(amount)));
 
     this.pause();
-    const result: FeeAmount = await this.account.estimateFee(amountsBN, TxType.Transfer, 0n, false);
+    const result: FeeAmount = await account(this).estimateFee(amountsBN, TxType.Transfer, 0n, false);
     this.resume();
 
     const effectiveAmount = amountsBN.reduce((acc, cur) => acc + cur, BigInt(0));
@@ -348,23 +351,23 @@ export async function estimateFeeTransfer(...amounts: string[]) {
     let perTx = '';
     let perByte = '';
     if (result.relayerFee.fee.transfer > 0n) {
-        perTx = `${await this.account.shieldedToHuman(result.relayerFee.fee.transfer)} per tx`
+        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.transfer)} per tx`
     }
     if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
-    this.echo(`Requested amount:   [[;white;]${await this.account.shieldedToHuman(effectiveAmount)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`Requested amount:   [[;white;]${await account(this).shieldedToHuman(effectiveAmount)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
 }
 
 export async function estimateFeeWithdraw(amount: string) {
-    const amountSh = await this.account.humanToShielded(amount);
+    const amountSh = await account(this).humanToShielded(amount);
 
     this.resume();
     let swapAmount = 0n;
@@ -380,25 +383,25 @@ export async function estimateFeeWithdraw(amount: string) {
     } while(entered != '');
 
     this.pause();
-    const result: FeeAmount = await this.account.estimateFee([amountSh], TxType.Withdraw, swapAmount, false);
+    const result: FeeAmount = await account(this).estimateFee([amountSh], TxType.Withdraw, swapAmount, false);
     this.resume();
 
     let perTx = '';
     let perByte = '';
     let swapFee = '';
     if (result.relayerFee.fee.withdrawal > 0n) {
-        perTx = `${await this.account.shieldedToHuman(result.relayerFee.fee.withdrawal)} per tx`
+        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.withdrawal)} per tx`
     }
     if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await this.account.shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
     }
     if (result.relayerFee.nativeConvertFee > 0n && swapAmount > 0n) {
-        swapFee = `${await this.account.shieldedToHuman(result.relayerFee.nativeConvertFee)} swap`;
+        swapFee = `${await account(this).shieldedToHuman(result.relayerFee.nativeConvertFee)} swap`;
     }
     const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await this.account.shieldedToHuman(result.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${this.account.tokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
     this.echo(`Insuffic. balance:  [[;white;]${result.insufficientFunds == true ? 'true' : 'false'}]`);
@@ -406,40 +409,40 @@ export async function estimateFeeWithdraw(amount: string) {
 
 export async function getLimits(address: string | undefined) {
     this.pause();
-    const result: PoolLimits = await this.account.getLimits(address);
+    const result: PoolLimits = await account(this).getLimits(address);
     this.resume();
 
-    this.echo(`[[;white;]Max available deposit:  ${await this.account.shieldedToHuman(result.deposit.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...single operation:    ${await this.account.shieldedToHuman(result.deposit.components.singleOperation)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...address daily limit: ${await this.account.shieldedToHuman(result.deposit.components.dailyForAddress.available)} / ${await this.account.shieldedToHuman(result.deposit.components.dailyForAddress.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.deposit.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.deposit.components.dailyForAll.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...pool limit:          ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.available)} / ${await this.account.shieldedToHuman(result.deposit.components.poolLimit.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;white;]Max available withdraw: ${await this.account.shieldedToHuman(result.withdraw.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...total daily limit:   ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await this.account.shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;white;]Max available DD:       ${await this.account.shieldedToHuman(result.dd.total)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...single operation:    ${await this.account.shieldedToHuman(result.dd.components.singleOperation)} ${this.account.shTokenSymbol()}]`);
-    this.echo(`[[;gray;]...address daily limit: ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.available)} / ${await this.account.shieldedToHuman(result.dd.components.dailyForAddress.total)} ${this.account.shTokenSymbol()}]`);
+    this.echo(`[[;white;]Max available deposit:  ${await account(this).shieldedToHuman(result.deposit.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...single operation:    ${await account(this).shieldedToHuman(result.deposit.components.singleOperation)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...address daily limit: ${await account(this).shieldedToHuman(result.deposit.components.dailyForAddress.available)} / ${await account(this).shieldedToHuman(result.deposit.components.dailyForAddress.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${await account(this).shieldedToHuman(result.deposit.components.dailyForAll.available)} / ${await account(this).shieldedToHuman(result.deposit.components.dailyForAll.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...pool limit:          ${await account(this).shieldedToHuman(result.deposit.components.poolLimit.available)} / ${await account(this).shieldedToHuman(result.deposit.components.poolLimit.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;white;]Max available withdraw: ${await account(this).shieldedToHuman(result.withdraw.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...total daily limit:   ${await account(this).shieldedToHuman(result.withdraw.components.dailyForAll.available)} / ${await account(this).shieldedToHuman(result.withdraw.components.dailyForAll.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;white;]Max available DD:       ${await account(this).shieldedToHuman(result.dd.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...single operation:    ${await account(this).shieldedToHuman(result.dd.components.singleOperation)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`[[;gray;]...address daily limit: ${await account(this).shieldedToHuman(result.dd.components.dailyForAddress.available)} / ${await account(this).shieldedToHuman(result.dd.components.dailyForAddress.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`[[;white;]Limits tier: ${result.tier}`);
 
 }
 
 export async function getMaxAvailableTransfer() {
     this.pause();
-    const maxTransfer = await this.account.getMaxAvailableTransfer(TxType.Transfer);
-    const humanTransfer = await this.account.shieldedToHuman(maxTransfer);
-    const weiTransfer = await this.account.shieldedToWei(maxTransfer);
-    const maxWithdraw = await this.account.getMaxAvailableTransfer(TxType.Withdraw);
-    const humanWithdraw = await this.account.shieldedToHuman(maxWithdraw);
-    const weiWithdraw = await this.account.shieldedToWei(maxWithdraw);
-    const maxWithdrawSwap = await this.account.getMaxAvailableTransfer(TxType.Withdraw, 1n);
-    const humanWithdrawSwap = await this.account.shieldedToHuman(maxWithdrawSwap);
-    const weiWithdrawSwap = await this.account.shieldedToWei(maxWithdrawSwap);
+    const maxTransfer = await account(this).getMaxAvailableTransfer(TxType.Transfer);
+    const humanTransfer = await account(this).shieldedToHuman(maxTransfer);
+    const weiTransfer = await account(this).shieldedToWei(maxTransfer);
+    const maxWithdraw = await account(this).getMaxAvailableTransfer(TxType.Withdraw);
+    const humanWithdraw = await account(this).shieldedToHuman(maxWithdraw);
+    const weiWithdraw = await account(this).shieldedToWei(maxWithdraw);
+    const maxWithdrawSwap = await account(this).getMaxAvailableTransfer(TxType.Withdraw, 1n);
+    const humanWithdrawSwap = await account(this).shieldedToHuman(maxWithdrawSwap);
+    const weiWithdrawSwap = await account(this).shieldedToWei(maxWithdrawSwap);
     this.resume();
 
     this.echo(`Max available shielded balance for:`);
-    this.echo(`    ...transfer:      [[;white;]${humanTransfer} ${this.account.shTokenSymbol()}] (${weiTransfer} wei)`);
-    this.echo(`    ...withdraw:      [[;white;]${humanWithdraw} ${this.account.shTokenSymbol()}] (${weiWithdraw} wei)`);
-    this.echo(`    ...withdraw+swap: [[;white;]${humanWithdrawSwap} ${this.account.shTokenSymbol()}] (${weiWithdrawSwap} wei)`);
+    this.echo(`    ...transfer:      [[;white;]${humanTransfer} ${account(this).shTokenSymbol()}] (${weiTransfer} wei)`);
+    this.echo(`    ...withdraw:      [[;white;]${humanWithdraw} ${account(this).shTokenSymbol()}] (${weiWithdraw} wei)`);
+    this.echo(`    ...withdraw+swap: [[;white;]${humanWithdrawSwap} ${account(this).shTokenSymbol()}] (${weiWithdrawSwap} wei)`);
 }
 
 export async function depositShielded(amount: string, times: string) {
@@ -447,16 +450,16 @@ export async function depositShielded(amount: string, times: string) {
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
-        this.echo(`Performing shielded deposit [${this.account.depositScheme()} scheme]${cntStr}...`);
+        this.echo(`Performing shielded deposit [${account(this).depositScheme()} scheme]${cntStr}...`);
         this.pause();
 
         // Due to the fact that the console is a test tool, we doesn't check address balance here
         // we should get ability to test relayer's behaviour
-        const result = await this.account.depositShielded(await this.account.humanToShielded(amount));
+        const result = await account(this).depositShielded(await account(this).humanToShielded(amount));
 
         this.resume();
         if (result.txHash) {
-            this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+            this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
         } else {
             this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
         }
@@ -468,15 +471,15 @@ export async function depositShieldedEphemeral(amount: string, index: string) {
 
     this.echo(`Getting ephemeral account info...`);
     this.pause();
-    let ephemeralAddress = await this.account.getEphemeralAddress(ephemeralIndex);
-    this.update(-1, `Ephemeral address [[!;;;;${this.account.getAddressUrl(ephemeralAddress.address)}]${ephemeralAddress.address}] has [[;white;]${await this.account.shieldedToHuman(ephemeralAddress.tokenBalance)}] ${this.account.tokenSymbol()}`);
+    let ephemeralAddress = await account(this).getEphemeralAddress(ephemeralIndex);
+    this.update(-1, `Ephemeral address [[!;;;;${account(this).getAddressUrl(ephemeralAddress.address)}]${ephemeralAddress.address}] has [[;white;]${await account(this).shieldedToHuman(ephemeralAddress.tokenBalance)}] ${account(this).tokenSymbol()}`);
 
     // Ephemeral account balance will be checked inside a library sinse its resposibility for ephemeral pool
-    this.echo(`Performing shielded deposit from ephemeral address [[;white;]#${ephemeralIndex}] [${this.account.depositScheme()} scheme]...`);
-    const result = await this.account.depositShieldedEphemeral(await this.account.humanToShielded(amount), ephemeralIndex);
+    this.echo(`Performing shielded deposit from ephemeral address [[;white;]#${ephemeralIndex}] [${account(this).depositScheme()} scheme]...`);
+    const result = await account(this).depositShieldedEphemeral(await account(this).humanToShielded(amount), ephemeralIndex);
     this.resume();
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
         this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
     }
@@ -488,14 +491,14 @@ export async function directDeposit(amount: string, times: string) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
         this.echo(`Performing direct deposit${cntStr}...`);
         this.pause();
-        const txHash = await this.account.directDeposit(await this.account.humanToShielded(amount));
+        const txHash = await account(this).directDeposit(await account(this).humanToShielded(amount));
         this.resume();
-        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.echo(`Done: [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
     }
 }
 
 export async function directDepositNative(amount: string, times: string) {
-    const curPool = await this.account.getCurrentPool();
+    const curPool = await account(this).getCurrentPool();
     const poolEnv = env.pools[curPool];
     if (!poolEnv.isNative) {
         this.error(`The current pool (${curPool}) doesn't support native direct deposits`);
@@ -507,22 +510,22 @@ export async function directDepositNative(amount: string, times: string) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : '';
         this.echo(`Performing native direct deposit${cntStr}...`);
         this.pause();
-        const txHash = await this.account.directDeposit(
-            await this.account.humanToShielded(amount),
+        const txHash = await account(this).directDeposit(
+            await account(this).humanToShielded(amount),
             DirectDepositType.Native
         );
         this.resume();
-        this.echo(`Done: [[!;;;;${this.account.getTransactionUrl(txHash)}]${txHash}]`);
+        this.echo(`Done: [[!;;;;${account(this).getTransactionUrl(txHash)}]${txHash}]`);
     }
 }
 
 export async function transferShielded(to: string, amount: string, times: string) {
-    if ((await this.account.verifyShieldedAddress(to)) === false) {
+    if ((await account(this).verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let txCnt = 1;
         let requests: TransferRequest[] = [];
-        requests.push({ destination: to, amountGwei: await this.account.humanToShielded(amount)});
+        requests.push({ destination: to, amountGwei: await account(this).humanToShielded(amount)});
 
         if (times == '+') {
             let newRequest = '';
@@ -535,13 +538,13 @@ export async function transferShielded(to: string, amount: string, times: string
                     this.error('Please use the following format: \'shielded_address amount\'');
                     continue;
                 }
-                if ((await this.account.verifyShieldedAddress(components[0])) === false) {
+                if ((await account(this).verifyShieldedAddress(components[0])) === false) {
                     this.error(`Shielded address ${components[0]} is invalid. Please check it!`);
                     continue;
                 }
                 let newAmount: bigint;
                 try {
-                    newAmount = await this.account.humanToShielded(components[1]);
+                    newAmount = await account(this).humanToShielded(components[1]);
                 } catch (err) {
                     this.error(`Cannot convert \'${components[1]} to the number`);
                     continue;
@@ -559,11 +562,11 @@ export async function transferShielded(to: string, amount: string, times: string
             let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
             this.echo(`Performing shielded transfer${cntStr}...`);
             this.pause();
-            const result = await this.account.transferShielded(requests);
+            const result = await account(this).transferShielded(requests);
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
+                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
                 } else {
                     return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
                 }
@@ -575,7 +578,7 @@ export async function transferShielded(to: string, amount: string, times: string
 }
 
 export async function transferShieldedMultinote(to: string, amount: string, count: string, times: string) {
-    if ((await this.account.verifyShieldedAddress(to)) === false) {
+    if ((await account(this).verifyShieldedAddress(to)) === false) {
         this.error(`Shielded address ${to} is invalid. Please check it!`);
     } else {
         let notesCnt = Number(count);
@@ -587,18 +590,18 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
 
         let requests: TransferRequest[] = [];
         for(let reqIdx = 0; reqIdx < notesCnt; reqIdx++) {
-            requests.push({ destination: to, amountGwei: await this.account.humanToShielded(amount)});
+            requests.push({ destination: to, amountGwei: await account(this).humanToShielded(amount)});
         }
 
         for (let i = 0; i < txCnt; i++) {
             let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
             this.echo(`Performing transfer with ${notesCnt} notes ${cntStr}...`);
             this.pause();
-            const result = await this.account.transferShielded(requests);
+            const result = await account(this).transferShielded(requests);
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
                 } else {
                     return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
                 }
@@ -609,28 +612,28 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
 
 export async function withdrawShielded(amount: string, address: string, times: string) {
     let txCnt = times !== undefined ? Number(times) : 1;
-    const withdrawAmount = await this.account.humanToShielded(amount);
+    const withdrawAmount = await account(this).humanToShielded(amount);
 
     let swapAmount = 0n;
-    const supportedSwap = await this.account.maxSwapAmount();
-    const supportedSwapWei = await this.account.shieldedToWei(supportedSwap)
+    const supportedSwap = await account(this).maxSwapAmount();
+    const supportedSwapWei = await account(this).shieldedToWei(supportedSwap)
     if (supportedSwapWei > 0) {
-        const str = supportedSwapWei > (10n ** 24n) ? '>1M' : `up to ${await this.account.weiToHuman(supportedSwapWei)}`;
-        this.echo(`[[;green;]You can swap few tokens (${str} ${this.account.tokenSymbol()}) into the native ones ${txCnt > 1 ? '(will applied to the each tx)' : ''}]`);
+        const str = supportedSwapWei > (10n ** 24n) ? '>1M' : `up to ${await account(this).weiToHuman(supportedSwapWei)}`;
+        this.echo(`[[;green;]You can swap few tokens (${str} ${account(this).tokenSymbol()}) into the native ones ${txCnt > 1 ? '(will applied to the each tx)' : ''}]`);
         this.resume();
         const val = await this.read('Specify amount to swap or press ENTER to skip: ');
-        swapAmount = await this.account.humanToShielded(val ?? '0');
+        swapAmount = await account(this).humanToShielded(val ?? '0');
     }
 
     for (let i = 0; i < txCnt; i++) {
         let cntStr = (txCnt > 1) ? ` (${i + 1}/${txCnt})` : ``;
         this.echo(`Performing shielded withdraw${cntStr}...`);
         this.pause();
-        const result = await this.account.withdrawShielded(withdrawAmount, address, swapAmount);
+        const result = await account(this).withdrawShielded(withdrawAmount, address, swapAmount);
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             if (oneResult.txHash) {
-                return `[job #${oneResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
             } else {
                 return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
             }
@@ -639,39 +642,44 @@ export async function withdrawShielded(amount: string, address: string, times: s
 }
 
 export async function forcedExit(address: string) {
-    this.echo('Forced Exit: <getting info>');
-    const isSupported = await this.account.isForcedExitSupported();
-    this.update(-1, `Forced Exit: ${isSupported ? '[[;green;]supported]' : '[[;red;]unsupported]'}`);
+    this.pause();
+    try {
+        this.echo('Forced Exit: <getting info>');
+        const isSupported = await account(this).isForcedExitSupported();
+        this.update(-1, `Forced Exit: ${isSupported ? '[[;green;]supported]' : '[[;red;]unsupported]'}`);
 
-    if (isSupported) {
-        this.echo('Forced exit state: <fetching>');
-        const forcedExitState: ForcedExitState = await this.account.forcedExitState();
-        switch (forcedExitState) {
-            case ForcedExitState.NotStarted:
-                this.update(-1, 'Forced exit state: [[;white;]not started]');
-                break;
-            case ForcedExitState.Commited:
-                this.update(-1, 'Forced exit state: [[;yellow;]commited]');
-                break;
-            case ForcedExitState.Completed:
-                this.update(-1, 'Forced exit state: [[;green;]completed]');
-                break;
-            case ForcedExitState.Canceled:
-                this.update(-1, 'Forced exit state: [[;red;]canceled]');
-                break;
-        }
+        if (isSupported) {
+            this.echo('Forced exit state: <fetching>');
+            const forcedExitState: ForcedExitState = await account(this).forcedExitState();
+            switch (forcedExitState) {
+                case ForcedExitState.NotStarted:
+                    this.update(-1, 'Forced exit state: [[;white;]not started]');
+                    break;
+                case ForcedExitState.Commited:
+                    this.update(-1, 'Forced exit state: [[;yellow;]commited]');
+                    break;
+                case ForcedExitState.Completed:
+                    this.update(-1, 'Forced exit state: [[;green;]completed]');
+                    break;
+                case ForcedExitState.Canceled:
+                    this.update(-1, 'Forced exit state: [[;red;]canceled]');
+                    break;
+            }
 
-        if (forcedExitState == ForcedExitState.NotStarted) {
-            this.echo('Sending initial forced exit transaction...');
-            const committed: CommittedForcedExit = await this.initiateForcedExit(address);
-            
+            if (forcedExitState == ForcedExitState.NotStarted) {
+                this.echo('Sending initial forced exit transaction...');
+                const committed: CommittedForcedExit = await account(this).initiateForcedExit(address);
+                
+            }
         }
+    } finally {
+        this.resume();
     }
      
 }
 
 export async function getInternalState() {
-    const state = await this.account.getInternalState();
+    const state = await account(this).getInternalState();
 
     for (const [index, tx] of state.txs) {
         this.echo(`${index}: ${JSON.stringify(tx)}`);
@@ -690,9 +698,9 @@ export async function getRoot(index: string) {
     }
 
     let localState;
-    let localTreeStartIndex = await this.account.getLocalTreeStartIndex();
+    let localTreeStartIndex = await account(this).getLocalTreeStartIndex();
     try {
-        localState = await this.account.getLocalTreeState(idx);
+        localState = await account(this).getLocalTreeState(idx);
     } catch (err) {
         this.error(`Cannot retrieve local root at index ${idx!.toString()}: ${err}`);
         return;
@@ -711,12 +719,12 @@ export async function getRoot(index: string) {
 
     this.echo(`Requesting additional info...`);
     this.pause();
-    const relayerState = this.account.getRelayerTreeState();
+    const relayerState = account(this).getRelayerTreeState();
     let relayerOptimisticState;
     if (idx === undefined) {
-        relayerOptimisticState = this.account.getRelayerOptimisticTreeState();
+        relayerOptimisticState = account(this).getRelayerOptimisticTreeState();
     }
-    const poolState = this.account.getPoolTreeState(idx);
+    const poolState = account(this).getPoolTreeState(idx);
 
     let promises = [relayerState, relayerOptimisticState, poolState]
     Promise.all(promises).then((states) => {
@@ -747,7 +755,7 @@ export async function getLeftSiblings(index: string) {
 
     let siblings;
     try {
-        siblings = await this.account.getTreeLeftSiblings(idx);
+        siblings = await account(this).getTreeLeftSiblings(idx);
     } catch (err) {
         this.error(`Cannot get siblings: ${err}`);
         return;
@@ -785,22 +793,22 @@ export async function rollback(index: string) {
     }
 
     this.pause();
-    const newNextIndex = await this.account.rollback(idx);
+    const newNextIndex = await account(this).rollback(idx);
     this.echo(`New index:  [[;white;]${newNextIndex}]`);
-    const newState: TreeState = await this.account.getLocalTreeState();
+    const newState: TreeState = await account(this).getLocalTreeState();
     this.echo(`New root:   [[;white;]${newState.root} @ ${newState.index}]`);
-    const poolState: TreeState = await this.account.getPoolTreeState(newNextIndex);
+    const poolState: TreeState = await account(this).getPoolTreeState(newNextIndex);
     this.echo(`Pool root:  [[;white;]${poolState.root} @ ${poolState.index}]`);
     this.resume();
 }
 
 export async function syncState() {
     this.pause();
-    const curState: TreeState = await this.account.getLocalTreeState();
+    const curState: TreeState = await account(this).getLocalTreeState();
     const title = `Starting sync from index: [[;white;]${curState.index}]`;
     this.echo(title);
 
-    const isReadyToTransact = await this.account.syncState((state: ClientState, progress?: number) => {
+    const isReadyToTransact = await account(this).syncState((state: ClientState, progress?: number) => {
         switch (state) {
             case ClientState.StateUpdating:
                 this.update(-1, `${title} [[;green;](in progress)]`);
@@ -816,7 +824,7 @@ export async function syncState() {
         }
     });
 
-    const newState: TreeState = await this.account.getLocalTreeState();
+    const newState: TreeState = await account(this).getLocalTreeState();
     this.echo(`Finished sync at index:   [[;white;]${newState.index}]`);
     this.echo(`Client ready to transact:  ${isReadyToTransact ? '[[;green;]YES]' : '[[;red;]NO]'}`);
     this.resume();
@@ -824,8 +832,8 @@ export async function syncState() {
 
 export async function getStateSyncStatistic() {
     this.pause();
-    const fullSyncStat = await this.account.getStatFullSync();
-    const avgTimePerTx = await this.account.getAverageTimePerTx();
+    const fullSyncStat = await account(this).getStatFullSync();
+    const avgTimePerTx = await account(this).getAverageTimePerTx();
 
     if (fullSyncStat !== undefined) {
         this.echo(`Full state sync: [[;white;]${fullSyncStat.totalTime / 1000} sec]`);
@@ -855,21 +863,21 @@ export async function getEphemeral(index: string) {
     let idx;
     if (index === undefined) {
         this.echo(`Getting first unused ephemeral address...`);
-        idx = await this.account.getNonusedEphemeralIndex();
+        idx = await account(this).getNonusedEphemeralIndex();
     } else {
         idx = Number(index);
     }
 
     const [addr, inTxCnt, outTxCnt] = await Promise.all([
-        this.account.getEphemeralAddress(idx),
-        this.account.getEphemeralAddressInTxCount(idx),
-        this.account.getEphemeralAddressOutTxCount(idx),
+        account(this).getEphemeralAddress(idx),
+        account(this).getEphemeralAddressInTxCount(idx),
+        account(this).getEphemeralAddressOutTxCount(idx),
     ]);
 
     this.echo(`Index: [[;white;]${addr.index}]`);
-    this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
-    this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
-    this.echo(`  Native balance:     [[;white;]${await this.account.ethWeiToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+    this.echo(`  Address:            [[!;;;;${account(this).getAddressUrl(addr.address)}]${addr.address}]`);
+    this.echo(`  Token balance:      [[;white;]${await account(this).shieldedToHuman(addr.tokenBalance)} ${account(this).tokenSymbol()}]`);
+    this.echo(`  Native balance:     [[;white;]${await account(this).ethWeiToHuman(addr.nativeBalance)} ${account(this).nativeSymbol()}]`);
     this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
     this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
     this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
@@ -880,18 +888,18 @@ export async function getEphemeral(index: string) {
 export async function getEphemeralUsed() {
     this.pause();
 
-    let usedAddr: EphemeralAddress[] = await this.account.getUsedEphemeralAddresses();
+    let usedAddr: EphemeralAddress[] = await account(this).getUsedEphemeralAddresses();
 
     for (let addr of usedAddr) {
         const [inTxCnt, outTxCnt] = await Promise.all([
-            this.account.getEphemeralAddressInTxCount(addr.index),
-            this.account.getEphemeralAddressOutTxCount(addr.index),
+            account(this).getEphemeralAddressInTxCount(addr.index),
+            account(this).getEphemeralAddressOutTxCount(addr.index),
         ]);
 
         this.echo(`Index: [[;white;]${addr.index}]`);
-        this.echo(`  Address:            [[!;;;;${this.account.getAddressUrl(addr.address)}]${addr.address}]`);
-        this.echo(`  Token balance:      [[;white;]${await this.account.shieldedToHuman(addr.tokenBalance)} ${this.account.tokenSymbol()}]`);
-        this.echo(`  Native balance:     [[;white;]${await this.account.ethWeiToHuman(addr.nativeBalance)} ${this.account.nativeSymbol()}]`);
+        this.echo(`  Address:            [[!;;;;${account(this).getAddressUrl(addr.address)}]${addr.address}]`);
+        this.echo(`  Token balance:      [[;white;]${await account(this).shieldedToHuman(addr.tokenBalance)} ${account(this).tokenSymbol()}]`);
+        this.echo(`  Native balance:     [[;white;]${await account(this).ethWeiToHuman(addr.nativeBalance)} ${account(this).nativeSymbol()}]`);
         this.echo(`  Transfers (in/out): [[;white;]${inTxCnt}]/[[;white;]${outTxCnt}]`);
         this.echo(`  Nonce [native]:     [[;white;]${addr.nativeNonce}]`);
         this.echo(`  Nonce [permit]:     [[;white;]${addr.permitNonce}]`);
@@ -903,22 +911,22 @@ export async function getEphemeralUsed() {
 export async function getEphemeralPrivKey(index: string) {
     this.pause();
     let idx = Number(index);
-    let priv: string = await this.account.getEphemeralAddressPrivateKey(idx);
+    let priv: string = await account(this).getEphemeralAddressPrivateKey(idx);
     this.echo(`Private key @${idx}: [[;white;]${priv}]`);
     this.resume();
 }
 
 export async function setProverMode(mode: ProverMode) {
     this.pause();
-    await this.account.setProverMode(mode);
-    this.echo(`Prover mode: ${await this.account.getProverMode()}`);
+    await account(this).setProverMode(mode);
+    this.echo(`Prover mode: ${await account(this).getProverMode()}`);
     this.resume();
 }
 
 export async function getProverInfo() {
     this.pause();
-    const proverMode = await this.account.getProverMode();
-    const delegatedProverUrls: string[] = this.account.getDelegatedProverUrls();
+    const proverMode = await account(this).getProverMode();
+    const delegatedProverUrls: string[] = account(this).getDelegatedProverUrls();
     switch(proverMode) {
         case ProverMode.Local:
             this.echo(`Local Prover`);
@@ -943,7 +951,7 @@ export async function getProverInfo() {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await this.account.proverVersion();
+            const ver = await account(this).proverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -954,12 +962,12 @@ export async function getProverInfo() {
 
 export async function printHistory() {
     this.pause();
-    const dds: Promise<DirectDeposit[]> = this.account.getPendingDirectDeposits();
-    const history: HistoryRecord[] = await this.account.getAllHistory();
+    const dds: Promise<DirectDeposit[]> = account(this).getPendingDirectDeposits();
+    const history: HistoryRecord[] = await account(this).getAllHistory();
     this.resume();
 
     for (const tx of history) {
-        this.echo(`${await humanReadable(tx, this.account)} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
+        this.echo(`${await humanReadable(tx, account(this))} [[!;;;;${account(this).getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
 
         if (tx.actions.length > 1) {
             let directions = new Map<string, {amount: bigint, notesCnt: number, isLoopback}>();
@@ -985,17 +993,17 @@ export async function printHistory() {
                     destDescr = `MYSELF${notesCntDescription}`;
                 }
 
-                const shTokenSymb = await this.account.shTokenSymbol(tx.timestamp);
-                this.echo(`                                  ${await this.account.shieldedToHuman(value.amount)} ${shTokenSymb} ${prep} ${destDescr}`);
+                const shTokenSymb = await account(this).shTokenSymbol(tx.timestamp);
+                this.echo(`                                  ${await account(this).shieldedToHuman(value.amount)} ${shTokenSymb} ${prep} ${destDescr}`);
             }
         }
-        //this.echo(`RECORD ${tx.type} [[!;;;;${this.account.getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
+        //this.echo(`RECORD ${tx.type} [[!;;;;${account(this).getTransactionUrl(tx.txHash)}]${tx.txHash}]`);
     }
 
     if ((await dds).length > 0) {
         this.echo(`[[;green;]---------------- PENDING DIRECT DEPOSITS ----------------]`);
         for (const aDD of (await dds)) {
-            this.echo(`⌛ ${await ddHumanReadable(aDD, this.account)}`);
+            this.echo(`⌛ ${await ddHumanReadable(aDD, account(this))}`);
         }
     };
 }
@@ -1097,7 +1105,7 @@ export async function complianceReport() {
 
     this.pause();
 
-    const report: ComplianceHistoryRecord[] = await this.account.generateComplianceReport(
+    const report: ComplianceHistoryRecord[] = await account(this).generateComplianceReport(
         fromDate ? fromDate.getTime() : undefined,
         toDate ? toDate.getTime() : undefined,
         );
@@ -1105,7 +1113,7 @@ export async function complianceReport() {
     const genDate = new Date();
 
     for (const aRecord of report) {
-        this.echo(`[[;white;]${await humanReadable(aRecord, this.account)}] [[!;;;;${this.account.getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
+        this.echo(`[[;white;]${await humanReadable(aRecord, account(this))}] [[!;;;;${account(this).getTransactionUrl(aRecord.txHash)}]${aRecord.txHash}]`);
         this.echo(`\tTx index:  ${aRecord.index}`);
 
         // Incoming transfer and direct deposit - are special cases:
@@ -1160,7 +1168,7 @@ export async function complianceReport() {
     this.echo('[[;white;]--------------------------------END-OF-REPORT--------------------------------]\n');
 
     let metadata: any = {};
-    metadata.userId = this.account.accountId;
+    metadata.userId = account(this).accountId;
     metadata.exportTimestamp = Math.floor(genDate.getTime() / 1000);
     metadata.startTimestamp = fromDate ? Math.floor(fromDate.getTime() / 1000) : null;
     metadata.endTimestamp = toDate ? Math.floor(toDate.getTime() / 1000) : null;
@@ -1252,17 +1260,17 @@ async function readDate(terminal: any, requestString: string): Promise<Date | nu
 export async function pendingDD() {
     this.echo(`Fetching pending direct deposits...`);
     this.pause();
-    const dds: DirectDeposit[] = await this.account.getPendingDirectDeposits();
+    const dds: DirectDeposit[] = await account(this).getPendingDirectDeposits();
     for (const aDD of dds) {
-        this.echo(`⌛ ${await ddHumanReadable(aDD, this.account)}`);
+        this.echo(`⌛ ${await ddHumanReadable(aDD, account(this))}`);
     }
     this.resume();
 }
 
 export async function cleanState() {
     this.pause();
-    await this.account.cleanInternalState();
-    const localState = await this.account.getLocalTreeState();
+    await account(this).cleanInternalState();
+    const localState = await account(this).getLocalTreeState();
     this.echo(`New index:  [[;white;]${localState.index.toString()}]`);
     this.resume();
 }
@@ -1273,40 +1281,40 @@ export function clear() {
 }
 
 export function reset() {
-    this.account.detachAccount();
+    account(this).detachAccount();
     this.reset();
 }
 
 export function getAccountId() {
     this.pause();
-    this.echo(`Current Account ID:  [[;white;]${this.account.accountId}]`);
+    this.echo(`Current Account ID:  [[;white;]${account(this).accountId}]`);
     this.resume();
 }
 
 export function getSupportId() {
     this.pause();
-    this.echo(`Current Support ID:  [[;white;]${this.account.supportId}]`);
+    this.echo(`Current Support ID:  [[;white;]${account(this).supportId}]`);
     this.resume();
 }
 
 export async function getVersion() {
     this.pause();
     this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
-    this.echo(`Client library  version: [[;white;]${await this.account.libraryVersion()}]`);
+    this.echo(`Client library  version: [[;white;]${await account(this).libraryVersion()}]`);
     this.echo(`Current relayer version: ...fetching...`);
 
     try {
-        const ver = await this.account.relayerVersion();
+        const ver = await account(this).relayerVersion();
         this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
     } catch (err) {
         this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
     }
 
-    if (await this.account.getProverMode() != ProverMode.Local) {
+    if (await account(this).getProverMode() != ProverMode.Local) {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await this.account.proverVersion();
+            const ver = await account(this).proverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -1339,27 +1347,27 @@ class GiftCard {
 export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
 
     this.pause();
-    const cloudUrl = env.cloudApi[this.account.getCurrentPool()];
+    const cloudUrl = env.cloudApi[account(this).getCurrentPool()];
     console.log("cloudUrl = ", cloudUrl)
 
-    const singleCardBalance = await this.account.humanToShielded(cardBalance)
+    const singleCardBalance = await account(this).humanToShielded(cardBalance)
     const requiredTotalSum = singleCardBalance * BigInt(quantity);
-    await this.account.syncState();
+    await account(this).syncState();
     const txRequests = Array(Number(quantity)).fill(singleCardBalance);
-    const fee = await this.account.estimateFee(txRequests, TxType.Transfer, 0n, true);
+    const fee = await account(this).estimateFee(txRequests, TxType.Transfer, 0n, true);
     if (fee.insufficientFunds) {
-        const [balance] = await this.account.getShieldedBalances(false); // state already updated, do not sync again
-        const requiredStr = `${await this.account.shieldedToHuman(requiredTotalSum)} ${this.account.shTokenSymbol()}`;
-        const feeStr = `${await this.account.shieldedToHuman(fee.total)} ${this.account.shTokenSymbol()}`;
-        const balanceStr = `${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}`;
+        const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
+        const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
+        const feeStr = `${await account(this).shieldedToHuman(fee.total)} ${account(this).shTokenSymbol()}`;
+        const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
         this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
         return;
     }
-    const minTransferAmount = await this.account.minTxAmount();
+    const minTransferAmount = await account(this).minTxAmount();
 
     if (singleCardBalance < minTransferAmount) {
-        const singleStr = `${await this.account.shieldedToHuman(singleCardBalance)} ${this.account.shTokenSymbol()}`;
-        const minAmountStr = `${await this.account.shieldedToHuman(minTransferAmount)} ${this.account.shTokenSymbol()}`;
+        const singleStr = `${await account(this).shieldedToHuman(singleCardBalance)} ${account(this).shTokenSymbol()}`;
+        const minAmountStr = `${await account(this).shieldedToHuman(minTransferAmount)} ${account(this).shTokenSymbol()}`;
         this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
         return
     }
@@ -1368,10 +1376,10 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     headers.append("Authorization", `Bearer ${authToken}`);
     headers.append("Content-Type", "application/json");
     let giftCards: GiftCard[] = [];
-    const birthIndex = Number((await this.account.getPoolTreeState()).index);
+    const birthIndex = Number((await account(this).getPoolTreeState()).index);
     try {
         this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
-        const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
+        const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
         for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
             const alias = `${prefix}_${cardIndex}`;
             const body = JSON.stringify({ "description": `${alias}` });
@@ -1408,12 +1416,12 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
                 sk: hexToBuf(sk, 32),
                 birthIndex,
                 balance: singleCardBalance,
-                poolAlias: this.account.getCurrentPool,
+                poolAlias: account(this).getCurrentPool(),
             };
 
             console.log("giftCardProps:", giftCardProps);
 
-            const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
+            const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
             const svg = qrcode(url);
             giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
             if (Number(quantity) > 1) {
@@ -1427,14 +1435,14 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
         const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
             async giftCard =>  {return {
                 destination: giftCard.address,
-                amountGwei: await this.account.humanToShielded(cardBalance)
+                amountGwei: await account(this).humanToShielded(cardBalance)
             }
         } ));
-        const result = await this.account.transferShielded(transferRequests);
+        const result = await account(this).transferShielded(transferRequests);
 
         this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
             if (singleTxResult.txHash) {
-                return `[job #${singleTxResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+                return `[job #${singleTxResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
             } else {
                 return `[job #${singleTxResult.jobId}]: [[;red;]tx hash was not provided]`;
             }
@@ -1520,44 +1528,44 @@ async function zipQrCodes(links: string[], account: Account): Promise<string> {
 export async function generateGiftCardLocal(amount: string, quantity: string){
 
     let qty = Number(quantity ?? 1);
-    const cardBalance = await this.account.humanToShielded(amount);
-    const poolAlias = this.account.getCurrentPool();
+    const cardBalance = await account(this).humanToShielded(amount);
+    const poolAlias = account(this).getCurrentPool();
 
     this.echo(`[[;green;]You can add extra funds to cover the relayer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
     this.resume();
     const val = await this.read(`Specify extra funds for the ${qty > 1 ? 'EACH ' : ''}gift-card or press ENTER to leave it zero: `);
-    const extraFundsForFee = await this.account.humanToShielded(val ?? '0');
+    const extraFundsForFee = await account(this).humanToShielded(val ?? '0');
 
     this.pause();
 
     // check is account has enough funds to deposit gift-card
     this.echo('Checking available funds...');
-    await this.account.syncState();
-    const availableFunds = await this.account.getMaxAvailableTransfer(TxType.Transfer);
+    await account(this).syncState();
+    const availableFunds = await account(this).getMaxAvailableTransfer(TxType.Transfer);
     if (availableFunds >= (cardBalance + extraFundsForFee) * BigInt(qty) ) {
         this.update(-1, 'Checking available funds... [[;green;]OK]');
 
         let  transferRequests:TransferRequest[] = [];
         let walletUrls: string[] = [];
         this.echo(`Creating burner wallets... 0/${qty}`);
-        const birthIndex = Number((await this.account.getPoolTreeState()).index);
+        const birthIndex = Number((await account(this).getPoolTreeState()).index);
         for (let index = 0; index < qty; index++) {
             const mnemonic = bip39.generateMnemonic();
             const sk = deriveSpendingKeyZkBob(mnemonic)
-            const receivingAddress = await this.account.genShieldedAddressForSeed(sk)
+            const receivingAddress = await account(this).genShieldedAddressForSeed(sk)
             transferRequests.push( {
                     destination: receivingAddress,
                     amountGwei: cardBalance + extraFundsForFee
                 });
             this.update(-1,`Creating burner wallets... ${index+1}/${qty}`);
             const giftCardProps: GiftCardProperties = { sk, birthIndex, balance: cardBalance, poolAlias };
-            const baseUrl = env.redemptionUrls[this.account.getCurrentPool()];
-            const url = await redemptionUrl(giftCardProps, baseUrl, this.account);
+            const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
+            const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
             walletUrls.push(url);
         }
         const urlsJoined = walletUrls.join("\n");
         this.update(-1, `Your gift cards URL${walletUrls.length > 1 ? 's' : ''}:\n${urlsJoined}`);
-        const qrUrl = await zipQrCodes(walletUrls, this.account);
+        const qrUrl = await zipQrCodes(walletUrls, account(this));
         this.echo (`[[;red;]DON'T FORGET TO COPY THE LINK${walletUrls.length > 1 ? 'S' : ''} ABOVE OR DOWNLOAD AN] [[!;;;;${qrUrl}]QR ARCHIVE]`);
         if (qty > 1) {
             let entered: string;
@@ -1581,10 +1589,10 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
 
         this.pause();
         this.echo('Sending funds...');
-        const results = await this.account.transferShielded(transferRequests);
+        const results = await account(this).transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
             if (singleResult.txHash) {
-                return `[job #${singleResult.jobId}]: [[!;;;;${this.account.getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
+                return `[job #${singleResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
             } else {
                 return `[job #${singleResult.jobId}]: [[;red;]tx hash was not provided]`;
             }
@@ -1612,17 +1620,17 @@ export async function giftCardBalance(...codeOrUrls: string[]) {
     let redeemedCnt = 0;
     let cardsBalance = 0n;
     for (let codeOrUrl of codeOrUrls) {
-        const giftCard = await extractGiftCard(codeOrUrl, this.account);
+        const giftCard = await extractGiftCard(codeOrUrl, account(this));
 
         this.echo(`Gift card properties:${codeOrUrls.length > 1 ? `\t\/\/ ${codeOrUrl}` : '' }`);
         this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
         this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
-        this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+        this.echo(`  balance:  [[;white;]${await account(this).shieldedToHuman(giftCard.balance)} BOB]`);
         this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 
         this.echo(`Getting actual gift card balance...`);
-        const balance = await this.account.giftCardBalance(giftCard);
-        this.update(-1, `Actual gift card balance: [[;white;]${await this.account.shieldedToHuman(balance)} ${this.account.shTokenSymbol()}]`)
+        const balance = await account(this).giftCardBalance(giftCard);
+        this.update(-1, `Actual gift card balance: [[;white;]${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}]`)
 
         redeemedCnt += (balance == 0n ? 1 : 0);
         cardsBalance += balance;
@@ -1633,26 +1641,26 @@ export async function giftCardBalance(...codeOrUrls: string[]) {
             `Found [[;white;]${redeemedCnt}] redeemed card${redeemedCnt > 1 ? 's' : ''}` :
             'There are no redeemed cards';
         this.echo(`\nTotal checked [[;white;]${codeOrUrls.length}] cards. ${redeemedCntStr}`);
-        this.echo(`Total cards balance: [[;white;]${await this.account.shieldedToHuman(cardsBalance)} BOB]\n`);
+        this.echo(`Total cards balance: [[;white;]${await account(this).shieldedToHuman(cardsBalance)} BOB]\n`);
     }
 
     this.resume();
 }
 
 export async function redeemGiftCard(codeOrUrl: string) {
-    const giftCard = await extractGiftCard(codeOrUrl, this.account);
+    const giftCard = await extractGiftCard(codeOrUrl, account(this));
 
     this.echo(`Gift card properties:`);
     this.echo(`  sk:       [[;white;]${bufToHex(giftCard.sk)}]`);
     this.echo(`  birthIdx: [[;white;]${giftCard.birthIndex}]`);
-    this.echo(`  balance:  [[;white;]${await this.account.shieldedToHuman(giftCard.balance)} BOB]`);
+    this.echo(`  balance:  [[;white;]${await account(this).shieldedToHuman(giftCard.balance)} BOB]`);
     this.echo(`  pool:     [[;white;]${giftCard.poolAlias}]`);
 
     this.pause();
     this.echo(`Redeeming gift card...`);
-    const result = await this.account.redeemGiftCard(giftCard);
+    const result = await account(this).redeemGiftCard(giftCard);
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${this.account.getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
         this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
     }
