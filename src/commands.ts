@@ -670,6 +670,19 @@ export async function forcedExit(address: string) {
                 this.echo('Sending initial forced exit transaction...');
                 const committed: CommittedForcedExit = await account(this).initiateForcedExit(address);
                 
+            } else if (forcedExitState == ForcedExitState.Commited) {
+                this.echo('Retrieving existing forced exit...');
+                const committed = await account(this).activeForcedExit();
+                if (committed) {
+                    this.echo(`\tNullifier:  [[;white;]${committed.nullifier}]`);
+                    this.echo(`\tOperator:   [[;white;]${committed.operator}]`);
+                    this.echo(`\tReceiver:   [[;white;]${committed.to}]`);
+                    this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}]`);
+                    this.echo(`\tStart time: [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()} (${committed.exitStart})]`);
+                    this.echo(`\tEnd time:   [[;white;]${new Date(committed.exitEnd * 1000).toLocaleString()} (${committed.exitEnd})]`);
+                } else {
+                    this.update(-1, `\tRetrieving existing forced exit... [[;red;]unable to find]`)
+                }
             }
         }
     } finally {
