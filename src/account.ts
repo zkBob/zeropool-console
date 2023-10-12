@@ -777,6 +777,12 @@ export class Account {
         );
     }
 
+    public async cancelForcedExit(): Promise<boolean> {
+        return this.getZpClient().cancelForcedExit(async (tx: PreparedTransaction) =>
+            this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
+    }
+
 
     public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
         return await this.getZpClient().giftCardBalance(giftCard);

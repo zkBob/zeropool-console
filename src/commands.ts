@@ -655,8 +655,11 @@ export async function forcedExit(address: string) {
                 case ForcedExitState.NotStarted:
                     this.update(-1, 'Forced exit state: [[;white;]not started]');
                     break;
-                case ForcedExitState.Commited:
-                    this.update(-1, 'Forced exit state: [[;yellow;]commited]');
+                case ForcedExitState.CommittedWaitingSlot:
+                    this.update(-1, 'Forced exit state: [[;yellow;]commited but not available yet]');
+                    break;
+                case ForcedExitState.CommittedReady:
+                    this.update(-1, 'Forced exit state: [[;blue;]commited and ready to execure]');
                     break;
                 case ForcedExitState.Completed:
                     this.update(-1, 'Forced exit state: [[;green;]completed]');
@@ -664,31 +667,54 @@ export async function forcedExit(address: string) {
                 case ForcedExitState.Canceled:
                     this.update(-1, 'Forced exit state: [[;red;]canceled]');
                     break;
+                case ForcedExitState.Outdated:
+                    this.update(-1, 'Forced exit state: [[;red;]outdated]');
+                    break;
+                default:
+                    this.update(-1, 'Forced exit state: [[;white;]UNKNOWN]');
+                    break;
+            }
+
+            this.echo('Retrieving existing forced exit...');
+            const committed = await account(this).activeForcedExit();
+            if (committed) {
+                this.echo(`\tNullifier:  [[;white;]${committed.nullifier}]`);
+                this.echo(`\tOperator:   [[;white;]${committed.operator}]`);
+                this.echo(`\tReceiver:   [[;white;]${committed.to}]`);
+                this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}]`);
+                this.echo(`\tStart time: [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()} (${committed.exitStart})]`);
+                this.echo(`\tEnd time:   [[;white;]${new Date(committed.exitEnd * 1000).toLocaleString()} (${committed.exitEnd})]`);
+                this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(committed.txHash)}]${committed.txHash}]`);
+            } else {
+                this.update(-1, `\tRetrieving existing forced exit... [[;red;]unable to find]`)
             }
 
             if (forcedExitState == ForcedExitState.NotStarted) {
                 this.echo('Sending initial forced exit transaction...');
-                const committed: CommittedForcedExit = await account(this).initiateForcedExit(address);
+                const newFeCommitted: CommittedForcedExit = await account(this).initiateForcedExit(address);
+
+                this.echo(`\tNullifier:  [[;white;]${newFeCommitted.nullifier}]`);
+                this.echo(`\tOperator:   [[;white;]${newFeCommitted.operator}]`);
+                this.echo(`\tReceiver:   [[;white;]${newFeCommitted.to}]`);
+                this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(newFeCommitted.amount)} ${account(this).shTokenSymbol()}]`);
+                this.echo(`\tStart time: [[;white;]${new Date(newFeCommitted.exitStart * 1000).toLocaleString()} (${newFeCommitted.exitStart})]`);
+                this.echo(`\tEnd time:   [[;white;]${new Date(newFeCommitted.exitEnd * 1000).toLocaleString()} (${newFeCommitted.exitEnd})]`);
+                this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(newFeCommitted.txHash)}]${newFeCommitted.txHash}]`)
                 
-            } else if (forcedExitState == ForcedExitState.Commited) {
-                this.echo('Retrieving existing forced exit...');
-                const committed = await account(this).activeForcedExit();
-                if (committed) {
-                    this.echo(`\tNullifier:  [[;white;]${committed.nullifier}]`);
-                    this.echo(`\tOperator:   [[;white;]${committed.operator}]`);
-                    this.echo(`\tReceiver:   [[;white;]${committed.to}]`);
-                    this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}]`);
-                    this.echo(`\tStart time: [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()} (${committed.exitStart})]`);
-                    this.echo(`\tEnd time:   [[;white;]${new Date(committed.exitEnd * 1000).toLocaleString()} (${committed.exitEnd})]`);
-                } else {
-                    this.update(-1, `\tRetrieving existing forced exit... [[;red;]unable to find]`)
-                }
+            } else if (forcedExitState == ForcedExitState.CommittedReady) {
+                this.echo('Sending execute forced exit transaction...');
+                const result = await account(this).executeForcedExit();
+                this.update(-1, 'Sending execute forced exit transaction... [[;green;]OK]');
+
+            } else if (forcedExitState == ForcedExitState.Outdated) {
+                this.echo('Sending cancel forced exit transaction...');
+                const result = await account(this).executeForcedExit();
+                this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
             }
         }
     } finally {
         this.resume();
     }
-     
 }
 
 export async function getInternalState() {
