@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, FinalizedForcedExit
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -678,43 +678,87 @@ export async function forcedExit(address: string) {
             this.echo('Retrieving existing forced exit...');
             const committed = await account(this).activeForcedExit();
             if (committed) {
-                this.echo(`\tNullifier:  [[;white;]${committed.nullifier}]`);
-                this.echo(`\tOperator:   [[;white;]${committed.operator}]`);
-                this.echo(`\tReceiver:   [[;white;]${committed.to}]`);
-                this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}]`);
-                this.echo(`\tStart time: [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()} (${committed.exitStart})]`);
-                this.echo(`\tEnd time:   [[;white;]${new Date(committed.exitEnd * 1000).toLocaleString()} (${committed.exitEnd})]`);
-                this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(committed.txHash)}]${committed.txHash}]`);
+                await prinfForcedExit(this, committed);
             } else {
                 this.update(-1, `\tRetrieving existing forced exit... [[;red;]unable to find]`)
             }
 
             if (forcedExitState == ForcedExitState.NotStarted) {
+                let entered: string;
+                this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
+                this.resume();
+                do {
+                    entered = await this.read(`[[;yellow;]Type 'YES' to confirm initiate transaction or 'NO' to cancel: ]`)
+                    if (entered.toLowerCase() == 'no') {
+                        this.echo(`Cancelled`);
+                        return;
+                    }
+                }while(entered.toLowerCase() != 'yes');
+                
                 this.echo('Sending initial forced exit transaction...');
                 const newFeCommitted: CommittedForcedExit = await account(this).initiateForcedExit(address);
-
-                this.echo(`\tNullifier:  [[;white;]${newFeCommitted.nullifier}]`);
-                this.echo(`\tOperator:   [[;white;]${newFeCommitted.operator}]`);
-                this.echo(`\tReceiver:   [[;white;]${newFeCommitted.to}]`);
-                this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(newFeCommitted.amount)} ${account(this).shTokenSymbol()}]`);
-                this.echo(`\tStart time: [[;white;]${new Date(newFeCommitted.exitStart * 1000).toLocaleString()} (${newFeCommitted.exitStart})]`);
-                this.echo(`\tEnd time:   [[;white;]${new Date(newFeCommitted.exitEnd * 1000).toLocaleString()} (${newFeCommitted.exitEnd})]`);
-                this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(newFeCommitted.txHash)}]${newFeCommitted.txHash}]`)
+                await prinfForcedExit(this, newFeCommitted);
                 
             } else if (forcedExitState == ForcedExitState.CommittedReady) {
+                let entered: string;
+                this.echo (`[[;yellow;]Do you really want to execute forced exit?]`);
+                const amountStr = `${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}`;
+                this.echo (`[[;red;]${amountStr} will withdrawn to the address ${committed.txHash}] and your zkBob account will KILLED WITHOUT RECOVERING OPTION`);
+                this.echo (`[[;red;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()} will withdrawn to the address ${committed.txHash}]`);
+                this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
+                this.resume();
+                do {
+                    entered = await this.read(`[[;yellow;]Type 'YES' to confirm forced exit or 'NO' to cancel: ]`)
+                    if (entered.toLowerCase() == 'no') {
+                        this.echo(`Cancelled`);
+                        return;
+                    }
+                }while(entered.toLowerCase() != 'yes');
+                
+
                 this.echo('Sending execute forced exit transaction...');
-                const result = await account(this).executeForcedExit();
+                const feExecuted = await account(this).executeForcedExit();
                 this.update(-1, 'Sending execute forced exit transaction... [[;green;]OK]');
+                await prinfForcedExit(this, feExecuted);
 
             } else if (forcedExitState == ForcedExitState.Outdated) {
+                let entered: string;
+                this.echo (`[[;yellow;]The forced will cancelled. Your funds remain in the pool. Continue?]`);
+                this.resume();
+                do {
+                    entered = await this.read(`[[;yellow;]Type 'YES' to confirm cancelation or 'NO' to abort process: ]`)
+                    if (entered.toLowerCase() == 'no') {
+                        this.echo(`Cancelled`);
+                        return;
+                    }
+                }while(entered.toLowerCase() != 'yes');
+
                 this.echo('Sending cancel forced exit transaction...');
-                const result = await account(this).executeForcedExit();
+                const feCancelled = await account(this).executeForcedExit();
                 this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
+                await prinfForcedExit(this, feCancelled);
             }
         }
     } finally {
         this.resume();
     }
+}
+
+async function prinfForcedExit(_this: any, fe: any): Promise<void> {
+    _this.echo(`\tNullifier:  [[;white;]${fe.nullifier}]`);
+    _this.echo(`\tOperator:   [[;white;]${fe.operator}]`);
+    _this.echo(`\tReceiver:   [[;white;]${fe.to}]`);
+    _this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(fe.amount)} ${account(this).shTokenSymbol()}]`);
+    if (fe.exitStart !== undefined && fe.exitEnd !== undefined) { 
+        // committed forced exit
+        _this.echo(`\tStart time: [[;white;]${new Date(fe.exitStart * 1000).toLocaleString()} (${fe.exitStart})]`);
+        _this.echo(`\tEnd time:   [[;white;]${new Date(fe.exitEnd * 1000).toLocaleString()} (${fe.exitEnd})]`);
+    } else if (fe.cancelled !== undefined) {
+        _this.echo(`\tStart time: [[;white;]${new Date(fe.exitStart * 1000).toLocaleString()} (${fe.exitStart})]`);
+        _this.echo(`\tStatus:     ${fe.cancelled ? '[[;red;]CANCELLED]' : '[[;green;]EXECUTED]'}`);
+    }
+
+    _this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(fe.txHash)}]${fe.txHash}]`)
 }
 
 export async function getInternalState() {

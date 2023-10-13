@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -771,13 +771,13 @@ export class Account {
         return this.getZpClient().activeForcedExit()
     }
 
-    public async executeForcedExit(): Promise<boolean> {
+    public async executeForcedExit(): Promise<FinalizedForcedExit> {
         return this.getZpClient().executeForcedExit(async (tx: PreparedTransaction) =>
             this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
         );
     }
 
-    public async cancelForcedExit(): Promise<boolean> {
+    public async cancelForcedExit(): Promise<FinalizedForcedExit> {
         return this.getZpClient().cancelForcedExit(async (tx: PreparedTransaction) =>
             this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
         );
