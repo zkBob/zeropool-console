@@ -8162,15 +8162,15 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-libzkbob-rs-wasm-web-mt@1.4.2-beta2:
-  version "1.4.2-beta2"
-  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-1.4.2-beta2.tgz#4037681744277b155e4140ceabfb3c805bb166f8"
-  integrity sha512-PAJ8WvozfUHjuoRhVmjDaCjXmLCCJxGR7KbnR2hO3dkULSs124jAP59dATAGSWJNwG2vbBmLROjEmQeTCnUhtw==
+libzkbob-rs-wasm-web-mt@1.4.2:
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-1.4.2.tgz#134140557a23f251a40995f64102d9b1091b94a2"
+  integrity sha512-2jvdNy20Va2e9IAlPbmewZ/7aeZMH1NBEQFhfH9BVObhVqNpNWWhna82zRXT0ebfu+HJwaZGJ1w4n6UzzYO4cw==
 
-libzkbob-rs-wasm-web@1.4.2-beta2:
-  version "1.4.2-beta2"
-  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-1.4.2-beta2.tgz#6fcf49ae678013370d906f041d0cc4c82b67d98c"
-  integrity sha512-DCmEDcQKRWsf5e8jpfBcld5Ox4/V1Jvyofutgh6J2UyC3hqdjWtv90UxvqAx4jF5R9yaKerPs3mSZHCMnJLmMg==
+libzkbob-rs-wasm-web@1.4.2:
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-1.4.2.tgz#c69453f387817eb5d0e335d9b6a2bead28ce5b49"
+  integrity sha512-CJDe7lpxsS70Z/eSvVmufSq4nQZ25M59a49ZIXEyTG86hJ9xCNkCjIiSvJSZh0+UwVQI87PSkmMeQY+AefqDSQ==
 
 lie@3.1.1:
   version "3.1.1"
@@ -13005,10 +13005,10 @@ yocto-queue@^0.1.0:
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-zkbob-client-js@5.3.0-beta7:
-  version "5.3.0-beta7"
-  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-5.3.0-beta7.tgz#3f12398eceff818a55294798869885e7c93bfd7b"
-  integrity sha512-Lk6IhJzmu8vt90dwQiwCT1aV67rddjEHRdTma5BqaTmGSGlpD9/duyRq1YLI5YAku3AFMhfXAVtvnAO26r1dJw==
+zkbob-client-js@5.3.0:
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-5.3.0.tgz#b0ae16e560ee86eb278ec0f1c5dfd775724992d8"
+  integrity sha512-b4WOFjMfXhrwxGOPw8V1+4kL/FkfB7D/SFye/nToG/sAhTP0gi7LhaSvTD/BwqlfKnyyI52KiAXs4TscUf6Tyg==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@graphprotocol/client-cli" "3.0.0"
@@ -13021,8 +13021,8 @@ zkbob-client-js@5.3.0-beta7:
     graphql "16.7.1"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "1.4.2-beta2"
-    libzkbob-rs-wasm-web-mt "1.4.2-beta2"
+    libzkbob-rs-wasm-web "1.4.2"
+    libzkbob-rs-wasm-web-mt "1.4.2"
     promise-retry "^2.0.1"
     promise-throttle "^1.1.2"
     regenerator-runtime "^0.13.9"
@@ -13031,10 +13031,10 @@ zkbob-client-js@5.3.0-beta7:
     web3 "1.8.0"
     web3-utils "1.8.0"
 
-zkbob-support-js@1.0.1-beta1:
-  version "1.0.1-beta1"
-  resolved "https://registry.yarnpkg.com/zkbob-support-js/-/zkbob-support-js-1.0.1-beta1.tgz#a873fd52af38b71b631dc5c8185804485959cdb4"
-  integrity sha512-1wuerFP9SxIwQq5Zsf8ypXtX7rtSft2JaSsomjrEAXUBrilFXnG9DLeh3rdOVLbWLybafGfyfpkZlbIZtOPX8A==
+zkbob-support-js@1.0.1-beta2:
+  version "1.0.1-beta2"
+  resolved "https://registry.yarnpkg.com/zkbob-support-js/-/zkbob-support-js-1.0.1-beta2.tgz#304f19ff7c8b16d7cef2b8f3a4e43b27d9f52f1e"
+  integrity sha512-vCGXL6lnHXHwm/OLEmVUlJP68VVlFBi73d0YCCxcQXZahQW6H65RP3HTxAoHzDTL8kRR4M/coik9DZ8wau2PJg==
   dependencies:
     "@ethereumjs/tx" "^3.2.1"
     "@polkadot/api" "^7.11.1"
