@@ -757,6 +757,10 @@ export class Account {
         return this.getZpClient().forcedExitState();
     }
 
+    public async availableFundsToForcedExit(): Promise<bigint> {
+        return this.getZpClient().availableFundsToForcedExit();
+    }
+
     public async initiateForcedExit(address?: string): Promise<CommittedForcedExit> {
         const myAddress = await this.getClient().getAddress();
         return this.getZpClient().requestForcedExit(

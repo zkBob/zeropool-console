@@ -680,25 +680,37 @@ export async function forcedExit(address: string) {
             if (committed) {
                 await prinfForcedExit(this, committed);
             } else {
-                this.update(-1, `\tRetrieving existing forced exit... [[;red;]unable to find]`)
+                this.update(-1, `Retrieving existing forced exit... [[;red;]unable to find]`)
             }
 
             if (forcedExitState == ForcedExitState.NotStarted) {
+                const availableFunds = await account(this).availableFundsToForcedExit();
+                this.echo(`Available funds to withdraw: [[;white;]${await account(this).shieldedToHuman(availableFunds)} ${account(this).shTokenSymbol()}]`);
+                this.echo(`The forced exit procedure consist of two direct transactions to the pool contract: commit and execute`);
+                this.echo(`The first transaction will mark your account as ready to be exited and you should wait when exit timeframe becomes opened`);
+                this.echo(`After the second one the funds will be withdrawn to your address and your account will become DESTROYED`);
+                this.echo(`The initiation transaction is safe and reversible (you can cancel your request later)`);
+
+
                 let entered: string;
                 this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
                 this.resume();
                 do {
                     entered = await this.read(`[[;yellow;]Type 'YES' to confirm initiate transaction or 'NO' to cancel: ]`)
                     if (entered.toLowerCase() == 'no') {
-                        this.echo(`Cancelled`);
+                        this.echo(`Canceled`);
                         return;
                     }
                 }while(entered.toLowerCase() != 'yes');
-                
+                this.pause();
+
                 this.echo('Sending initial forced exit transaction...');
                 const newFeCommitted: CommittedForcedExit = await account(this).initiateForcedExit(address);
+                this.update(-1, `Sending initial forced exit transaction... [[;green;]OK]`);
                 await prinfForcedExit(this, newFeCommitted);
                 
+            } else if (forcedExitState == ForcedExitState.CommittedWaitingSlot) {
+                this.echo (`Forced exit was initiated. You can execute it after [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()}]`);
             } else if (forcedExitState == ForcedExitState.CommittedReady) {
                 let entered: string;
                 this.echo (`[[;yellow;]Do you really want to execute forced exit?]`);
@@ -708,13 +720,13 @@ export async function forcedExit(address: string) {
                 this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
                 this.resume();
                 do {
-                    entered = await this.read(`[[;yellow;]Type 'YES' to confirm forced exit or 'NO' to cancel: ]`)
+                    entered = await this.read(`[[;yellow;]Type 'EXIT' to confirm forced exit or 'NO' to cancel: ]`)
                     if (entered.toLowerCase() == 'no') {
-                        this.echo(`Cancelled`);
+                        this.echo(`Canceled`);
                         return;
                     }
-                }while(entered.toLowerCase() != 'yes');
-                
+                }while(entered.toLowerCase() != 'exit');
+                this.pause();
 
                 this.echo('Sending execute forced exit transaction...');
                 const feExecuted = await account(this).executeForcedExit();
@@ -732,9 +744,10 @@ export async function forcedExit(address: string) {
                         return;
                     }
                 }while(entered.toLowerCase() != 'yes');
+                this.pause();
 
                 this.echo('Sending cancel forced exit transaction...');
-                const feCancelled = await account(this).executeForcedExit();
+                const feCancelled = await account(this).cancelForcedExit();
                 this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feCancelled);
             }
@@ -748,7 +761,7 @@ async function prinfForcedExit(_this: any, fe: any): Promise<void> {
     _this.echo(`\tNullifier:  [[;white;]${fe.nullifier}]`);
     _this.echo(`\tOperator:   [[;white;]${fe.operator}]`);
     _this.echo(`\tReceiver:   [[;white;]${fe.to}]`);
-    _this.echo(`\tAmount:     [[;white;]${await account(this).shieldedToHuman(fe.amount)} ${account(this).shTokenSymbol()}]`);
+    _this.echo(`\tAmount:     [[;white;]${await account(_this).shieldedToHuman(fe.amount)} ${account(_this).shTokenSymbol()}]`);
     if (fe.exitStart !== undefined && fe.exitEnd !== undefined) { 
         // committed forced exit
         _this.echo(`\tStart time: [[;white;]${new Date(fe.exitStart * 1000).toLocaleString()} (${fe.exitStart})]`);
@@ -758,7 +771,7 @@ async function prinfForcedExit(_this: any, fe: any): Promise<void> {
         _this.echo(`\tStatus:     ${fe.cancelled ? '[[;red;]CANCELLED]' : '[[;green;]EXECUTED]'}`);
     }
 
-    _this.echo(`\tTx hash:    [[!;;;;${account(this).getTransactionUrl(fe.txHash)}]${fe.txHash}]`)
+    _this.echo(`\tTx hash:    [[!;;;;${account(_this).getTransactionUrl(fe.txHash)}]${fe.txHash}]`)
 }
 
 export async function getInternalState() {
