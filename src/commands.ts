@@ -708,31 +708,32 @@ export async function forcedExit(address: string) {
                 const newFeCommitted: CommittedForcedExit = await account(this).initiateForcedExit(address);
                 this.update(-1, `Sending initial forced exit transaction... [[;green;]OK]`);
                 await prinfForcedExit(this, newFeCommitted);
-                
+                this.echo('[[;yellow;]Your account has been committed for emergency exit]');
+                this.echo(`You can execute your forced exit after [[;white;]${new Date(newFeCommitted.exitStart * 1000).toLocaleString()}]`);
             } else if (forcedExitState == ForcedExitState.CommittedWaitingSlot) {
                 this.echo (`Forced exit was initiated. You can execute it after [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()}]`);
             } else if (forcedExitState == ForcedExitState.CommittedReady) {
                 let entered: string;
-                this.echo (`[[;red;]Do you really want to execute forced exit? WARNING: THIS IS ONE-WAY ACTION!]`);
+                this.echo (`[[;red;]You are about to complete emergency exit process. WARNING: IT IS A ONE-WAY DESTRUCTIVE ACTION!]`);
                 const amountStr = `${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}`;
                 const destLinkStr = `[[!;;;;${account(this).getAddressUrl(committed.to)}]${committed.to}]`
                 this.echo (`[[;red;]${amountStr} will withdrawn to the address ${destLinkStr} and your zkBob account will KILLED WITHOUT RECOVERING OPTION]`);
-                this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
+                this.echo (`[[;yellow;]Do you really want to execute forced exit?]`);
                 this.resume();
                 do {
-                    entered = await this.read(`[[;yellow;]Type 'EXIT' to confirm forced exit or 'NO' to cancel: ]`)
+                    entered = await this.read(`[[;yellow;]Type 'EXECUTE' to confirm forced exit or 'NO' to cancel: ]`)
                     if (entered.toLowerCase() == 'no') {
                         this.echo(`Canceled`);
                         return;
                     }
-                }while(entered.toLowerCase() != 'exit');
+                }while(entered.toLowerCase() != 'execute');
                 this.pause();
 
                 this.echo('Sending execute forced exit transaction...');
                 const feExecuted = await account(this).executeForcedExit();
                 this.update(-1, 'Sending execute forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feExecuted);
-
+                this.echo (`[[;red;]Your account was already destroyed. You cannot transact anymore]`);
             } else if (forcedExitState == ForcedExitState.Outdated) {
                 let entered: string;
                 this.echo (`[[;yellow;]The forced will cancelled. Your funds remain in the pool. Continue?]`);
@@ -751,7 +752,7 @@ export async function forcedExit(address: string) {
                 this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feCancelled);
             } else if (forcedExitState == ForcedExitState.Completed) {
-                this.echo (`[[;red;]Your account has been destroyed. You cannot transact anymore]`);
+                this.echo (`[[;red;]Your account was already destroyed]`);
             }
         }
     } finally {
