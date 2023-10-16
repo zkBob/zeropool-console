@@ -214,7 +214,7 @@ jQuery(async function ($) {
                   }
                   this.echo(`Library version: ${await this.account.libraryVersion()}`);
                   this.echo(`Relayer version: ...requesting...`);
-                  const relayerVer = await this.account.relayerVersion();
+                  const relayerVer = await this.account.relayerVersion().catch((err) => ({ref: `[[;red;]UNAVAILABLE]`, commitHash: err.message}) );
                   this.update(-1, `Relayer version: ${relayerVer.ref} (${relayerVer.commitHash})\n`);
                   clientReady = true;
                   break;

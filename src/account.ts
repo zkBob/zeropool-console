@@ -781,6 +781,10 @@ export class Account {
         );
     }
 
+    public async executedForcedExit(): Promise<FinalizedForcedExit | undefined> {
+        return this.getZpClient().executedForcedExit()
+    }
+
     public async cancelForcedExit(): Promise<FinalizedForcedExit> {
         return this.getZpClient().cancelForcedExit(async (tx: PreparedTransaction) =>
             this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)

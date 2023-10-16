@@ -677,8 +677,11 @@ export async function forcedExit(address: string) {
 
             this.echo('Retrieving existing forced exit...');
             const committed = await account(this).activeForcedExit();
+            const completed = await account(this).executedForcedExit();
             if (committed) {
                 await prinfForcedExit(this, committed);
+            } else if (completed) {
+                await prinfForcedExit(this, completed);
             } else {
                 this.update(-1, `Retrieving existing forced exit... [[;red;]unable to find]`)
             }
@@ -733,7 +736,7 @@ export async function forcedExit(address: string) {
                 const feExecuted = await account(this).executeForcedExit();
                 this.update(-1, 'Sending execute forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feExecuted);
-                this.echo (`[[;red;]Your account was already destroyed. You cannot transact anymore]`);
+                this.echo (`[[;red;]Your zk account has been destroyed. You cannot transact anymore]`);
             } else if (forcedExitState == ForcedExitState.Outdated) {
                 let entered: string;
                 this.echo (`[[;yellow;]The forced will cancelled. Your funds remain in the pool. Continue?]`);
@@ -751,8 +754,9 @@ export async function forcedExit(address: string) {
                 const feCancelled = await account(this).cancelForcedExit();
                 this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feCancelled);
+                this.echo (`[[;red;]The forced exit has been cancelled and your zk account became restored to the normal state]`);
             } else if (forcedExitState == ForcedExitState.Completed) {
-                this.echo (`[[;red;]Your account was already destroyed]`);
+                this.echo (`[[;red;]Your zk account was already destroyed]`);
             }
         }
     } finally {
@@ -762,15 +766,17 @@ export async function forcedExit(address: string) {
 
 async function prinfForcedExit(_this: any, fe: any): Promise<void> {
     _this.echo(`\tNullifier:  [[;white;]${fe.nullifier}]`);
-    _this.echo(`\tOperator:   [[;white;]${fe.operator}]`);
-    _this.echo(`\tReceiver:   [[;white;]${fe.to}]`);
+    if (fe.operator) {
+        _this.echo(`\tOperator:   [[!;;;;${account(_this).getAddressUrl(fe.operator)}]${fe.operator}]`);
+    };
+    _this.echo(`\tReceiver:   [[!;;;;${account(_this).getAddressUrl(fe.to)}]${fe.to}]`);
     _this.echo(`\tAmount:     [[;white;]${await account(_this).shieldedToHuman(fe.amount)} ${account(_this).shTokenSymbol()}]`);
     if (fe.exitStart !== undefined && fe.exitEnd !== undefined) { 
         // committed forced exit
         _this.echo(`\tStart time: [[;white;]${new Date(fe.exitStart * 1000).toLocaleString()} (${fe.exitStart})]`);
         _this.echo(`\tEnd time:   [[;white;]${new Date(fe.exitEnd * 1000).toLocaleString()} (${fe.exitEnd})]`);
     } else if (fe.cancelled !== undefined) {
-        _this.echo(`\tStart time: [[;white;]${new Date(fe.exitStart * 1000).toLocaleString()} (${fe.exitStart})]`);
+        // executed or cancelled forced exit
         _this.echo(`\tStatus:     ${fe.cancelled ? '[[;red;]CANCELLED]' : '[[;green;]EXECUTED]'}`);
     }
 
