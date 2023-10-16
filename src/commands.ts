@@ -713,10 +713,10 @@ export async function forcedExit(address: string) {
                 this.echo (`Forced exit was initiated. You can execute it after [[;white;]${new Date(committed.exitStart * 1000).toLocaleString()}]`);
             } else if (forcedExitState == ForcedExitState.CommittedReady) {
                 let entered: string;
-                this.echo (`[[;yellow;]Do you really want to execute forced exit?]`);
+                this.echo (`[[;red;]Do you really want to execute forced exit? WARNING: THIS IS ONE-WAY ACTION!]`);
                 const amountStr = `${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()}`;
-                this.echo (`[[;red;]${amountStr} will withdrawn to the address ${committed.txHash}] and your zkBob account will KILLED WITHOUT RECOVERING OPTION`);
-                this.echo (`[[;red;]${await account(this).shieldedToHuman(committed.amount)} ${account(this).shTokenSymbol()} will withdrawn to the address ${committed.txHash}]`);
+                const destLinkStr = `[[!;;;;${account(this).getAddressUrl(committed.to)}]${committed.to}]`
+                this.echo (`[[;red;]${amountStr} will withdrawn to the address ${destLinkStr} and your zkBob account will KILLED WITHOUT RECOVERING OPTION]`);
                 this.echo (`[[;yellow;]Do you really want to initiate forced exit?]`);
                 this.resume();
                 do {
@@ -743,13 +743,15 @@ export async function forcedExit(address: string) {
                         this.echo(`Cancelled`);
                         return;
                     }
-                }while(entered.toLowerCase() != 'yes');
+                } while(entered.toLowerCase() != 'yes');
                 this.pause();
 
                 this.echo('Sending cancel forced exit transaction...');
                 const feCancelled = await account(this).cancelForcedExit();
                 this.update(-1, 'Sending cancel forced exit transaction... [[;green;]OK]');
                 await prinfForcedExit(this, feCancelled);
+            } else if (forcedExitState == ForcedExitState.Completed) {
+                this.echo (`[[;red;]Your account has been destroyed. You cannot transact anymore]`);
             }
         }
     } finally {
