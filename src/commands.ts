@@ -664,9 +664,6 @@ export async function forcedExit(address: string) {
                 case ForcedExitState.Completed:
                     this.update(-1, 'Forced exit state: [[;green;]completed]');
                     break;
-                case ForcedExitState.Canceled:
-                    this.update(-1, 'Forced exit state: [[;red;]canceled]');
-                    break;
                 case ForcedExitState.Outdated:
                     this.update(-1, 'Forced exit state: [[;red;]outdated]');
                     break;
