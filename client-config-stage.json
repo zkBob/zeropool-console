@@ -1,5 +1,5 @@
 {
-    "defaultPool": "BOB-sepolia",
+    "defaultPool": "USDT-devnet",
 
     "pools": {
         "BOB-sepolia": {
@@ -69,6 +69,17 @@
             "feeDecimals": 2,
             "minTxAmount": 50000,
             "depositScheme": "approve"
+        },
+        "USDT-devnet": {
+            "chainId": 728126428,
+            "poolAddress": "TVtGa6o4KWYa6pfcd6A34xQte1FuDJPFah",
+            "tokenAddress": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
+            "relayerUrls": ["https://tron-devnet-relayer.thgkjlr.website"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "feeDecimals": 2,
+            "minTxAmount": 50000,
+            "depositScheme": "approve"
         }
     },
 
@@ -84,6 +95,9 @@
         },
         "2494104990": {
             "rpcUrls": ["https://api.shasta.trongrid.io"]
+        },
+        "728126428": {
+            "rpcUrls": ["https://tron-devnet.zkbob.com"]
         }
     },
 
@@ -103,6 +117,10 @@
         "2494104990": {
             "tx": "https://shasta.tronscan.org/#/transaction/{{hash}}",
             "address": "https://shasta.tronscan.org/#/address/{{addr}}"
+        },
+        "728126428": {
+            "tx": "{{hash}}",
+            "address": "{{addr}}"
         }
     },
 
@@ -112,12 +130,13 @@
     },
 
     "minters": {
-        "BOB-sepolia": "",
-        "BOB2USDC-goerli": "",
+        "BOB-sepolia": "0xb9988D599A64723462955BfC8441F1Af90335796",
+        "BOB2USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
         "WETH-goerli": "",
-        "USDC-goerli": "",
-        "BOB-op-goerli": "",
-        "USDT-shasta": ""
+        "USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
+        "BOB-op-goerli": "0x357cA353dbCad28418d5F3110727B2af62803F20",
+        "USDT-shasta": "",
+        "USDT-devnet": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD"
     },
 
     "cloudApi": {
@@ -126,7 +145,8 @@
         "WETH-goerli": "",
         "USDC-goerli": "",
         "BOB-op-goerli": "",
-        "USDT-shasta": ""
+        "USDT-shasta": "",
+        "USDT-devnet": ""
     },
 
     "redemptionUrls": {
@@ -135,7 +155,8 @@
         "WETH-goerli": "https://staging--zkbob.netlify.app",
         "USDC-goerli": "https://staging--zkbob.netlify.app",
         "BOB-op-goerli": "https://staging--zkbob.netlify.app",
-        "USDT-shasta": "https://staging--zkbob.netlify.app"
+        "USDT-shasta": "https://staging--zkbob.netlify.app",
+        "USDT-devnet": "https://staging--zkbob.netlify.app"
     },
 
     "migrations": {
