@@ -75,6 +75,7 @@ export class Account {
             pools: env.pools,
             chains: env.chains,
             snarkParams: env.globalSnarks,
+            snarkParamsSet: env.snarkParamsSet,
             supportId: this.supportId,
             forcedMultithreading: undefined,
         };
