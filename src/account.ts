@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -749,6 +749,49 @@ export class Account {
             throw Error('State is not ready for transact');
         }
     }
+
+    public async isForcedExitSupported(): Promise<boolean> {
+        return this.getZpClient().isForcedExitSupported();
+    }
+
+    public async forcedExitState(): Promise<ForcedExitState> {
+        return this.getZpClient().forcedExitState();
+    }
+
+    public async availableFundsToForcedExit(): Promise<bigint> {
+        return this.getZpClient().availableFundsToForcedExit();
+    }
+
+    public async initiateForcedExit(address?: string): Promise<CommittedForcedExit> {
+        const myAddress = await this.getClient().getAddress();
+        return this.getZpClient().requestForcedExit(
+            myAddress,  // operator
+            address ?? myAddress, // to
+            async (tx: PreparedTransaction) => 
+                this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
+    }
+
+    public async activeForcedExit(): Promise<CommittedForcedExit | undefined> {
+        return this.getZpClient().activeForcedExit()
+    }
+
+    public async executeForcedExit(): Promise<FinalizedForcedExit> {
+        return this.getZpClient().executeForcedExit(async (tx: PreparedTransaction) =>
+            this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
+    }
+
+    public async executedForcedExit(): Promise<FinalizedForcedExit | undefined> {
+        return this.getZpClient().executedForcedExit()
+    }
+
+    public async cancelForcedExit(): Promise<FinalizedForcedExit> {
+        return this.getZpClient().cancelForcedExit(async (tx: PreparedTransaction) =>
+            this.getClient().sendTransaction(tx.to, tx.amount, tx.data, tx.selector)
+        );
+    }
+
 
     public async giftCardBalance(giftCard: GiftCardProperties): Promise<bigint> {
         return await this.getZpClient().giftCardBalance(giftCard);
