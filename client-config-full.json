@@ -158,17 +158,6 @@
         }
     },
 
-    "extraPrefixes": [
-        {
-            "poolId": 16776966,
-            "prefix": "zkbob_shasta"
-        },
-        {
-            "poolId": 16776967,
-            "prefix": "zkbob_nile"
-        }
-    ],
-
     "globalSnarks": {
         "transferParamsUrl": "./assets/transfer_params.bin",
         "transferVkUrl": "./assets/transfer_verification_key.json"

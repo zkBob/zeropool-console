@@ -115,7 +115,7 @@ export async function shieldedAddressInfo(shieldedAddress: string) {
     this.update(-1, `Validating ${isValid ? '[[;green;]PASS]' : '[[;red;]ERROR]'}`)
     this.echo('Checking ownable on the current pool ...');
     const isOwn = await account(this).isMyAddress(shieldedAddress);
-    this.update(-1, `Checking ownable on the current pool ${isValid ? '[[;green;]YES]' : '[[;red;]NO]'}`)
+    this.update(-1, `Checking ownable on the current pool ${isOwn ? '[[;green;]YES]' : '[[;red;]NO]'}`)
 
     this.echo('Parsing address...');
     try {
