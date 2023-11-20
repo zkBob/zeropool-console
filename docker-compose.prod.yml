@@ -13,5 +13,5 @@ services:
       - ./assets:/usr/share/nginx/html/assets
       - ./client-config.json:/usr/share/nginx/html/client-config.json
     environment:
-      CONFIG_JSON: ./client-config.json
+      - CONFIG_JSON=./client-config-full.json
     command: yarn dev

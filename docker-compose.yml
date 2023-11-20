@@ -13,7 +13,5 @@ services:
     volumes:
       - ./src:/home/node/app/src
       - ./assets:/home/node/app/assets:ro
-      - ./client-config.json:/home/node/app/client-config.json
-    environment:
-      CONFIG_JSON: ./client-config.json
-    command: yarn dev
+      - ./client-config-prod.json:/home/node/app/client-config-prod.json
+    command: bash -c "echo CONFIG_JSON=./client-config-prod.json > /home/node/app/.env && yarn dev-docker"
