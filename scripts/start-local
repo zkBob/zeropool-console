@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-npm i && npm run dev
+yarn install && yarn dev

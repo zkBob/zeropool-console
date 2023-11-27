@@ -11,7 +11,7 @@ services:
       - "80:80"
     volumes:
       - ./assets:/usr/share/nginx/html/assets
-      - ./client-config.json:/usr/share/nginx/html/client-config.json
+      - ./client-config-full.json:/usr/share/nginx/html/client-config-full.json
     environment:
-      - CONFIG_JSON=./client-config-full.json
+      CONFIG_JSON: ./client-config-full.json
     command: yarn dev
