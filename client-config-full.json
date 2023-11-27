@@ -6,24 +6,24 @@
             "chainId": 137,
             "parameters": "prod",
             "poolAddress": "0x72e6B59D4a90ab232e55D4BB7ed2dD17494D62fB",
-            "tokenAddress": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+            "tokenAddress": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
             "relayerUrls": ["https://relayer-mvp.zkbob.com"],
             "delegatedProverUrls": ["https://remoteprover-mvp.zkbob.com/"],
             "coldStorageConfigPath": "./assets/coldstorage/zkbob-polygon-coldstorage.cfg",
             "feeDecimals": 2,
-            "depositScheme": "usdc-polygon",
+            "depositScheme": "usdc",
             "ddSubgraph": "zkbob-usdc-polygon"
         },
-        "BOB-optimism": {
+        "USDC-optimism": {
             "chainId": 10,
             "parameters": "prod",
             "poolAddress": "0x1CA8C2B9B20E18e86d5b9a72370fC6c91814c97C",
-            "tokenAddress": "0xB0B195aEFA3650A6908f15CdaC7D92F8a5791B0B",
+            "tokenAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
             "relayerUrls": ["https://relayer-optimism.zkbob.com/"],
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "depositScheme": "permit",
+            "depositScheme": "usdc",
             "ddSubgraph": "zkbob-bob-optimism"
         },
         "WETH-optimism": {
@@ -135,7 +135,7 @@
         "137": {
             "rpcUrls": ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"]
         },
-	    "10": {
+        "10": {
             "rpcUrls": ["https://rpc.ankr.com/optimism", "https://mainnet.optimism.io"]
         },
         "11155111": {
@@ -175,7 +175,7 @@
             "tx": "https://polygonscan.com/tx/{{hash}}",
             "address": "https://polygonscan.com/address/{{addr}}"
         },
-	    "10": {
+        "10": {
             "tx": "https://optimistic.etherscan.io/tx/{{hash}}",
             "address": "https://optimistic.etherscan.io/address/{{addr}}"
         },
@@ -207,7 +207,7 @@
 
     "minters": {
         "USDC-polygon": "",
-        "BOB-optimism": "",
+        "USDC-optimism": "",
         "WETH-optimism": "",
         "BOB-sepolia": "0xb9988D599A64723462955BfC8441F1Af90335796",
         "BOB2USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
@@ -221,7 +221,7 @@
 
     "cloudApi": {
         "USDC-polygon": "",
-	    "BOB-optimism": "",
+        "USDC-optimism": "",
         "WETH-optimism": "",
         "BOB-sepolia": "http://45.77.217.163:8701",
         "BOB2USDC-goerli": "",
@@ -235,7 +235,7 @@
 
     "redemptionUrls": {
         "USDC-polygon": "https://app.zkbob.com",
-	    "BOB-optimism": "https://app.zkbob.com",
+        "USDC-optimism": "https://app.zkbob.com",
         "WETH-optimism": "https://app.zkbob.com",
         "BOB-sepolia": "https://staging--zkbob.netlify.app",
         "BOB2USDC-goerli": "https://staging--zkbob.netlify.app",
@@ -263,6 +263,20 @@
                     "tokenAddress": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b",
                     "firstTimestamp": 0,
                     "lastTimestamp": 1689689468
+                },
+                "USDC.e": {
+                    "tokenAddress": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                    "firstTimestamp": 1689689469,
+                    "lastTimestamp": 1700482210
+                }
+            }
+        },
+        "USDC-optimism": {
+            "oldTokens": {
+                "BOB": {
+                    "tokenAddress": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b",
+                    "firstTimestamp": 0,
+                    "lastTimestamp": 1696854269
                 }
             }
         }

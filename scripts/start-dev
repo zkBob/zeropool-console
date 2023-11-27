@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-cd ../libzeropool-rs/libzeropool-rs-wasm && \
+cd ../libzkbob-rs/libzkbob-rs-wasm && \
 ./scripts/build && \
 cd -
 
-cd ../zeropool-api-js && \
-yarn upgrade libzeropool-rs-wasm-web && \
+cd ../zkbob-client-js && \
+yarn upgrade libzkbob-rs-wasm-web && \
+yarn upgrade libzkbob-rs-wasm-web-mt && \
 yarn build && \
 
 cd -
-export EVM_RPC=''
-export RELAYER_URL=''
-export TOKEN_ADDRESS=''
-export MINTER_ADDRESS=''
-export CONTRACT_ADDRESS=''
-yarn upgrade zeropool-api-js && \
+yarn upgrade zkbob-client-js && \
 yarn dev
