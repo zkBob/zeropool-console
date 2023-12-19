@@ -110,13 +110,19 @@ export async function genShieldedAddressUniversal(number: string) {
 }
 
 export async function shieldedAddressInfo(shieldedAddress: string) {
+    this.echo('Validating ...');
+    const isValid = await account(this).verifyShieldedAddress(shieldedAddress);
+    this.update(-1, `Validating ${isValid ? '[[;green;]PASS]' : '[[;red;]ERROR]'}`)
+    this.echo('Checking ownable on the current pool ...');
+    const isOwn = await account(this).isMyAddress(shieldedAddress);
+    this.update(-1, `Checking ownable on the current pool ${isOwn ? '[[;green;]YES]' : '[[;red;]NO]'}`)
+
     this.echo('Parsing address...');
     try {
         const components = await account(this).zkAddressInfo(shieldedAddress);
         this.update(-1, 'Parsing address... [[;green;]OK]');
         this.echo(`Address format:    [[;white;]${components.format}]`);
         this.echo(`Is it derived from my SK:    ${components.derived_from_our_sk ? '[[;green;]YES]' : '[[;white;]NO]'}`);
-        const isValid = await account(this).verifyShieldedAddress(shieldedAddress);
         this.echo(`Is it valid on current pool: ${isValid ? '[[;green;]YES]' : '[[;red;]NO]'}`);
         try {
             const poolId = BigInt(components.pool_id);

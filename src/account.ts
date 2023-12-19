@@ -74,6 +74,7 @@ export class Account {
         this.config = {
             pools: env.pools,
             chains: env.chains,
+            extraPrefixes: env.extraPrefixes,
             snarkParams: env.globalSnarks,
             snarkParamsSet: env.snarkParamsSet,
             supportId: this.supportId,
