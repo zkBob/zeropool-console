@@ -20,7 +20,7 @@ function account(_this: any): Account {
 }
 
 export async function currentPoolEnvironment() {
-    const curPool = await account(this).getCurrentPool();
+    const curPool = account(this).getCurrentPool();
     const poolEnv = env.pools[curPool];
     const chainEnv = env.chains[String(poolEnv.chainId)];
 
@@ -28,6 +28,9 @@ export async function currentPoolEnvironment() {
     this.echo(`Chain:        ${account(this).networkName()} (${poolEnv.chainId})`)
     this.echo(`Pool address:     [[!;;;;${account(this).getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
     this.echo(`Token address:    [[!;;;;${account(this).getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
+    if (poolEnv.guardAddress) {
+        this.echo(`MPC Guard:        [[!;;;;${account(this).getAddressUrl(poolEnv.guardAddress)}]${poolEnv.guardAddress}]`);
+    }
     this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ''}:     ${chainEnv.rpcUrls.join(', ')}`);
     this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ''}:          ${poolEnv.relayerUrls.join(', ')}`);
     this.echo(`Cold storage:     ${poolEnv.coldStorageConfigPath}`);
@@ -827,21 +830,31 @@ export async function getRoot(index: string) {
 
     this.echo(`Requesting additional info...`);
     this.pause();
-    const relayerState = account(this).getRelayerTreeState();
+    const relayerState = account(this).getRelayerTreeState().catch((e) => e.message);
     let relayerOptimisticState;
     if (idx === undefined) {
-        relayerOptimisticState = account(this).getRelayerOptimisticTreeState();
+        relayerOptimisticState = account(this).getRelayerOptimisticTreeState().catch((e) => e.message);
     }
-    const poolState = account(this).getPoolTreeState(idx);
+    const poolState = account(this).getPoolTreeState(idx).catch((e) => e.message);
 
     let promises = [relayerState, relayerOptimisticState, poolState]
     Promise.all(promises).then((states) => {
+        const relayerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
+                        `[[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`;
+        const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
+                    `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
+        const poolState = typeof states[2] === "string" ? `[[;red;]${states[2]}]` : 
+                    `[[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`;
+
         if (relayerOptimisticState !== undefined) {
-            this.update(-1, `Relayer:            [[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`);
-            this.echo(`Relayer optimistic: [[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`);
-            this.echo(`Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+            const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
+                        `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
+
+            this.update(-1, `Relayer:            ${relayerState}`);
+            this.echo(`Relayer optimistic: ${relayerOpState}`);
+            this.echo(`Pool  contract:     ${poolState}`);
         } else {
-            this.update(-1, `Pool  contract:     [[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`);
+            this.update(-1, `Pool  contract:     ${poolState}`);
         }
     }).catch((reason) => {
         this.error(`Cannot fetch additional info: ${reason}`);

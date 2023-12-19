@@ -39,7 +39,7 @@
     "tslib": "^2.3.1",
     "uuid": "^9.0.0",
     "web3": "^1.7.1",
-    "zkbob-client-js": "5.5.0-beta1",
+    "zkbob-client-js": "file:../zkbob-client-js",
     "zkbob-support-js": "1.0.1"
   },
   "devDependencies": {
