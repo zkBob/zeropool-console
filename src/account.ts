@@ -208,10 +208,6 @@ export class Account {
         return env.pools[this.getCurrentPool()].poolAddress;
     }
 
-    public async getDepositDestination(): Promise<string> {
-        return this.getZpClient().depositDestination();
-    }
-
     public getDelegatedProverUrls(): string[] {
         return env.pools[this.getCurrentPool()].delegatedProverUrls
     }
@@ -607,7 +603,7 @@ export class Account {
             let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
             if (depositScheme == DepositType.Approve) {
                 // check a token approvement if needed (in case of approve deposit scheme)
-                const depositDestination = await this.getDepositDestination();
+                const depositDestination = this.getPoolAddr();
                 const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), depositDestination);
                 if (totalNeededAmount > currentAllowance) {
                     totalNeededAmount -= currentAllowance;

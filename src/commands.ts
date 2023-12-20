@@ -28,9 +28,6 @@ export async function currentPoolEnvironment() {
     this.echo(`Chain:        ${account(this).networkName()} (${poolEnv.chainId})`)
     this.echo(`Pool address:     [[!;;;;${account(this).getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
     this.echo(`Token address:    [[!;;;;${account(this).getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
-    if (poolEnv.guardAddress) {
-        this.echo(`MPC Guard:        [[!;;;;${account(this).getAddressUrl(poolEnv.guardAddress)}]${poolEnv.guardAddress}]`);
-    }
     this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ''}:     ${chainEnv.rpcUrls.join(', ')}`);
     this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ''}:          ${poolEnv.relayerUrls.join(', ')}`);
     this.echo(`Cold storage:     ${poolEnv.coldStorageConfigPath}`);
