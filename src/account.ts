@@ -607,7 +607,7 @@ export class Account {
                 const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), depositDestination);
                 if (totalNeededAmount > currentAllowance) {
                     totalNeededAmount -= currentAllowance;
-                    console.log(`Increasing allowance for the Pool\\Guard contract (${depositDestination}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
+                    console.log(`Increasing allowance for the Pool contract (${depositDestination}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
                     await this.getClient().increaseAllowance(this.getTokenAddr(), depositDestination, totalNeededAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
