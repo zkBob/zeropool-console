@@ -1,5 +1,5 @@
 {
-    "defaultPool": "USDT-nile-guard",
+    "defaultPool": "USDT-tron",
 
     "pools": {
         "USDC-polygon": {
@@ -107,17 +107,6 @@
             "minTxAmount": 50000,
             "depositScheme": "approve"
         },
-        "USDT-devnet": {
-            "chainId": 728126428,
-            "poolAddress": "TVtGa6o4KWYa6pfcd6A34xQte1FuDJPFah",
-            "tokenAddress": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
-            "relayerUrls": ["https://tron-devnet-relayer.thgkjlr.website"],
-            "delegatedProverUrls": [],
-            "coldStorageConfigPath": "",
-            "feeDecimals": 2,
-            "minTxAmount": 50000,
-            "depositScheme": "approve"
-        },
         "USDT-nile": {
             "chainId": 3448148188,
             "poolAddress": "TT8GgygLhEDh88kYwY8mYz38iEpJWw1YLG",
@@ -139,6 +128,17 @@
             "feeDecimals": 2,
             "minTxAmount": 50000,
             "depositScheme": "approve"
+        },
+        "USDT-tron": {
+            "chainId": 728126428,
+            "poolAddress": "TXViaNRhEugXpAZApviBqBnbTSKUgejnR9",
+            "tokenAddress": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+            "relayerUrls": ["https://relayer-tron-mpc.zkbob.com/"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "minTxAmount": 50000,
+            "depositScheme": "approve",
+            "ddSubgraph": ""
         }
     },
 
@@ -169,11 +169,11 @@
         "2494104990": {
             "rpcUrls": ["https://api.shasta.trongrid.io"]
         },
-        "728126428": {
-            "rpcUrls": ["https://tron-devnet.zkbob.com"]
-        },
         "3448148188": {
             "rpcUrls": ["https://nile.trongrid.io"]
+        },
+        "728126428": {
+            "rpcUrls": ["https://api.trongrid.io"]
         }
     },
 
@@ -215,8 +215,8 @@
             "address": "https://shasta.tronscan.org/#/address/{{addr}}"
         },
         "728126428": {
-            "tx": "{{hash}}",
-            "address": "{{addr}}"
+            "tx": "https://tronscan.org/#/transaction/{{hash}}",
+            "address": "https://tronscan.org/#/address/{{addr}}"
         },
         "3448148188": {
             "tx": "https://nile.tronscan.org/#/transaction/{{hash}}",
@@ -236,7 +236,8 @@
         "USDT-shasta": "",
         "USDT-devnet": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
         "USDT-nile": "",
-        "USDT-nile-guard": ""
+        "USDT-nile-guard": "",
+        "USDT-tron": ""
     },
 
     "cloudApi": {
@@ -251,7 +252,8 @@
         "USDT-shasta": "",
         "USDT-devnet": "",
         "USDT-nile": "",
-        "USDT-nile-guard": ""
+        "USDT-nile-guard": "",
+        "USDT-tron": ""
     },
 
     "redemptionUrls": {
@@ -266,7 +268,8 @@
         "USDT-shasta": "https://staging--zkbob.netlify.app",
         "USDT-devnet": "https://staging--zkbob.netlify.app",
         "USDT-nile": "https://staging--zkbob.netlify.app",
-        "USDT-nile-guard": "https://staging--zkbob.netlify.app"
+        "USDT-nile-guard": "https://staging--zkbob.netlify.app",
+        "USDT-tron": "https://tron.zkbob.com"
     },
 
     "migrations": {
