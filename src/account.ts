@@ -842,4 +842,8 @@ export class Account {
     public async proverVersion(): Promise<ServiceVersion> {
         return await this.getZpClient().getProverVersion();
     }
+
+    public async getTokenSeller() : Promise<string> {
+        return await this.getZpClient().tokenSellerContract();
+    }
 }
