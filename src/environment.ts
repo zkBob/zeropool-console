@@ -1,4 +1,4 @@
-import { Chains, Pools, SnarkConfigParams, Parameters } from 'zkbob-client-js';
+import { Chains, Pools, SnarkConfigParams, Parameters, ZkAddressPrefix } from 'zkbob-client-js';
 
 export interface TokenMigrationConfig {
     tokenAddress: string;
@@ -10,6 +10,7 @@ export interface ConsoleConfig {
     defaultPool: string;
     pools: Pools;
     chains: Chains;
+    extraPrefixes?: ZkAddressPrefix[];
     globalSnarks?: SnarkConfigParams;
     snarkParamsSet?: Parameters;
     blockExplorerUrls: {[chainId: string]: {tx: string, address: string} };

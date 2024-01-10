@@ -74,6 +74,7 @@ export class Account {
         this.config = {
             pools: env.pools,
             chains: env.chains,
+            extraPrefixes: env.extraPrefixes,
             snarkParams: env.globalSnarks,
             snarkParamsSet: env.snarkParamsSet,
             supportId: this.supportId,
@@ -602,11 +603,12 @@ export class Account {
             let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
             if (depositScheme == DepositType.Approve) {
                 // check a token approvement if needed (in case of approve deposit scheme)
-                const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), this.getPoolAddr());
+                const depositDestination = this.getPoolAddr();
+                const currentAllowance = await this.getClient().allowance(this.getTokenAddr(), depositDestination);
                 if (totalNeededAmount > currentAllowance) {
                     totalNeededAmount -= currentAllowance;
-                    console.log(`Increasing allowance for the Pool (${this.getPoolAddr()}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
-                    await this.getClient().increaseAllowance(this.getTokenAddr(), this.getPoolAddr(), totalNeededAmount);
+                    console.log(`Increasing allowance for the Pool contract (${depositDestination}) to spend our tokens (+ ${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()})`);
+                    await this.getClient().increaseAllowance(this.getTokenAddr(), depositDestination, totalNeededAmount);
                 } else {
                     console.log(`Current allowance (${await this.weiToHuman(currentAllowance)} ${this.tokenSymbol()}) is greater or equal than needed (${await this.weiToHuman(totalNeededAmount)} ${this.tokenSymbol()}). Skipping approve`);
                 }
@@ -839,5 +841,9 @@ export class Account {
 
     public async proverVersion(): Promise<ServiceVersion> {
         return await this.getZpClient().getProverVersion();
+    }
+
+    public async getTokenSeller() : Promise<string> {
+        return await this.getZpClient().tokenSellerContract();
     }
 }
