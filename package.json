@@ -7,6 +7,7 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "scripts": {
     "dev": "webpack serve --config webpack.config.dev.js --mode=development --progress",
+    "dev-docker": "webpack serve --config webpack.config.dev.js --mode=development --host 0.0.0.0",
     "build:dev": "webpack --config webpack.config.dev.js",
     "build:prod": "webpack --config webpack.config.prod.js",
     "publish-docker": "VERSION=$npm_package_version TAG=latest ./scripts/publish-docker",
