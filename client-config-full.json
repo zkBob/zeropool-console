@@ -1,5 +1,5 @@
 {
-    "defaultPool": "USDT-tron",
+    "defaultPool": "USDC-goerli",
 
     "pools": {
         "USDC-polygon": {
@@ -83,7 +83,8 @@
             "feeDecimals": 2,
             "minTxAmount": 50000,
             "depositScheme": "usdc-polygon",
-            "ddSubgraph": "zkbob-usdc-goerli"
+            "ddSubgraph": "zkbob-usdc-goerli",
+            "calldataVersion": 2
         },
         "BOB-op-goerli": {
             "chainId":420,
