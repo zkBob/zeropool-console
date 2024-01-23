@@ -276,7 +276,7 @@ export async function getTxParts(...amounts: string[]) {
     } else {
         let totalFee = BigInt(0);
         for (const part of result) {
-            totalFee += part.fee;
+            totalFee += part.fee.total;
         }
 
         if (result.length == 1) {
@@ -294,7 +294,9 @@ export async function getTxParts(...amounts: string[]) {
     for (let i = 0; i < result.length; i++) {
         const part = result[i];
         const notes = part.outNotes;
-        const partFee = await account(this).shieldedToHuman(part.fee);
+        const partFeeTotal = await account(this).shieldedToHuman(part.fee.total);
+        const partFeeProxy = await account(this).shieldedToHuman(part.fee.proxyPart);
+        const partFeeProver = await account(this).shieldedToHuman(part.fee.proverPart);
         let partLimit = "";
         if (part.accountLimit > 0) {
             partLimit = `, accountLimit = ${await account(this).shieldedToHuman(part.accountLimit)} ${account(this).shTokenSymbol()}`;
@@ -302,10 +304,10 @@ export async function getTxParts(...amounts: string[]) {
 
         const txTotalAmount = notes.map(note => note.amountGwei).reduce((acc, cur) => acc + cur, BigInt(0));
         if (notes.length == 0) {
-            this.echo(`TX#${i} Aggregate notes: ${await account(this).shieldedToHuman(part.inNotesBalance)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+            this.echo(`TX#${i} Aggregate notes: ${await account(this).shieldedToHuman(part.inNotesBalance)} ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}]${partLimit}`);
         } else {
             if (amounts.length > 1 || notes.length > 1) {
-                this.echo(`TX#${i} ${await account(this).shieldedToHuman(txTotalAmount)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} ${await account(this).shieldedToHuman(txTotalAmount)} ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}}]${partLimit}`);
                 for (const aNote of notes) {
                     if(aNote.destination != lastDest) {
                         lastDest = aNote.destination;
@@ -315,7 +317,7 @@ export async function getTxParts(...amounts: string[]) {
                 }
             } else {
                 const color = (notes.length == 0 ? 'gray' : 'green');
-                this.echo(`TX#${i} [[;${color};]${await account(this).shieldedToHuman(txTotalAmount)}] ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} [[;${color};]${await account(this).shieldedToHuman(txTotalAmount)}] ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}]${partLimit}`);
             }
         }
     }
@@ -338,7 +340,7 @@ export async function estimateFeeDeposit(amount: string) {
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).tokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).tokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
@@ -364,7 +366,7 @@ export async function estimateFeeTransfer(...amounts: string[]) {
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
@@ -406,7 +408,7 @@ export async function estimateFeeWithdraw(amount: string) {
     }
     const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
@@ -1476,7 +1478,7 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
     if (fee.insufficientFunds) {
         const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
         const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
-        const feeStr = `${await account(this).shieldedToHuman(fee.total)} ${account(this).shTokenSymbol()}`;
+        const feeStr = `${await account(this).shieldedToHuman(fee.fee.total)} ${account(this).shTokenSymbol()}`;
         const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
         this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
         return;

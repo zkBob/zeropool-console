@@ -3,7 +3,7 @@ import Utf8 from 'crypto-js/enc-utf8';
 import { Client as NetworkClient, ClientFactory } from 'zkbob-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
-         TransferConfig, TransferRequest, FeeAmount, TxType,
+         TransferConfig, TransferRequest, FeeAmount, TxFee, TxType,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
@@ -564,7 +564,8 @@ export class Account {
     }
 
     public async minFee(txType: TxType): Promise<bigint> {
-        return await this.getZpClient().atomicTxFee(txType);
+        const txFee = await this.getZpClient().atomicTxFee(txType);
+        return txFee.total;
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, swapAmount: bigint = 0n, updateState: boolean = true): Promise<FeeAmount> {
@@ -600,7 +601,7 @@ export class Account {
             const relayerFee = feeEst.relayerFee;
             console.info(`Using relayer fee: base = ${depositScheme == DepositType.Approve  ? relayerFee.fee.deposit : relayerFee.fee.permittableDeposit}, perByte = ${relayerFee.oneByteFee}`);
                         
-            let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
+            let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.fee.total);
             if (depositScheme == DepositType.Approve) {
                 // check a token approvement if needed (in case of approve deposit scheme)
                 const depositDestination = this.getPoolAddr();
