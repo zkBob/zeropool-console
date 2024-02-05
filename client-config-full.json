@@ -1,5 +1,5 @@
 {
-    "defaultPool": "USDC-goerli",
+    "defaultPool": "BOB-sepolia",
 
     "pools": {
         "USDC-polygon": {
@@ -41,14 +41,14 @@
         },
         "BOB-sepolia": {
             "chainId": 11155111,
-            "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
+            "poolAddress": "0x77f3D9Fb578a0F2B300347fb3Cd302dFd7eedf93",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
-            "relayerUrls": ["https://relayer.thgkjlr.website/"],
-            "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
-            "coldStorageConfigPath": "./assets/coldstorage/zkbob-sepolia-coldstorage.cfg",
+            "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "depositScheme": "permit",
-            "ddSubgraph": "https://api.studio.thegraph.com/query/50398/zkbob-bob-sepolia/version/latest"
+            "calldataVersion": 2
         },
         "BOB2USDC-goerli": {
             "chainId": 5,
@@ -83,8 +83,7 @@
             "feeDecimals": 2,
             "minTxAmount": 50000,
             "depositScheme": "usdc-polygon",
-            "ddSubgraph": "zkbob-usdc-goerli",
-            "calldataVersion": 2
+            "ddSubgraph": "zkbob-usdc-goerli"
         },
         "BOB-op-goerli": {
             "chainId":420,

@@ -8216,11 +8216,15 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libzkbob-rs-wasm-web-mt@file:../libzkbob-rs/libzkbob-rs-wasm/web-mt-debug":
-  version "1.6.0"
+libzkbob-rs-wasm-web-mt@1.7.0-beta1:
+  version "1.7.0-beta1"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web-mt/-/libzkbob-rs-wasm-web-mt-1.7.0-beta1.tgz#488bd9f69698a760e234e06fe9c448c9b333c1f2"
+  integrity sha512-9StLEEkhZL9Z4taeUsCPi0XTkIpCc8o6Neh2t0mF84SUYnmqC8vkePZlYbG8TdK11ZparlV0wbO3wMtlWJc0BA==
 
-"libzkbob-rs-wasm-web@file:../libzkbob-rs/libzkbob-rs-wasm/web-debug":
-  version "1.6.0"
+libzkbob-rs-wasm-web@1.7.0-beta1:
+  version "1.7.0-beta1"
+  resolved "https://registry.yarnpkg.com/libzkbob-rs-wasm-web/-/libzkbob-rs-wasm-web-1.7.0-beta1.tgz#764a33c2f8362dc070be1f949c946d8c3d64cf48"
+  integrity sha512-gxK0ubYGDeSjwN0+Q0yc9yftdzrQIlTq7f07lyV1XRE/LQPZ3Ais4bBZdgzT7UtU2VsCUj66euLb+uR2nWGYdg==
 
 lie@3.1.1:
   version "3.1.1"
@@ -13070,8 +13074,10 @@ yocto-queue@^0.1.0:
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-"zkbob-client-js@file:../zkbob-client-js":
-  version "5.5.0"
+zkbob-client-js@5.6.0-beta1:
+  version "5.6.0-beta1"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-5.6.0-beta1.tgz#564c0e934fefb7a6b8b318960202f5545c1c8127"
+  integrity sha512-LfppEp3nPbp3iCBn0LQAz37K+IWPi9K0WHw/z7NN5+mGqJMbhz2ZPQiQ0cm+MI7E+9ZsFj8gblx8vlOkV8o5fw==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@graphprotocol/client-cli" "3.0.0"
@@ -13084,8 +13090,8 @@ yocto-queue@^0.1.0:
     graphql "16.7.1"
     hdwallet-babyjub "^0.0.2"
     idb "^7.0.0"
-    libzkbob-rs-wasm-web "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-5.5.0-c112e123-f1d1-4f89-ba80-ea3dbe477b3a-1705579645609/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-debug"
-    libzkbob-rs-wasm-web-mt "file:../../Library/Caches/Yarn/v6/npm-zkbob-client-js-5.5.0-c112e123-f1d1-4f89-ba80-ea3dbe477b3a-1705579645609/node_modules/libzkbob-rs/libzkbob-rs-wasm/web-mt-debug"
+    libzkbob-rs-wasm-web "1.7.0-beta1"
+    libzkbob-rs-wasm-web-mt "1.7.0-beta1"
     promise-retry "^2.0.1"
     promise-throttle "^1.1.2"
     regenerator-runtime "^0.13.9"
