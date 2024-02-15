@@ -28,10 +28,17 @@ export async function currentPoolEnvironment() {
     this.echo(`Chain:        ${account(this).networkName()} (${poolEnv.chainId})`)
     this.echo(`Pool address:     [[!;;;;${account(this).getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
     this.echo(`Token address:    [[!;;;;${account(this).getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
-    this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ''}:     ${chainEnv.rpcUrls.join(', ')}`);
-    this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ''}:          ${poolEnv.relayerUrls.join(', ')}`);
+    this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ' '}:    ${chainEnv.rpcUrls.join(', ')}`);
+    if (poolEnv.relayerUrls && poolEnv.relayerUrls.length > 0) {
+        this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ' '}:         ${poolEnv.relayerUrls.join(', ')}`);
+    }
+    if (poolEnv.proxyUrls && poolEnv.proxyUrls.length > 0) {
+        this.echo(`${poolEnv.proxyUrls.length > 1 ? 'Proxies' : 'Proxy  '}:          ${poolEnv.proxyUrls.join(', ')}`);
+    }
     this.echo(`Cold storage:     ${poolEnv.coldStorageConfigPath}`);
-    this.echo(`Delegated prover${poolEnv.delegatedProverUrls.length > 1 ? 's' : ''}: ${poolEnv.delegatedProverUrls.join(', ')}`);
+    if (poolEnv.delegatedProverUrls && poolEnv.delegatedProverUrls.length > 0) {
+        this.echo(`Delegated prover${poolEnv.delegatedProverUrls.length > 1 ? 's' : ''}: ${poolEnv.delegatedProverUrls.join(', ')}`);
+    }
     this.echo(`Minter:           ${env.minters[curPool]}`);
     this.echo(`Cloud API:        ${env.cloudApi[curPool]}`);
     this.echo(`UI URL:           ${env.redemptionUrls[curPool]}`);
@@ -331,12 +338,12 @@ export async function estimateFeeDeposit(amount: string) {
 
     let perTx = '';
     let perByte = '';
-    const baseFee = txType == TxType.Deposit ? result.relayerFee.fee.deposit : result.relayerFee.fee.permittableDeposit;
+    const baseFee = txType == TxType.Deposit ? result.sequencerFee.fee.deposit : result.sequencerFee.fee.permittableDeposit;
     if (baseFee > 0n) {
         perTx = `${await account(this).shieldedToHuman(baseFee)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
@@ -358,11 +365,11 @@ export async function estimateFeeTransfer(...amounts: string[]) {
 
     let perTx = '';
     let perByte = '';
-    if (result.relayerFee.fee.transfer > 0n) {
-        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.transfer)} per tx`
+    if (result.sequencerFee.fee.transfer > 0n) {
+        perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.transfer)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
     const components = [perTx, perByte].filter((s) => s.length > 0);
 
@@ -397,14 +404,14 @@ export async function estimateFeeWithdraw(amount: string) {
     let perTx = '';
     let perByte = '';
     let swapFee = '';
-    if (result.relayerFee.fee.withdrawal > 0n) {
-        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.withdrawal)} per tx`
+    if (result.sequencerFee.fee.withdrawal > 0n) {
+        perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.withdrawal)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    if (result.relayerFee.nativeConvertFee > 0n && swapAmount > 0n) {
-        swapFee = `${await account(this).shieldedToHuman(result.relayerFee.nativeConvertFee)} swap`;
+    if (result.sequencerFee.nativeConvertFee > 0n && swapAmount > 0n) {
+        swapFee = `${await account(this).shieldedToHuman(result.sequencerFee.nativeConvertFee)} swap`;
     }
     const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);
 
@@ -462,7 +469,7 @@ export async function depositShielded(amount: string, times: string) {
         this.pause();
 
         // Due to the fact that the console is a test tool, we doesn't check address balance here
-        // we should get ability to test relayer's behaviour
+        // we should get ability to test sequencer's behaviour
         const result = await account(this).depositShielded(await account(this).humanToShielded(amount));
 
         this.resume();
@@ -829,29 +836,29 @@ export async function getRoot(index: string) {
 
     this.echo(`Requesting additional info...`);
     this.pause();
-    const relayerState = account(this).getRelayerTreeState().catch((e) => e.message);
-    let relayerOptimisticState;
+    const sequencerState = account(this).getSequencerTreeState().catch((e) => e.message);
+    let sequencerOptimisticState;
     if (idx === undefined) {
-        relayerOptimisticState = account(this).getRelayerOptimisticTreeState().catch((e) => e.message);
+        sequencerOptimisticState = account(this).getSequencerOptimisticTreeState().catch((e) => e.message);
     }
     const poolState = account(this).getPoolTreeState(idx).catch((e) => e.message);
 
-    let promises = [relayerState, relayerOptimisticState, poolState]
+    let promises = [sequencerState, sequencerOptimisticState, poolState]
     Promise.all(promises).then((states) => {
-        const relayerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
+        const sequencerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
                         `[[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`;
-        const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
+        const sequencerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
                     `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
         const poolState = typeof states[2] === "string" ? `[[;red;]${states[2]}]` : 
                     `[[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`;
 
-        if (relayerOptimisticState !== undefined) {
-            const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
+        if (sequencerOptimisticState !== undefined) {
+            const sequencerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
                         `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
 
-            this.update(-1, `Relayer:            ${relayerState}`);
-            this.echo(`Relayer optimistic: ${relayerOpState}`);
-            this.echo(`Pool  contract:     ${poolState}`);
+            this.update(-1, `Sequencer:            ${sequencerState}`);
+            this.echo(`Sequencer optimistic: ${sequencerOpState}`);
+            this.echo(`Pool  contract:       ${poolState}`);
         } else {
             this.update(-1, `Pool  contract:     ${poolState}`);
         }
@@ -889,15 +896,15 @@ export async function getLeftSiblings(index: string) {
         this.echo(`[[;white;] ${height}]|[[;white;] ${index}]| ${aNode.value}`);
     });
 
-    let relayerResponse = `[\n`;
+    let sequencerResponse = `[\n`;
     siblings.forEach((aNode, index) => {
         const hexNode = nodeToHex(aNode).slice(2);
-        relayerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
+        sequencerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
     });
-    relayerResponse += `]`
+    sequencerResponse += `]`
 
-    this.echo('[[;white;]Relayer response format:]');
-    this.echo(`${relayerResponse}`);
+    this.echo('[[;white;]sequencer response format:]');
+    this.echo(`${sequencerResponse}`);
 
     this.resume();
 
@@ -1046,20 +1053,20 @@ export async function setProverMode(mode: ProverMode) {
 export async function getProverInfo() {
     this.pause();
     const proverMode = await account(this).getProverMode();
-    const delegatedProverUrls: string[] = account(this).getDelegatedProverUrls();
+    const delegatedProverUrls = account(this).getDelegatedProverUrls();
     switch(proverMode) {
         case ProverMode.Local:
             this.echo(`Local Prover`);
             break;
         case ProverMode.Delegated:
-            if (delegatedProverUrls.length > 0) {
+            if (delegatedProverUrls && delegatedProverUrls.length > 0) {
                 this.echo(`Delegated Prover: ${delegatedProverUrls.join(', ')}`);
             } else {
                 this.echo(`Delegated Prover: delegated prover url not provided`);
             }
             break;
         case ProverMode.DelegatedWithFallback:
-            if (delegatedProverUrls.length > 0) {
+            if (delegatedProverUrls && delegatedProverUrls.length > 0) {
                 this.echo(`Delegated Prover with fallback: ${delegatedProverUrls.join(', ')}`);
             } else {
                 this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
@@ -1071,7 +1078,7 @@ export async function getProverInfo() {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await account(this).proverVersion();
+            const ver = await account(this).delegatedProverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -1419,22 +1426,22 @@ export function getSupportId() {
 
 export async function getVersion() {
     this.pause();
-    this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
-    this.echo(`Client library  version: [[;white;]${await account(this).libraryVersion()}]`);
-    this.echo(`Current relayer version: ...fetching...`);
+    this.echo(`zkBob console version:     [[;white;]${pjson.version}]`);
+    this.echo(`Client library  version:   [[;white;]${await account(this).libraryVersion()}]`);
+    this.echo(`Current sequencer version: ...fetching...`);
 
     try {
-        const ver = await account(this).relayerVersion();
-        this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
+        const ver = await account(this).sequencerVersion();
+        this.update(-1, `Current sequencer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
     } catch (err) {
-        this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
+        this.update(-1, `Current sequencer version: [[;red;]${err.message}]`);
     }
 
     if (await account(this).getProverMode() != ProverMode.Local) {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await account(this).proverVersion();
+            const ver = await account(this).delegatedProverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -1651,7 +1658,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     const cardBalance = await account(this).humanToShielded(amount);
     const poolAlias = account(this).getCurrentPool();
 
-    this.echo(`[[;green;]You can add extra funds to cover the relayer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
+    this.echo(`[[;green;]You can add extra funds to cover the sequencer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
     this.resume();
     const val = await this.read(`Specify extra funds for the ${qty > 1 ? 'EACH ' : ''}gift-card or press ENTER to leave it zero: `);
     const extraFundsForFee = await account(this).humanToShielded(val ?? '0');
