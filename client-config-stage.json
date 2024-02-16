@@ -1,24 +1,20 @@
 {
-    "defaultPool": "BOB2USDC-goerli",
+    "defaultPool": "BOB-sepolia",
 
     "pools": {
         "BOB-sepolia": {
             "chainId": 11155111,
-            "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
+            "poolAddress": "0x77f3D9Fb578a0F2B300347fb3Cd302dFd7eedf93",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
-            "relayerUrls": ["https://relayer.thgkjlr.website/"],
-            "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
-            "coldStorageConfigPath": "./assets/coldstorage/zkbob-sepolia-coldstorage.cfg",
+            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/"],
             "feeDecimals": 2,
-            "depositScheme": "permit",
-            "ddSubgraph": "https://api.studio.thegraph.com/query/50398/zkbob-bob-sepolia/version/latest"
+            "depositScheme": "permit"
         },
         "BOB2USDC-goerli": {
             "chainId": 5,
             "poolAddress": "0x49661694a71B3Dab9F25E86D5df2809B170c56E6",
             "tokenAddress": "0x28B531401Ee3f17521B3772c13EAF3f86C2Fe780",
             "relayerUrls": ["https://dev-relayer.thgkjlr.website/"],
-            "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "depositScheme": "usdc-polygon",
             "ddSubgraph": "zkbob-bob-goerli"
@@ -28,7 +24,6 @@
             "poolAddress": "0xf9dbCF4005497e042838dE9082C817fCa790e945",
             "tokenAddress": "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
             "relayerUrls": ["https://goerli-weth-relayer.thgkjlr.website/"],
-            "coldStorageConfigPath": "",
             "minTxAmount": 0,
             "depositScheme": "permit2",
             "isNative": true,
@@ -39,9 +34,7 @@
             "poolAddress": "0xCF6446Deb67b2b56604657C67DAF54f884412531",
             "tokenAddress": "0x28B531401Ee3f17521B3772c13EAF3f86C2Fe780",
             "relayerUrls": ["https://goerli-usdc-relayer.thgkjlr.website"],
-            "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "minTxAmount": 50000,
             "depositScheme": "usdc-polygon",
             "ddSubgraph": "zkbob-usdc-goerli"
         },
@@ -50,7 +43,6 @@
             "poolAddress":"0x55B81b0730399974Ccad8AC858e766Cf54126596",
             "tokenAddress":"0x0fA7E69b9344D6434Bd6b79c5950bb5234245a5F",
             "relayerUrls":["https://gop-relayer.thgkjlr.website"],
-            "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "depositScheme": "permit",
             "ddSubgraph": "zkbob-bob-goerli-opt"
@@ -60,9 +52,7 @@
             "poolAddress": "TLTyi81NhoeGfsq8Ef1STDYs6E7HFSAruV",
             "tokenAddress": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
             "relayerUrls": ["https://shasta-relayer.thgkjlr.website"],
-            "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "minTxAmount": 50000,
             "depositScheme": "approve"
         },
         "USDT-devnet": {
@@ -70,9 +60,7 @@
             "poolAddress": "TVtGa6o4KWYa6pfcd6A34xQte1FuDJPFah",
             "tokenAddress": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
             "relayerUrls": ["https://tron-devnet-relayer.thgkjlr.website"],
-            "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "minTxAmount": 50000,
             "depositScheme": "approve"
         },
         "USDT-nile": {
@@ -80,16 +68,36 @@
             "poolAddress": "TT8GgygLhEDh88kYwY8mYz38iEpJWw1YLG",
             "tokenAddress": "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf",
             "relayerUrls": ["https://tron-nile-relayer.thgkjlr.website"],
+            "feeDecimals": 2,
+            "depositScheme": "approve"
+        },
+        "USDT-nile-guard": {
+            "chainId": 3448148188,
+            "poolAddress": "TVbFjwMgDuzVYqTmMMzrkGQxZkaTfDZ1Gn",
+            "tokenAddress": "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf",
+            "relayerUrls": ["https://tron-nile-mpc-relayer.thgkjlr.website"],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
-            "minTxAmount": 50000,
             "depositScheme": "approve"
         }
     },
 
+    "extraPrefixes": [
+        {
+            "poolId": 16776968,
+            "prefix": "zkbob_nile_g",
+            "name": "USDT on Nile testnet (MPC guard contracts)"
+        },
+        {
+            "poolId": 16776969,
+            "prefix": "zkbob_sepolia",
+            "name": "BOB on Sepolia testnet (decentralized sequencer)"
+        }
+    ],
+
     "chains": {
         "11155111": {
-            "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia-public.unifra.io", "https://rpc.sepolia.org"]
+            "rpcUrls": ["https://rpc.sepolia.org", "https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia.public.blastapi.io"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
@@ -143,23 +151,13 @@
     "minters": {
         "BOB-sepolia": "0xb9988D599A64723462955BfC8441F1Af90335796",
         "BOB2USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
-        "WETH-goerli": "",
         "USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
         "BOB-op-goerli": "0x357cA353dbCad28418d5F3110727B2af62803F20",
-        "USDT-shasta": "",
-        "USDT-devnet": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD",
-        "USDT-nile": ""
+        "USDT-devnet": "TRdunaTZCKYM9xW3HGJjJLQYV6f89UHEkD"
     },
 
     "cloudApi": {
-        "BOB-sepolia": "http://45.77.217.163:8701",
-        "BOB2USDC-goerli": "",
-        "WETH-goerli": "",
-        "USDC-goerli": "",
-        "BOB-op-goerli": "",
-        "USDT-shasta": "",
-        "USDT-devnet": "",
-        "USDT-nile": ""
+        "BOB-sepolia": "http://45.77.217.163:8701"
     },
 
     "redemptionUrls": {
@@ -170,7 +168,8 @@
         "BOB-op-goerli": "https://staging--zkbob.netlify.app",
         "USDT-shasta": "https://staging--zkbob.netlify.app",
         "USDT-devnet": "https://staging--zkbob.netlify.app",
-        "USDT-nile": "https://staging--zkbob.netlify.app"
+        "USDT-nile": "https://staging--zkbob.netlify.app",
+        "USDT-nile-guard": "https://staging--zkbob.netlify.app"
     },
 
     "migrations": {

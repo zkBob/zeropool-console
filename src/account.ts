@@ -542,7 +542,7 @@ export class Account {
         });
 
         const sequencerFee = await this.getZpClient().getSequencerFee();
-        console.info(`Using sequencer fee: base = ${txType == TxType.Transfer ? sequencerFee.fee.transfer : sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${swapAmount ? `swap = ${sequencerFee.nativeConvertFee}` : ''}`);
+        console.info(`Using sequencer fee: base = ${txType == TxType.Transfer ? sequencerFee.fee.transfer : sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${swapAmount ? `, swap = ${sequencerFee.nativeConvertFee}` : ''}`);
 
         return await this.getZpClient().getTransactionParts(txType, transfers, sequencerFee, swapAmount, false);
     }
@@ -739,7 +739,7 @@ export class Account {
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
             const sequencerFee = await this.getZpClient().getSequencerFee();
-            console.info(`Using sequencer fee: base = ${sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${nativeAmount ? `swap = ${sequencerFee.nativeConvertFee}` : ''}`);
+            console.info(`Using sequencer fee: base = ${sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${nativeAmount ? `, swap = ${sequencerFee.nativeConvertFee}` : ''}`);
 
             console.log('Making withdraw...');
             const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, sequencerFee);

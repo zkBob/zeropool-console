@@ -832,7 +832,7 @@ export async function getRoot(index: string) {
         }
     }
 
-    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
+    this.echo(`Local Merkle Tree:    [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
 
     this.echo(`Requesting additional info...`);
     this.pause();
@@ -1472,114 +1472,118 @@ class GiftCard {
 }
 
 export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
-
-    this.pause();
     const cloudUrl = env.cloudApi[account(this).getCurrentPool()];
-    console.log("cloudUrl = ", cloudUrl)
+    if (cloudUrl) {
+        console.log("cloudUrl = ", cloudUrl)
 
-    const singleCardBalance = await account(this).humanToShielded(cardBalance)
-    const requiredTotalSum = singleCardBalance * BigInt(quantity);
-    await account(this).syncState();
-    const txRequests = Array(Number(quantity)).fill(singleCardBalance);
-    const fee = await account(this).estimateFee(txRequests, TxType.Transfer, 0n, true);
-    if (fee.insufficientFunds) {
-        const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
-        const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
-        const feeStr = `${await account(this).shieldedToHuman(fee.fee.total)} ${account(this).shTokenSymbol()}`;
-        const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
-        this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
-        return;
-    }
-    const minTransferAmount = await account(this).minTxAmount();
+        this.pause();
 
-    if (singleCardBalance < minTransferAmount) {
-        const singleStr = `${await account(this).shieldedToHuman(singleCardBalance)} ${account(this).shTokenSymbol()}`;
-        const minAmountStr = `${await account(this).shieldedToHuman(minTransferAmount)} ${account(this).shTokenSymbol()}`;
-        this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
-        return
-    }
-
-    const headers = new Headers();
-    headers.append("Authorization", `Bearer ${authToken}`);
-    headers.append("Content-Type", "application/json");
-    let giftCards: GiftCard[] = [];
-    const birthIndex = Number((await account(this).getPoolTreeState()).index);
-    try {
-        this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
-        const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
-        for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
-            const alias = `${prefix}_${cardIndex}`;
-            const body = JSON.stringify({ "description": `${alias}` });
-            const signupResponse = await fetch(`${cloudUrl}/signup`, {
-                method: 'POST',
-                headers,
-                body
-            });
-            if (signupResponse.status == 401) {
-                throw new Error("not authorized to create new accounts, check admin token in environment variables")
-            } else if (!signupResponse.ok) {
-                throw new Error(`cloud wallet returned bad response ${signupResponse}` )
-            }
-            const signupResponseJson = await signupResponse.json();
-            const cloudId = signupResponseJson.accountId;
-
-            if(!cloudId) throw new Error("sign up response is invalid")
-
-            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
-
-            if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
-
-            const exportJson = await exportResponse.json();
-            let sk = `0x${exportJson.sk}`;
-
-            const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
-
-            if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
-            const generateAddressResponseJson = await generateAddressResponse.json();
-            const address = generateAddressResponseJson.address;
-            console.log(`generated new account with address: ${address} `);
-
-            const giftCardProps: GiftCardProperties = {
-                sk: hexToBuf(sk, 32),
-                birthIndex,
-                balance: singleCardBalance,
-                poolAlias: account(this).getCurrentPool(),
-            };
-
-            console.log("giftCardProps:", giftCardProps);
-
-            const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
-            const svg = qrcode(url);
-            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
-            if (Number(quantity) > 1) {
-                this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
-            }
+        const singleCardBalance = await account(this).humanToShielded(cardBalance)
+        const requiredTotalSum = singleCardBalance * BigInt(quantity);
+        await account(this).syncState();
+        const txRequests = Array(Number(quantity)).fill(singleCardBalance);
+        const fee = await account(this).estimateFee(txRequests, TxType.Transfer, 0n, true);
+        if (fee.insufficientFunds) {
+            const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
+            const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
+            const feeStr = `${await account(this).shieldedToHuman(fee.fee.total)} ${account(this).shTokenSymbol()}`;
+            const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
+            this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
+            return;
         }
-        this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
+        const minTransferAmount = await account(this).minTxAmount();
 
-        let zipUrl = await makeZippedReport(giftCards);
-        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);
-        const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
-            async giftCard =>  {return {
-                destination: giftCard.address,
-                amountGwei: await account(this).humanToShielded(cardBalance)
+        if (singleCardBalance < minTransferAmount) {
+            const singleStr = `${await account(this).shieldedToHuman(singleCardBalance)} ${account(this).shTokenSymbol()}`;
+            const minAmountStr = `${await account(this).shieldedToHuman(minTransferAmount)} ${account(this).shTokenSymbol()}`;
+            this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
+            return
+        }
+
+        const headers = new Headers();
+        headers.append("Authorization", `Bearer ${authToken}`);
+        headers.append("Content-Type", "application/json");
+        let giftCards: GiftCard[] = [];
+        const birthIndex = Number((await account(this).getPoolTreeState()).index);
+        try {
+            this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
+            const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
+            for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
+                const alias = `${prefix}_${cardIndex}`;
+                const body = JSON.stringify({ "description": `${alias}` });
+                const signupResponse = await fetch(`${cloudUrl}/signup`, {
+                    method: 'POST',
+                    headers,
+                    body
+                });
+                if (signupResponse.status == 401) {
+                    throw new Error("not authorized to create new accounts, check admin token in environment variables")
+                } else if (!signupResponse.ok) {
+                    throw new Error(`cloud wallet returned bad response ${signupResponse}` )
+                }
+                const signupResponseJson = await signupResponse.json();
+                const cloudId = signupResponseJson.accountId;
+
+                if(!cloudId) throw new Error("sign up response is invalid")
+
+                const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
+
+                if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
+
+                const exportJson = await exportResponse.json();
+                let sk = `0x${exportJson.sk}`;
+
+                const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
+
+                if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
+                const generateAddressResponseJson = await generateAddressResponse.json();
+                const address = generateAddressResponseJson.address;
+                console.log(`generated new account with address: ${address} `);
+
+                const giftCardProps: GiftCardProperties = {
+                    sk: hexToBuf(sk, 32),
+                    birthIndex,
+                    balance: singleCardBalance,
+                    poolAlias: account(this).getCurrentPool(),
+                };
+
+                console.log("giftCardProps:", giftCardProps);
+
+                const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
+                const svg = qrcode(url);
+                giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
+                if (Number(quantity) > 1) {
+                    this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
+                }
             }
-        } ));
-        const result = await account(this).transferShielded(transferRequests);
+            this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
 
-        this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
-            if (singleTxResult.txHash) {
-                return `[job #${singleTxResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
-            } else {
-                return `[job #${singleTxResult.jobId}]: [[;red;]tx hash was not provided]`;
-            }
-        }).join(`\n     `)}`);
+            let zipUrl = await makeZippedReport(giftCards);
+            this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);
+            const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
+                async giftCard =>  {return {
+                    destination: giftCard.address,
+                    amountGwei: await account(this).humanToShielded(cardBalance)
+                }
+            } ));
+            const result = await account(this).transferShielded(transferRequests);
 
-    } catch (error) {
-        this.echo(`Process failed with error: [[;red;]${error.message}]`);
+            this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
+                if (singleTxResult.txHash) {
+                    return `[job #${singleTxResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+                } else {
+                    return `[job #${singleTxResult.jobId}]: [[;red;]tx hash was not provided]`;
+                }
+            }).join(`\n     `)}`);
+
+        } catch (error) {
+            this.echo(`Process failed with error: [[;red;]${error.message}]`);
+        }
+
+        this.resume();
+    } else {
+        this.echo(`[[;red;]Error: Cloud API was not exist for the pool ${account(this).getCurrentPool()}. Please check config]`);
     }
-
-    this.resume();
 
 }
 
