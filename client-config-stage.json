@@ -10,6 +10,16 @@
             "feeDecimals": 2,
             "depositScheme": "permit"
         },
+        "BOB-sepolia-old": {
+            "chainId": 11155111,
+            "poolAddress": "0x3bd088C19960A8B5d72E4e01847791BD0DD1C9E6",
+            "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
+            "relayerUrls": ["https://relayer.thgkjlr.website/"],
+            "delegatedProverUrls": ["https://prover-staging.thgkjlr.website/"],
+            "feeDecimals": 2,
+            "depositScheme": "permit",
+            "ddSubgraph": "https://api.studio.thegraph.com/query/50398/zkbob-bob-sepolia/version/latest"
+        },
         "BOB2USDC-goerli": {
             "chainId": 5,
             "poolAddress": "0x49661694a71B3Dab9F25E86D5df2809B170c56E6",
@@ -150,6 +160,7 @@
 
     "minters": {
         "BOB-sepolia": "0xb9988D599A64723462955BfC8441F1Af90335796",
+        "BOB-sepolia-old": "0xb9988D599A64723462955BfC8441F1Af90335796",
         "BOB2USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
         "USDC-goerli": "0x56c105D40f637eF3ac04905682b3DAEfF3F13D24",
         "BOB-op-goerli": "0x357cA353dbCad28418d5F3110727B2af62803F20",
@@ -157,11 +168,12 @@
     },
 
     "cloudApi": {
-        "BOB-sepolia": "http://45.77.217.163:8701"
+        "BOB-sepolia-old": "http://45.77.217.163:8701"
     },
 
     "redemptionUrls": {
         "BOB-sepolia": "https://staging--zkbob.netlify.app",
+        "BOB-sepolia-old": "https://staging--zkbob.netlify.app",
         "BOB2USDC-goerli": "https://staging--zkbob.netlify.app",
         "WETH-goerli": "https://staging--zkbob.netlify.app",
         "USDC-goerli": "https://staging--zkbob.netlify.app",
