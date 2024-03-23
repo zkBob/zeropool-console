@@ -3,7 +3,7 @@ import Utf8 from 'crypto-js/enc-utf8';
 import { Client as NetworkClient, ClientFactory } from 'zkbob-support-js';
 import { AccountConfig, ClientConfig, ProverMode,
          ZkBobClient, HistoryRecord, ComplianceHistoryRecord,
-         TransferConfig, TransferRequest, FeeAmount, TxFee, TxType,
+         TransferConfig, TransferRequest, FeeAmount, TxType,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,

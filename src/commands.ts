@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, FinalizedForcedExit
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, ProxyFee,
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -338,6 +338,7 @@ export async function estimateFeeDeposit(amount: string) {
 
     let perTx = '';
     let perByte = '';
+    let proverFee = '';
     const baseFee = txType == TxType.Deposit ? result.sequencerFee.fee.deposit : result.sequencerFee.fee.permittableDeposit;
     if (baseFee > 0n) {
         perTx = `${await account(this).shieldedToHuman(baseFee)} per tx`
@@ -345,7 +346,11 @@ export async function estimateFeeDeposit(amount: string) {
     if (result.sequencerFee.oneByteFee > 0n) {
         perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    const components = [perTx, perByte].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, proverFee].filter((s) => s.length > 0);
 
     this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).tokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
@@ -365,13 +370,18 @@ export async function estimateFeeTransfer(...amounts: string[]) {
 
     let perTx = '';
     let perByte = '';
+    let proverFee = '';
     if (result.sequencerFee.fee.transfer > 0n) {
         perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.transfer)} per tx`
     }
     if (result.sequencerFee.oneByteFee > 0n) {
         perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    const components = [perTx, perByte].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, proverFee].filter((s) => s.length > 0);
 
     this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
@@ -404,6 +414,7 @@ export async function estimateFeeWithdraw(amount: string) {
     let perTx = '';
     let perByte = '';
     let swapFee = '';
+    let proverFee = '';
     if (result.sequencerFee.fee.withdrawal > 0n) {
         perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.withdrawal)} per tx`
     }
@@ -413,7 +424,11 @@ export async function estimateFeeWithdraw(amount: string) {
     if (result.sequencerFee.nativeConvertFee > 0n && swapAmount > 0n) {
         swapFee = `${await account(this).shieldedToHuman(result.sequencerFee.nativeConvertFee)} swap`;
     }
-    const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, swapFee, proverFee].filter((s) => s.length > 0);
 
     this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
