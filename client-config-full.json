@@ -37,6 +37,14 @@
         },
         "BOB-sepolia": {
             "chainId": 11155111,
+            "poolAddress": "0x7D6BB1192c859fF5Cf9fC4a0dbFbD782F19aeE35",
+            "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
+            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/"],
+            "feeDecimals": 2,
+            "depositScheme": "permit"
+        },
+        "BOB-sepolia-donotuse": {
+            "chainId": 11155111,
             "poolAddress": "0x77f3D9Fb578a0F2B300347fb3Cd302dFd7eedf93",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
             "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/"],
@@ -124,6 +132,11 @@
         },
         {
             "poolId": 16776969,
+            "prefix": "zkbob_sepolia_",
+            "name": "BOB on Sepolia testnet (decentralized sequencer, calldata without prover address)"
+        },
+        {
+            "poolId": 16776970,
             "prefix": "zkbob_sepolia",
             "name": "BOB on Sepolia testnet (decentralized sequencer)"
         }
@@ -140,7 +153,7 @@
             "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://rpc.sepolia.org", "https://eth-sepolia.public.blastapi.io"]
         },
         "5": {
-            "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"]
+            "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", "https://goerli.gateway.tenderly.co", "https://goerli.blockpi.network/v1/rpc/public", "https://gateway.tenderly.co/public/goerli"]
         },
         "420": {
             "rpcUrls": ["https://goerli.optimism.io"]
