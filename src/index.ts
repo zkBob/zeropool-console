@@ -79,6 +79,8 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url> [code_or_redemption_url2 code_or_redemption_url3 ...]', 'retrieve gift cards balances'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
+  'sequencer-list': [c.sequencerList, '', 'show all available sequencers'],
+  'sequencer-prioritize': [c.prioritizeSequencer, '<url_or_index>', 'set primary sequencer (autoselection will disabled)'],
   'help': [
     function () {
       let message = '\nAvailable commands:\n' + Object.entries(COMMANDS)

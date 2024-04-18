@@ -39,7 +39,7 @@
             "chainId": 11155111,
             "poolAddress": "0x7D6BB1192c859fF5Cf9fC4a0dbFbD782F19aeE35",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
-            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/"],
+            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/", "http://128.199.32.205:8081"],
             "feeDecimals": 2,
             "depositScheme": "permit"
         },

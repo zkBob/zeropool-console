@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit, SequencerEndpoint
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -847,5 +847,13 @@ export class Account {
 
     public async getTokenSeller() : Promise<string> {
         return await this.getZpClient().tokenSellerContract();
+    }
+
+    public async SequencerList() : Promise<SequencerEndpoint[]> {
+        return this.getZpClient().sequencerEndpoints();
+    }
+
+    public async SetPrimarySequencer(index: number | undefined): Promise<number | undefined> {
+        return this.getZpClient().prioritizeSequencerEndpoint(index);
     }
 }

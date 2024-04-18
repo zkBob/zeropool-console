@@ -1812,3 +1812,44 @@ export async function redeemGiftCard(codeOrUrl: string) {
     }
     this.resume();
 }
+
+export async function sequencerList() {
+    const list = await account(this).SequencerList();
+    this.echo('Available sequencers:');
+    list.forEach((endpoint, idx) => {
+        this.echo(` ${endpoint.isActive ? '[[;green;]>]' : ' '} ${endpoint.isPrioritize ? '[[;yellow;]*]' : ' '}  ${[endpoint.isActive ? `[[;white;]${endpoint.url}] (current)` : `${endpoint.url}`]}`);
+    })
+}
+
+export async function prioritizeSequencer(indexOrUrl: string) {
+    const list = await account(this).SequencerList();
+    let idx: number | undefined = undefined;
+    if (indexOrUrl !== undefined && typeof indexOrUrl == 'string' && indexOrUrl.length > 0) {
+        if (!isNaN(Number(indexOrUrl))) {
+            idx = Number(indexOrUrl);
+        } else {
+            idx = list.findIndex(e => e.url === indexOrUrl);
+            if (idx == -1) {
+                this.echo(`[[;red;]Cannot find sequencer with url ${indexOrUrl}]`);
+                return;
+            }
+        }
+    }
+
+    if (idx === undefined) {
+        this.echo(`Removing priority mark...`);
+    } else {
+        this.echo(`Setting sequencer with index ${idx} as a prioritized one...`);
+    }
+
+    this.pause();
+    try {
+        const res = await account(this).SetPrimarySequencer(idx);
+        this.echo(`Current primary sequencer: ${res !== undefined ? `[[;white;]${list[res].url}]` : `not set`}`);
+    } catch(err) {
+        this.resume();
+        throw err;
+    }
+
+    this.resume();
+}
