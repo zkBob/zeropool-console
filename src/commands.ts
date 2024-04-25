@@ -1817,7 +1817,7 @@ export async function sequencerList() {
     const list = await account(this).SequencerList();
     this.echo('Available sequencers:');
     list.forEach((endpoint, idx) => {
-        this.echo(` ${endpoint.isActive ? '[[;green;]>]' : ' '} ${endpoint.isPrioritize ? '[[;yellow;]*]' : ' '}  ${[endpoint.isActive ? `[[;white;]${endpoint.url}] (current)` : `${endpoint.url}`]}`);
+        this.echo(` ${endpoint.isActive ? '[[;green;]>]' : ' '} ${endpoint.isPrioritize ? '[[;yellow;]*]' : ' '} [${idx}] ${[endpoint.isActive ? `[[;white;]${endpoint.url}] (current)` : `${endpoint.url}`]}`);
     })
 }
 
@@ -1839,7 +1839,7 @@ export async function prioritizeSequencer(indexOrUrl: string) {
     if (idx === undefined) {
         this.echo(`Removing priority mark...`);
     } else {
-        this.echo(`Setting sequencer with index ${idx} as a prioritized one...`);
+        this.echo(`Setting sequencer at index ${idx} as a prioritized one...`);
     }
 
     this.pause();
