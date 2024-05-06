@@ -13983,8 +13983,10 @@ yocto-queue@^0.1.0:
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-"zkbob-client-js@file:../zkbob-client-js":
-  version "6.0.0-beta5"
+zkbob-client-js@6.0.0-beta6:
+  version "6.0.0-beta6"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-6.0.0-beta6.tgz#592f2c20682653d1c02f0f31522c71cd7bbdf242"
+  integrity sha512-RsZ4ixpOou1kpRvK9s7czk4AVBUAO+OtdjW5L9kwathZo2rguVoVY2sYaHW9A3HuSHcJ/YhQIlBLxpkqr4CXaQ==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@graphprotocol/client-cli" "3.0.0"
