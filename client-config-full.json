@@ -39,7 +39,7 @@
             "chainId": 11155111,
             "poolAddress": "0x7D6BB1192c859fF5Cf9fC4a0dbFbD782F19aeE35",
             "tokenAddress": "0x2C74B18e2f84B78ac67428d0c7a9898515f0c46f",
-            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/", "http://128.199.32.205:8081"],
+            "proxyUrls": ["https://sepolia-decentralized-relayer.thgkjlr.website/", "https://sepolia-proxy.zkbob.evgen.space"],
             "feeDecimals": 2,
             "depositScheme": "permit"
         },
@@ -150,7 +150,7 @@
             "rpcUrls": ["https://rpc.ankr.com/optimism", "https://mainnet.optimism.io"]
         },
         "11155111": {
-            "rpcUrls": ["https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://rpc.sepolia.org", "https://eth-sepolia.public.blastapi.io"]
+            "rpcUrls": ["https://sepolia.drpc.org", "https://rpc.sepolia.org", "https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia.public.blastapi.io"]
         },
         "5": {
             "rpcUrls": ["https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", "https://goerli.gateway.tenderly.co", "https://goerli.blockpi.network/v1/rpc/public", "https://gateway.tenderly.co/public/goerli"]

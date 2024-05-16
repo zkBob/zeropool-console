@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit, SequencerEndpoint
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit, SequencerEndpoint, SequencerJob
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -588,7 +588,7 @@ export class Account {
         return addrUrl.replace('{{addr}}', addr);
     }
 
-    public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
+    public async depositShielded(amount: bigint): Promise<{job: SequencerJob, txHash: string}> {
         let myAddress = await this.getClient().getAddress();
         
         console.log('Waiting while state become ready...');
@@ -625,9 +625,8 @@ export class Account {
             }
 
             console.log('Making deposit...');
-            let jobId;
             const blockNumber = await this.getClient().getBlockNumber().catch(() => undefined);
-            jobId = await this.getZpClient().deposit(amount, async (signingRequest) => {
+            const job = await this.getZpClient().deposit(amount, async (signingRequest) => {
                 switch (signingRequest.type) {
                     case SignatureType.TypedDataV4:
                         return this.getClient().signTypedData(signingRequest.data);
@@ -638,9 +637,9 @@ export class Account {
                 }
             }, myAddress, sequencerFee, blockNumber);
 
-            console.log('Please wait sequencer provide txHash for job %s...', jobId);
+            console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+            return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
@@ -648,7 +647,7 @@ export class Account {
         }
     }
 
-    public async depositShieldedEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
+    public async depositShieldedEphemeral(amount: bigint, index: number): Promise<{job: SequencerJob, txHash: string}> {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
@@ -657,12 +656,11 @@ export class Account {
             console.info(`Using sequencer fee: base = ${depositScheme == DepositType.Approve  ? sequencerFee.fee.deposit : sequencerFee.fee.permittableDeposit}, perByte = ${sequencerFee.oneByteFee}`);
 
             console.log('Making deposit...');
-            let jobId;
-            jobId = await this.getZpClient().depositEphemeral(amount, index, sequencerFee);
+            const job = await this.getZpClient().depositEphemeral(amount, index, sequencerFee);
 
-            console.log('Please wait sequencer complete the job %s...', jobId);
+            console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+            return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
@@ -713,7 +711,7 @@ export class Account {
         return await this.getClient().approve(this.getTokenAddr(), spender, amount);
     }
 
-    public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
+    public async transferShielded(transfers: TransferRequest[]): Promise<{job: SequencerJob, txHash: string}[]> {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
@@ -721,10 +719,10 @@ export class Account {
             console.info(`Using sequencer fee: base = ${sequencerFee.fee.transfer}, perByte = ${sequencerFee.oneByteFee}`);
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, sequencerFee);
-            console.log('Please wait sequencer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
+            const jobs: SequencerJob[] = await this.getZpClient().transferMulti(transfers, sequencerFee);
+            console.log(`Please wait sequencer provide txHash${jobs.length > 1 ? 'es for jobs' : ' for job'} ${jobs.map((j) => j.id).join(', ')}...`,);
 
-            return await this.getZpClient().waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobs);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
@@ -732,7 +730,7 @@ export class Account {
         }
     }
 
-    public async withdrawShielded(amount: bigint, external_addr: string, nativeAmount: bigint = 0n): Promise<{jobId: string, txHash: string}[]> {
+    public async withdrawShielded(amount: bigint, external_addr: string, nativeAmount: bigint = 0n): Promise<{job: SequencerJob, txHash: string}[]> {
         let address = external_addr ?? await this.getClient().getAddress();
 
         console.log('Waiting while state become ready...');
@@ -742,10 +740,10 @@ export class Account {
             console.info(`Using sequencer fee: base = ${sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${nativeAmount ? `, swap = ${sequencerFee.nativeConvertFee}` : ''}`);
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, sequencerFee);
-            console.log('Please wait sequencer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
+            const jobs: SequencerJob[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, sequencerFee);
+            console.log(`Please wait sequencer provide txHash${jobs.length > 1 ? 'es for jobs' : ' for job'} ${jobs.map((j) => j.id).join(', ')}...`,);
 
-            return await this.getZpClient().waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobs);
         } else {
             console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
@@ -800,17 +798,17 @@ export class Account {
         return await this.getZpClient().giftCardBalance(giftCard);
     }
 
-    public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{jobId: string, txHash: string}> {
+    public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{job: SequencerJob, txHash: string}> {
         const provers = this.config.pools[this.getCurrentPool()].delegatedProverUrls;
         const proverMode = provers && provers.length > 0 ? 
             ProverMode.DelegatedWithFallback : 
             ProverMode.Local;
 
         console.log('Redeeming gift-card...');
-        const jobId: string = await this.getZpClient().redeemGiftCard(giftCard, proverMode);
-        console.log(`Please wait sequencer provide txHash for job ${jobId}...`);
+        const job: SequencerJob = await this.getZpClient().redeemGiftCard(giftCard, proverMode);
+        console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-        return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+        return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
     }
 
     public async codeForGiftCard(giftCard: GiftCardProperties): Promise<string> {

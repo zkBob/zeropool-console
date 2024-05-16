@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, ProxyFee,
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, ProxyFee, SequencerJob,
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -489,9 +489,9 @@ export async function depositShielded(amount: string, times: string) {
 
         this.resume();
         if (result.txHash) {
-            this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+            this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
         } else {
-            this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+            this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
         }
     }
 }
@@ -509,9 +509,9 @@ export async function depositShieldedEphemeral(amount: string, index: string) {
     const result = await account(this).depositShieldedEphemeral(await account(this).humanToShielded(amount), ephemeralIndex);
     this.resume();
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
-        this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
     }
 }
 
@@ -596,9 +596,9 @@ export async function transferShielded(to: string, amount: string, times: string
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
+                    return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
                 } else {
-                    return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                    return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
                 }
                     
             }).join(`\n     `)}`);
@@ -631,9 +631,9 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                    return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
                 } else {
-                    return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                    return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
                 }
             }).join(`\n     `)}`);
         }
@@ -663,9 +663,9 @@ export async function withdrawShielded(amount: string, address: string, times: s
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             if (oneResult.txHash) {
-                return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
             } else {
-                return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
             }
         }).join(`\n      `)}`);
     }
@@ -1583,11 +1583,11 @@ export async function generateGiftCards(prefix: string, quantity: string, cardBa
             } ));
             const result = await account(this).transferShielded(transferRequests);
 
-            this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
+            this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { job: SequencerJob; txHash: string; }) => {
                 if (singleTxResult.txHash) {
-                    return `[job #${singleTxResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+                    return `[job #${singleTxResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
                 } else {
-                    return `[job #${singleTxResult.jobId}]: [[;red;]tx hash was not provided]`;
+                    return `[job #${singleTxResult.job.toString()}]: [[;red;]tx hash was not provided]`;
                 }
             }).join(`\n     `)}`);
 
@@ -1738,9 +1738,9 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
         const results = await account(this).transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
             if (singleResult.txHash) {
-                return `[job #${singleResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
+                return `[job #${singleResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
             } else {
-                return `[job #${singleResult.jobId}]: [[;red;]tx hash was not provided]`;
+                return `[job #${singleResult.job.toString()}]: [[;red;]tx hash was not provided]`;
             }
         }).join(`\n     `)}`);
     } else {
@@ -1806,9 +1806,9 @@ export async function redeemGiftCard(codeOrUrl: string) {
     this.echo(`Redeeming gift card...`);
     const result = await account(this).redeemGiftCard(giftCard);
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
-        this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
     }
     this.resume();
 }
