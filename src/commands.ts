@@ -853,26 +853,29 @@ export async function getRoot(index: string) {
     this.pause();
     const sequencerState = account(this).getSequencerTreeState().catch((e) => e.message);
     let sequencerOptimisticState;
+    let sequencerPendingIndex;
     if (idx === undefined) {
         sequencerOptimisticState = account(this).getSequencerOptimisticTreeState().catch((e) => e.message);
+        sequencerPendingIndex = account(this).getSequencerPendingIndex().catch((e) => e.message);
     }
     const poolState = account(this).getPoolTreeState(idx).catch((e) => e.message);
 
-    let promises = [sequencerState, sequencerOptimisticState, poolState]
+    let promises = [sequencerState, sequencerOptimisticState, poolState, sequencerPendingIndex]
     Promise.all(promises).then((states) => {
         const sequencerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
                         `[[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`;
-        const sequencerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
-                    `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
         const poolState = typeof states[2] === "string" ? `[[;red;]${states[2]}]` : 
                     `[[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`;
 
-        if (sequencerOptimisticState !== undefined) {
+        if (idx === undefined) {
             const sequencerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
                         `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
+            const optimisticIdx = typeof states[1] !== "string" ? states[1].index as bigint : 0n;
+            const seqPendIdx = typeof states[3] === "bigint" && states[3] >  optimisticIdx ?
+                        ` [pending: [[;white;]${states[3].toString()}]]` : '';
 
             this.update(-1, `Sequencer:            ${sequencerState}`);
-            this.echo(`Sequencer optimistic: ${sequencerOpState}`);
+            this.echo(`Sequencer optimistic: ${sequencerOpState}${seqPendIdx}`);
             this.echo(`Pool  contract:       ${poolState}`);
         } else {
             this.update(-1, `Pool  contract:     ${poolState}`);

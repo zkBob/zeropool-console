@@ -435,6 +435,10 @@ export class Account {
         return this.getZpClient().getSequencerOptimisticState();
     }
 
+    public async getSequencerPendingIndex(): Promise<bigint> {
+        return this.getZpClient().getSequencerPendingIndex();
+    }
+
     public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
         return this.getZpClient().getTreeStartIndex();
     }
