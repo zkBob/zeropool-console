@@ -1,5 +1,5 @@
 {
-    "defaultPool": "BOB-sepolia",
+    "defaultPool": "USDC-op-tenderly",
 
     "pools": {
         "USDC-polygon": {
@@ -42,6 +42,17 @@
             "proxyUrls": ["http://127.0.0.1:8081", "https://sepolia-decentralized-relayer.thgkjlr.website/", "https://sepolia-proxy.zkbob.evgen.space"],
             "feeDecimals": 2,
             "depositScheme": "permit"
+        },
+        "USDC-op-tenderly": {
+            "chainId": 10,
+            "parameters": "prod",
+            "poolAddress": "0x1CA8C2B9B20E18e86d5b9a72370fC6c91814c97C",
+            "tokenAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+            "proxyUrls": ["https://sepolia-proxy.zkbob.evgen.space", "https://sepolia-decentralized-relayer.thgkjlr.website"],
+            "delegatedProverUrls": [],
+            "coldStorageConfigPath": "",
+            "feeDecimals": 2,
+            "depositScheme": "usdc"
         },
         "BOB-sepolia-donotuse": {
             "chainId": 11155111,
@@ -147,7 +158,7 @@
             "rpcUrls": ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"]
         },
         "10": {
-            "rpcUrls": ["https://rpc.ankr.com/optimism", "https://mainnet.optimism.io"]
+            "rpcUrls": ["https://virtual.optimism.rpc.tenderly.co/cf23b470-a370-4ebd-8be1-67ced3d49177"]
         },
         "11155111": {
             "rpcUrls": ["https://sepolia.drpc.org", "https://rpc.sepolia.org", "https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia.public.blastapi.io"]
@@ -187,7 +198,7 @@
             "address": "https://polygonscan.com/address/{{addr}}"
         },
         "10": {
-            "tx": "https://optimistic.etherscan.io/tx/{{hash}}",
+            "tx": "https://dashboard.tenderly.co/explorer/vnet/cf23b470-a370-4ebd-8be1-67ced3d49177/tx/{{hash}}",
             "address": "https://optimistic.etherscan.io/address/{{addr}}"
         },
         "11155111": {
@@ -239,7 +250,8 @@
         "USDT-devnet": "https://staging--zkbob.netlify.app",
         "USDT-nile": "https://staging--zkbob.netlify.app",
         "USDT-nile-guard": "https://staging--zkbob.netlify.app",
-        "USDT-tron": "https://tron.zkbob.com"
+        "USDT-tron": "https://tron.zkbob.com",
+        "USDC-op-tenderly": "https://app.zkbob.com"
     },
 
     "migrations": {
@@ -267,6 +279,15 @@
             }
         },
         "USDC-optimism": {
+            "oldTokens": {
+                "BOB": {
+                    "tokenAddress": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b",
+                    "firstTimestamp": 0,
+                    "lastTimestamp": 1696854269
+                }
+            }
+        },
+        "USDC-op-tenderly": {
             "oldTokens": {
                 "BOB": {
                     "tokenAddress": "0xb0b195aefa3650a6908f15cdac7d92f8a5791b0b",
