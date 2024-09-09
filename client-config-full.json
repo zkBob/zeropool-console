@@ -48,7 +48,7 @@
             "parameters": "prod",
             "poolAddress": "0x1CA8C2B9B20E18e86d5b9a72370fC6c91814c97C",
             "tokenAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-            "proxyUrls": ["https://sepolia-proxy.zkbob.evgen.space", "https://sepolia-decentralized-relayer.thgkjlr.website"],
+            "proxyUrls": ["https://sepolia-proxy.zkbob.evgen.space", "https://sepolia-decentralized-relayer.thgkjlr.website", "http://127.0.0.1:8081"],
             "delegatedProverUrls": [],
             "coldStorageConfigPath": "",
             "feeDecimals": 2,
@@ -158,7 +158,7 @@
             "rpcUrls": ["https://polygon-rpc.com", "https://rpc.ankr.com/polygon"]
         },
         "10": {
-            "rpcUrls": ["https://virtual.optimism.rpc.tenderly.co/cf23b470-a370-4ebd-8be1-67ced3d49177"]
+            "rpcUrls": ["https://virtual.optimism.rpc.tenderly.co/fb1a77c3-e7f5-4622-aee5-85025a99a658"]
         },
         "11155111": {
             "rpcUrls": ["https://sepolia.drpc.org", "https://rpc.sepolia.org", "https://sepolia.infura.io/v3/2a219563d6f8480db0e2ce66bcd8f29e", "https://eth-sepolia.public.blastapi.io"]
@@ -198,7 +198,7 @@
             "address": "https://polygonscan.com/address/{{addr}}"
         },
         "10": {
-            "tx": "https://dashboard.tenderly.co/explorer/vnet/cf23b470-a370-4ebd-8be1-67ced3d49177/tx/{{hash}}",
+            "tx": "https://dashboard.tenderly.co/explorer/vnet/fb1a77c3-e7f5-4622-aee5-85025a99a658/tx/{{hash}}",
             "address": "https://optimistic.etherscan.io/address/{{addr}}"
         },
         "11155111": {

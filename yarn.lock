@@ -13828,10 +13828,10 @@ zen-observable@0.8.15:
   resolved "https://registry.yarnpkg.com/zen-observable/-/zen-observable-0.8.15.tgz#96415c512d8e3ffd920afd3889604e30b9eaac15"
   integrity sha512-PQ2PC7R9rslx84ndNBZB/Dkv8V8fZEpk83RLgXtYd0fwUgEjseMn1Dgajh2x6S8QbZAFa9p2qVCEuYZNgve0dQ==
 
-zkbob-client-js@6.0.0-beta9:
-  version "6.0.0-beta9"
-  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-6.0.0-beta9.tgz#c08c7832acb3ca52fb92dd9bb340023e356ccd6b"
-  integrity sha512-IIUWosrPADbDXTOdc3Wkhi0VFMdkSCXoC41d6OXYch32zDjjVvhDKoKoLA04FxU2rIy6bqOEKLO45m1kGKyvIw==
+zkbob-client-js@6.0.0-beta10:
+  version "6.0.0-beta10"
+  resolved "https://registry.yarnpkg.com/zkbob-client-js/-/zkbob-client-js-6.0.0-beta10.tgz#90a76a4c7e7722d8f6160e0742a52666e1276b31"
+  integrity sha512-arMjVWSfwNbXdwvNHdWx/6kDuxKlE1eRVRLIpedlc80jr00gek0xQDfcX4tWSvczmczUKaDSoZpGs48C8OKe8Q==
   dependencies:
     "@ethereumjs/util" "^8.0.2"
     "@graphprotocol/client-cli" "3.0.0"
@@ -13846,7 +13846,6 @@ zkbob-client-js@6.0.0-beta9:
     idb "^7.0.0"
     libzkbob-rs-wasm-web "1.7.0-beta5"
     libzkbob-rs-wasm-web-mt "1.7.0-beta5"
-    promise-retry "^2.0.1"
     promise-throttle "^1.1.2"
     regenerator-runtime "^0.13.9"
     tronweb "^5.3.0"
