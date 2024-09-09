@@ -46,7 +46,7 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'transfer-shielded': [c.transferShielded, '<shielded address> <amount> [times | +]', 'move shielded tokens to the another zkBob address (inside a pool)'],
   'transfer-shielded-multinote': [c.transferShieldedMultinote, '<shielded address> <amount> <count> [times]', 'send a set of (notes) to the single address'],
   'withdraw-shielded': [c.withdrawShielded, '<amount> [address] [times]', 'withdraw shielded tokens to the native address (to the your account if the address is ommited)'],
-  'forced-exit': [c.forcedExit, '', 'Withdraw funds and deactivate account (in case of relayer failure)'],
+  'forced-exit': [c.forcedExit, '', 'Withdraw funds and deactivate account (in case of sequencer failure)'],
   'history': [c.printHistory, '', 'print all transactions related to your account'],
   'compliance-report': [c.complianceReport, '', 'generate compliance report: history + evidence of transactions ownership'],
   'pending-dd': [c.pendingDD, '', 'print pending direct deposits for the account'],
@@ -73,12 +73,14 @@ const COMMANDS: { [key: string]: [(...args) => void, string, string] } = {
   'reset': [c.reset, '', 'log out from the current account'],
   'account-id': [c.getAccountId, '', 'get the client account id (indexed DB name)'],
   'support-id': [c.getSupportId, '', 'get the client support id'],
-  'version': [ c.getVersion, '', 'get console and relayer versions'],
+  'version': [ c.getVersion, '', 'get console and sequencer versions'],
   'gift-card-generate':[c.generateGiftCardLocal, '<balance> [quantity]', 'generates a bunch of gift cards from the local account'],
   'gift-card-generate-cloud':[c.generateGiftCards,'<alias> <quantity> <balance> <token>','generate gift cards via cloud (you should provide cloud access token)'],
   'gift-card-balance': [c.giftCardBalance, '<code_or_redemption_url> [code_or_redemption_url2 code_or_redemption_url3 ...]', 'retrieve gift cards balances'],
   'gift-card-redeem': [c.redeemGiftCard, '<code_or_redemption_url>', 'redeem gift card to the current account'],
   'environment': [c.currentPoolEnvironment, '', 'get environment constants'],
+  'sequencer-list': [c.sequencerList, '', 'show all available sequencers'],
+  'sequencer-prioritize': [c.prioritizeSequencer, '<url_or_index>', 'set primary sequencer (autoselection will disabled)'],
   'help': [
     function () {
       let message = '\nAvailable commands:\n' + Object.entries(COMMANDS)
@@ -120,7 +122,7 @@ NOTE: You don't need native coins for the most of the commands<br>
   <div class="command-example">get-address</div>
   <br>
   <div class="comment">// Mint 10 tokens for the account</div>
-  <div class="comment">// (you need native coins to cover the relayer's fee)</div>
+  <div class="comment">// (you need native coins to cover the sequencer's fee)</div>
   <div class="command-example">testnet-mint ^10</div>
   <br>
   <div class="comment">// Make sure your token balance was deposited</div>
@@ -212,10 +214,10 @@ jQuery(async function ($) {
                   if (this.account.getPools().length > 1) {
                     this.echo(`Supported pools: ${await this.account.getPools().join(', ')}`);
                   }
-                  this.echo(`Library version: ${await this.account.libraryVersion()}`);
-                  this.echo(`Relayer version: ...requesting...`);
-                  const relayerVer = await this.account.relayerVersion().catch((err) => ({ref: `[[;red;]UNAVAILABLE]`, commitHash: err.message}) );
-                  this.update(-1, `Relayer version: ${relayerVer.ref} (${relayerVer.commitHash})\n`);
+                  this.echo(`Library version:   ${await this.account.libraryVersion()}`);
+                  this.echo(`Sequencer version: ...requesting...`);
+                  const sequencerVer = await this.account.sequencerVersion().catch((err) => ({ref: `[[;red;]UNAVAILABLE]`, commitHash: err.message}) );
+                  this.update(-1, `Sequencer version: ${sequencerVer.ref} (${sequencerVer.commitHash})\n`);
                   clientReady = true;
                   break;
 

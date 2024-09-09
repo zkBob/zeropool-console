@@ -2,7 +2,7 @@ import bip39 from 'bip39-light';
 import { EphemeralAddress, HistoryRecord, HistoryTransactionType, ComplianceHistoryRecord, PoolLimits, TxType,
          TransferConfig, TransferRequest, TreeState, ProverMode, HistoryRecordState, GiftCardProperties, FeeAmount,
          deriveSpendingKeyZkBob,
-         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, FinalizedForcedExit
+         DepositType, DirectDepositType, DirectDeposit, ClientState, CommittedForcedExit, ForcedExitState, ProxyFee, SequencerJob,
         } from 'zkbob-client-js';
 import { bufToHex, nodeToHex, hexToBuf } from 'zkbob-client-js/lib/utils';
 import qrcodegen from "@ribpay/qr-code-generator";
@@ -28,10 +28,17 @@ export async function currentPoolEnvironment() {
     this.echo(`Chain:        ${account(this).networkName()} (${poolEnv.chainId})`)
     this.echo(`Pool address:     [[!;;;;${account(this).getAddressUrl(poolEnv.poolAddress)}]${poolEnv.poolAddress}]`);
     this.echo(`Token address:    [[!;;;;${account(this).getAddressUrl(poolEnv.tokenAddress)}]${poolEnv.tokenAddress}]`);
-    this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ''}:     ${chainEnv.rpcUrls.join(', ')}`);
-    this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ''}:          ${poolEnv.relayerUrls.join(', ')}`);
+    this.echo(`RPC endpoint${chainEnv.rpcUrls.length > 1 ? 's' : ' '}:    ${chainEnv.rpcUrls.join(', ')}`);
+    if (poolEnv.relayerUrls && poolEnv.relayerUrls.length > 0) {
+        this.echo(`Relayer${poolEnv.relayerUrls.length > 1 ? 's' : ' '}:         ${poolEnv.relayerUrls.join(', ')}`);
+    }
+    if (poolEnv.proxyUrls && poolEnv.proxyUrls.length > 0) {
+        this.echo(`${poolEnv.proxyUrls.length > 1 ? 'Proxies' : 'Proxy  '}:          ${poolEnv.proxyUrls.join(', ')}`);
+    }
     this.echo(`Cold storage:     ${poolEnv.coldStorageConfigPath}`);
-    this.echo(`Delegated prover${poolEnv.delegatedProverUrls.length > 1 ? 's' : ''}: ${poolEnv.delegatedProverUrls.join(', ')}`);
+    if (poolEnv.delegatedProverUrls && poolEnv.delegatedProverUrls.length > 0) {
+        this.echo(`Delegated prover${poolEnv.delegatedProverUrls.length > 1 ? 's' : ''}: ${poolEnv.delegatedProverUrls.join(', ')}`);
+    }
     this.echo(`Minter:           ${env.minters[curPool]}`);
     this.echo(`Cloud API:        ${env.cloudApi[curPool]}`);
     this.echo(`UI URL:           ${env.redemptionUrls[curPool]}`);
@@ -276,7 +283,7 @@ export async function getTxParts(...amounts: string[]) {
     } else {
         let totalFee = BigInt(0);
         for (const part of result) {
-            totalFee += part.fee;
+            totalFee += part.fee.total;
         }
 
         if (result.length == 1) {
@@ -294,7 +301,9 @@ export async function getTxParts(...amounts: string[]) {
     for (let i = 0; i < result.length; i++) {
         const part = result[i];
         const notes = part.outNotes;
-        const partFee = await account(this).shieldedToHuman(part.fee);
+        const partFeeTotal = await account(this).shieldedToHuman(part.fee.total);
+        const partFeeProxy = await account(this).shieldedToHuman(part.fee.proxyPart);
+        const partFeeProver = await account(this).shieldedToHuman(part.fee.proverPart);
         let partLimit = "";
         if (part.accountLimit > 0) {
             partLimit = `, accountLimit = ${await account(this).shieldedToHuman(part.accountLimit)} ${account(this).shTokenSymbol()}`;
@@ -302,10 +311,10 @@ export async function getTxParts(...amounts: string[]) {
 
         const txTotalAmount = notes.map(note => note.amountGwei).reduce((acc, cur) => acc + cur, BigInt(0));
         if (notes.length == 0) {
-            this.echo(`TX#${i} Aggregate notes: ${await account(this).shieldedToHuman(part.inNotesBalance)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+            this.echo(`TX#${i} Aggregate notes: ${await account(this).shieldedToHuman(part.inNotesBalance)} ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}]${partLimit}`);
         } else {
             if (amounts.length > 1 || notes.length > 1) {
-                this.echo(`TX#${i} ${await account(this).shieldedToHuman(txTotalAmount)} ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} ${await account(this).shieldedToHuman(txTotalAmount)} ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}}]${partLimit}`);
                 for (const aNote of notes) {
                     if(aNote.destination != lastDest) {
                         lastDest = aNote.destination;
@@ -315,7 +324,7 @@ export async function getTxParts(...amounts: string[]) {
                 }
             } else {
                 const color = (notes.length == 0 ? 'gray' : 'green');
-                this.echo(`TX#${i} [[;${color};]${await account(this).shieldedToHuman(txTotalAmount)}] ${account(this).shTokenSymbol()} [fee: ${partFee}]${partLimit}`);
+                this.echo(`TX#${i} [[;${color};]${await account(this).shieldedToHuman(txTotalAmount)}] ${account(this).shTokenSymbol()} [fee: ${partFeeTotal} = ${partFeeProxy} + ${partFeeProver}]${partLimit}`);
             }
         }
     }
@@ -329,16 +338,21 @@ export async function estimateFeeDeposit(amount: string) {
 
     let perTx = '';
     let perByte = '';
-    const baseFee = txType == TxType.Deposit ? result.relayerFee.fee.deposit : result.relayerFee.fee.permittableDeposit;
+    let proverFee = '';
+    const baseFee = txType == TxType.Deposit ? result.sequencerFee.fee.deposit : result.sequencerFee.fee.permittableDeposit;
     if (baseFee > 0n) {
         perTx = `${await account(this).shieldedToHuman(baseFee)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    const components = [perTx, perByte].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, proverFee].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).tokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).tokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
@@ -356,15 +370,20 @@ export async function estimateFeeTransfer(...amounts: string[]) {
 
     let perTx = '';
     let perByte = '';
-    if (result.relayerFee.fee.transfer > 0n) {
-        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.transfer)} per tx`
+    let proverFee = '';
+    if (result.sequencerFee.fee.transfer > 0n) {
+        perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.transfer)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    const components = [perTx, perByte].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, proverFee].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}`);
@@ -395,18 +414,23 @@ export async function estimateFeeWithdraw(amount: string) {
     let perTx = '';
     let perByte = '';
     let swapFee = '';
-    if (result.relayerFee.fee.withdrawal > 0n) {
-        perTx = `${await account(this).shieldedToHuman(result.relayerFee.fee.withdrawal)} per tx`
+    let proverFee = '';
+    if (result.sequencerFee.fee.withdrawal > 0n) {
+        perTx = `${await account(this).shieldedToHuman(result.sequencerFee.fee.withdrawal)} per tx`
     }
-    if (result.relayerFee.oneByteFee > 0n) {
-        perByte = `${await account(this).shieldedToHuman(result.relayerFee.oneByteFee)} per byte`
+    if (result.sequencerFee.oneByteFee > 0n) {
+        perByte = `${await account(this).shieldedToHuman(result.sequencerFee.oneByteFee)} per byte`
     }
-    if (result.relayerFee.nativeConvertFee > 0n && swapAmount > 0n) {
-        swapFee = `${await account(this).shieldedToHuman(result.relayerFee.nativeConvertFee)} swap`;
+    if (result.sequencerFee.nativeConvertFee > 0n && swapAmount > 0n) {
+        swapFee = `${await account(this).shieldedToHuman(result.sequencerFee.nativeConvertFee)} swap`;
     }
-    const components = [perTx, perByte, swapFee].filter((s) => s.length > 0);
+    const proxyFee = result.sequencerFee as ProxyFee
+    if (proxyFee && proxyFee.proverFee > 0n) {
+        proverFee = `${await account(this).shieldedToHuman(proxyFee.proverFee)} to prover`;
+    }
+    const components = [perTx, perByte, swapFee, proverFee].filter((s) => s.length > 0);
 
-    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.total)} ${account(this).shTokenSymbol()}]`);
+    this.echo(`Total fee est.:     [[;white;]${await account(this).shieldedToHuman(result.fee.total)} ${account(this).shTokenSymbol()}]`);
     this.echo(`Fee components:     [[;white;](${components.length > 0 ? components.join(' + ') : '--'}) ${account(this).tokenSymbol()}]`);
     this.echo(`Total calldata len: [[;white;]${result.calldataTotalLength} bytes]`);
     this.echo(`Transaction count:  [[;white;]${result.txCnt}]`);
@@ -460,14 +484,14 @@ export async function depositShielded(amount: string, times: string) {
         this.pause();
 
         // Due to the fact that the console is a test tool, we doesn't check address balance here
-        // we should get ability to test relayer's behaviour
+        // we should get ability to test sequencer's behaviour
         const result = await account(this).depositShielded(await account(this).humanToShielded(amount));
 
         this.resume();
         if (result.txHash) {
-            this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+            this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
         } else {
-            this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+            this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
         }
     }
 }
@@ -485,9 +509,9 @@ export async function depositShieldedEphemeral(amount: string, index: string) {
     const result = await account(this).depositShieldedEphemeral(await account(this).humanToShielded(amount), ephemeralIndex);
     this.resume();
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
-        this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
     }
 }
 
@@ -572,9 +596,9 @@ export async function transferShielded(to: string, amount: string, times: string
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
+                    return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`;
                 } else {
-                    return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                    return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
                 }
                     
             }).join(`\n     `)}`);
@@ -607,9 +631,9 @@ export async function transferShieldedMultinote(to: string, amount: string, coun
             this.resume();
             this.echo(`Done ${result.map((oneResult) => {
                 if (oneResult.txHash) {
-                    return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                    return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
                 } else {
-                    return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                    return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
                 }
             }).join(`\n     `)}`);
         }
@@ -639,9 +663,9 @@ export async function withdrawShielded(amount: string, address: string, times: s
         this.resume();
         this.echo(`Done ${result.map((oneResult) => {
             if (oneResult.txHash) {
-                return `[job #${oneResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
+                return `[job #${oneResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(oneResult.txHash)}]${oneResult.txHash}]`
             } else {
-                return `[job #${oneResult.jobId}]: [[;red;]tx hash was not provided]`;
+                return `[job #${oneResult.job.toString()}]: [[;red;]tx hash was not provided]`;
             }
         }).join(`\n      `)}`);
     }
@@ -823,33 +847,36 @@ export async function getRoot(index: string) {
         }
     }
 
-    this.echo(`Local Merkle Tree:  [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
+    this.echo(`Local Merkle Tree:    [[;white;]${localState.root.toString()} @${localState.index.toString()}]${treeDescr}`)
 
     this.echo(`Requesting additional info...`);
     this.pause();
-    const relayerState = account(this).getRelayerTreeState().catch((e) => e.message);
-    let relayerOptimisticState;
+    const sequencerState = account(this).getSequencerTreeState().catch((e) => e.message);
+    let sequencerOptimisticState;
+    let sequencerPendingIndex;
     if (idx === undefined) {
-        relayerOptimisticState = account(this).getRelayerOptimisticTreeState().catch((e) => e.message);
+        sequencerOptimisticState = account(this).getSequencerOptimisticTreeState().catch((e) => e.message);
+        sequencerPendingIndex = account(this).getSequencerPendingIndex().catch((e) => e.message);
     }
     const poolState = account(this).getPoolTreeState(idx).catch((e) => e.message);
 
-    let promises = [relayerState, relayerOptimisticState, poolState]
+    let promises = [sequencerState, sequencerOptimisticState, poolState, sequencerPendingIndex]
     Promise.all(promises).then((states) => {
-        const relayerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
+        const sequencerState = typeof states[0] === "string" ? `[[;red;]${states[0]}]` : 
                         `[[;white;]${states[0].root.toString()} @${states[0].index.toString()}]`;
-        const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
-                    `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
         const poolState = typeof states[2] === "string" ? `[[;red;]${states[2]}]` : 
                     `[[;white;]${states[2].root.toString()} @${states[2].index.toString()}]`;
 
-        if (relayerOptimisticState !== undefined) {
-            const relayerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
+        if (idx === undefined) {
+            const sequencerOpState = typeof states[1] === "string" ? `[[;red;]${states[1]}]` : 
                         `[[;white;]${states[1].root.toString()} @${states[1].index.toString()}]`;
+            const optimisticIdx = typeof states[1] !== "string" ? states[1].index as bigint : 0n;
+            const seqPendIdx = typeof states[3] === "bigint" && states[3] >  optimisticIdx ?
+                        ` [pending: [[;white;]${states[3].toString()}]]` : '';
 
-            this.update(-1, `Relayer:            ${relayerState}`);
-            this.echo(`Relayer optimistic: ${relayerOpState}`);
-            this.echo(`Pool  contract:     ${poolState}`);
+            this.update(-1, `Sequencer:            ${sequencerState}`);
+            this.echo(`Sequencer optimistic: ${sequencerOpState}${seqPendIdx}`);
+            this.echo(`Pool  contract:       ${poolState}`);
         } else {
             this.update(-1, `Pool  contract:     ${poolState}`);
         }
@@ -887,15 +914,15 @@ export async function getLeftSiblings(index: string) {
         this.echo(`[[;white;] ${height}]|[[;white;] ${index}]| ${aNode.value}`);
     });
 
-    let relayerResponse = `[\n`;
+    let sequencerResponse = `[\n`;
     siblings.forEach((aNode, index) => {
         const hexNode = nodeToHex(aNode).slice(2);
-        relayerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
+        sequencerResponse += `\t\"${hexNode}\"${index < siblings.length - 1 ? ',' : ''}\n`;
     });
-    relayerResponse += `]`
+    sequencerResponse += `]`
 
-    this.echo('[[;white;]Relayer response format:]');
-    this.echo(`${relayerResponse}`);
+    this.echo('[[;white;]sequencer response format:]');
+    this.echo(`${sequencerResponse}`);
 
     this.resume();
 
@@ -1044,20 +1071,20 @@ export async function setProverMode(mode: ProverMode) {
 export async function getProverInfo() {
     this.pause();
     const proverMode = await account(this).getProverMode();
-    const delegatedProverUrls: string[] = account(this).getDelegatedProverUrls();
+    const delegatedProverUrls = account(this).getDelegatedProverUrls();
     switch(proverMode) {
         case ProverMode.Local:
             this.echo(`Local Prover`);
             break;
         case ProverMode.Delegated:
-            if (delegatedProverUrls.length > 0) {
+            if (delegatedProverUrls && delegatedProverUrls.length > 0) {
                 this.echo(`Delegated Prover: ${delegatedProverUrls.join(', ')}`);
             } else {
                 this.echo(`Delegated Prover: delegated prover url not provided`);
             }
             break;
         case ProverMode.DelegatedWithFallback:
-            if (delegatedProverUrls.length > 0) {
+            if (delegatedProverUrls && delegatedProverUrls.length > 0) {
                 this.echo(`Delegated Prover with fallback: ${delegatedProverUrls.join(', ')}`);
             } else {
                 this.echo(`Delegated Prover with fallback: delegated prover url not provided`);
@@ -1069,7 +1096,7 @@ export async function getProverInfo() {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await account(this).proverVersion();
+            const ver = await account(this).delegatedProverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -1417,22 +1444,22 @@ export function getSupportId() {
 
 export async function getVersion() {
     this.pause();
-    this.echo(`zkBob console version:   [[;white;]${pjson.version}]`);
-    this.echo(`Client library  version: [[;white;]${await account(this).libraryVersion()}]`);
-    this.echo(`Current relayer version: ...fetching...`);
+    this.echo(`zkBob console version:     [[;white;]${pjson.version}]`);
+    this.echo(`Client library  version:   [[;white;]${await account(this).libraryVersion()}]`);
+    this.echo(`Current sequencer version: ...fetching...`);
 
     try {
-        const ver = await account(this).relayerVersion();
-        this.update(-1, `Current relayer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
+        const ver = await account(this).sequencerVersion();
+        this.update(-1, `Current sequencer version: [[;white;]${ver.ref} @ ${ver.commitHash}]`);
     } catch (err) {
-        this.update(-1, `Current relayer version: [[;red;]${err.message}]`);
+        this.update(-1, `Current sequencer version: [[;red;]${err.message}]`);
     }
 
     if (await account(this).getProverMode() != ProverMode.Local) {
         this.echo(`Current prover version:  ...fetching...`);
 
         try {
-            const ver = await account(this).proverVersion();
+            const ver = await account(this).delegatedProverVersion();
             this.update(-1, `Current prover version:  [[;white;]${ver.ref} @ ${ver.commitHash}]`)
         } catch(err) {
             this.update(-1, `Current prover version:  [[;red;]${err.message}]`);
@@ -1463,114 +1490,118 @@ class GiftCard {
 }
 
 export async function generateGiftCards(prefix: string, quantity: string, cardBalance: string, authToken: string) {
-
-    this.pause();
     const cloudUrl = env.cloudApi[account(this).getCurrentPool()];
-    console.log("cloudUrl = ", cloudUrl)
+    if (cloudUrl) {
+        console.log("cloudUrl = ", cloudUrl)
 
-    const singleCardBalance = await account(this).humanToShielded(cardBalance)
-    const requiredTotalSum = singleCardBalance * BigInt(quantity);
-    await account(this).syncState();
-    const txRequests = Array(Number(quantity)).fill(singleCardBalance);
-    const fee = await account(this).estimateFee(txRequests, TxType.Transfer, 0n, true);
-    if (fee.insufficientFunds) {
-        const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
-        const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
-        const feeStr = `${await account(this).shieldedToHuman(fee.total)} ${account(this).shTokenSymbol()}`;
-        const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
-        this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
-        return;
-    }
-    const minTransferAmount = await account(this).minTxAmount();
+        this.pause();
 
-    if (singleCardBalance < minTransferAmount) {
-        const singleStr = `${await account(this).shieldedToHuman(singleCardBalance)} ${account(this).shTokenSymbol()}`;
-        const minAmountStr = `${await account(this).shieldedToHuman(minTransferAmount)} ${account(this).shTokenSymbol()}`;
-        this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
-        return
-    }
-
-    const headers = new Headers();
-    headers.append("Authorization", `Bearer ${authToken}`);
-    headers.append("Content-Type", "application/json");
-    let giftCards: GiftCard[] = [];
-    const birthIndex = Number((await account(this).getPoolTreeState()).index);
-    try {
-        this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
-        const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
-        for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
-            const alias = `${prefix}_${cardIndex}`;
-            const body = JSON.stringify({ "description": `${alias}` });
-            const signupResponse = await fetch(`${cloudUrl}/signup`, {
-                method: 'POST',
-                headers,
-                body
-            });
-            if (signupResponse.status == 401) {
-                throw new Error("not authorized to create new accounts, check admin token in environment variables")
-            } else if (!signupResponse.ok) {
-                throw new Error(`cloud wallet returned bad response ${signupResponse}` )
-            }
-            const signupResponseJson = await signupResponse.json();
-            const cloudId = signupResponseJson.accountId;
-
-            if(!cloudId) throw new Error("sign up response is invalid")
-
-            const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
-
-            if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
-
-            const exportJson = await exportResponse.json();
-            let sk = `0x${exportJson.sk}`;
-
-            const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
-
-            if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
-            const generateAddressResponseJson = await generateAddressResponse.json();
-            const address = generateAddressResponseJson.address;
-            console.log(`generated new account with address: ${address} `);
-
-            const giftCardProps: GiftCardProperties = {
-                sk: hexToBuf(sk, 32),
-                birthIndex,
-                balance: singleCardBalance,
-                poolAlias: account(this).getCurrentPool(),
-            };
-
-            console.log("giftCardProps:", giftCardProps);
-
-            const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
-            const svg = qrcode(url);
-            giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
-            if (Number(quantity) > 1) {
-                this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
-            }
+        const singleCardBalance = await account(this).humanToShielded(cardBalance)
+        const requiredTotalSum = singleCardBalance * BigInt(quantity);
+        await account(this).syncState();
+        const txRequests = Array(Number(quantity)).fill(singleCardBalance);
+        const fee = await account(this).estimateFee(txRequests, TxType.Transfer, 0n, true);
+        if (fee.insufficientFunds) {
+            const [balance] = await account(this).getShieldedBalances(false); // state already updated, do not sync again
+            const requiredStr = `${await account(this).shieldedToHuman(requiredTotalSum)} ${account(this).shTokenSymbol()}`;
+            const feeStr = `${await account(this).shieldedToHuman(fee.fee.total)} ${account(this).shTokenSymbol()}`;
+            const balanceStr = `${await account(this).shieldedToHuman(balance)} ${account(this).shTokenSymbol()}`;
+            this.echo(`[[;red;]Total card balance ${requiredStr} with required fee (${feeStr}) exceeds available funds (${balanceStr})]`);
+            return;
         }
-        this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
+        const minTransferAmount = await account(this).minTxAmount();
 
-        let zipUrl = await makeZippedReport(giftCards);
-        this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);
-        const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
-            async giftCard =>  {return {
-                destination: giftCard.address,
-                amountGwei: await account(this).humanToShielded(cardBalance)
+        if (singleCardBalance < minTransferAmount) {
+            const singleStr = `${await account(this).shieldedToHuman(singleCardBalance)} ${account(this).shTokenSymbol()}`;
+            const minAmountStr = `${await account(this).shieldedToHuman(minTransferAmount)} ${account(this).shTokenSymbol()}`;
+            this.echo(`[[;red;]Single card balance ${singleStr} less than minimum transfer amount ${minAmountStr}]`);
+            return
+        }
+
+        const headers = new Headers();
+        headers.append("Authorization", `Bearer ${authToken}`);
+        headers.append("Content-Type", "application/json");
+        let giftCards: GiftCard[] = [];
+        const birthIndex = Number((await account(this).getPoolTreeState()).index);
+        try {
+            this.echo(`Generating account${Number(quantity) > 1 ? 's' : ''}...`);
+            const baseUrl = env.redemptionUrls[account(this).getCurrentPool()];
+            for (let cardIndex = 0; cardIndex < Number(quantity); cardIndex++) {
+                const alias = `${prefix}_${cardIndex}`;
+                const body = JSON.stringify({ "description": `${alias}` });
+                const signupResponse = await fetch(`${cloudUrl}/signup`, {
+                    method: 'POST',
+                    headers,
+                    body
+                });
+                if (signupResponse.status == 401) {
+                    throw new Error("not authorized to create new accounts, check admin token in environment variables")
+                } else if (!signupResponse.ok) {
+                    throw new Error(`cloud wallet returned bad response ${signupResponse}` )
+                }
+                const signupResponseJson = await signupResponse.json();
+                const cloudId = signupResponseJson.accountId;
+
+                if(!cloudId) throw new Error("sign up response is invalid")
+
+                const exportResponse = await fetch(`${cloudUrl}/export?id=${cloudId}`, { headers });
+
+                if (!exportResponse.ok) throw new Error(`export failed ${exportResponse}`)
+
+                const exportJson = await exportResponse.json();
+                let sk = `0x${exportJson.sk}`;
+
+                const generateAddressResponse = await fetch(`${cloudUrl}/generateAddress?id=${cloudId}`);
+
+                if (!generateAddressResponse.ok) throw new Error(`generate address failed ${exportResponse}`);
+                const generateAddressResponseJson = await generateAddressResponse.json();
+                const address = generateAddressResponseJson.address;
+                console.log(`generated new account with address: ${address} `);
+
+                const giftCardProps: GiftCardProperties = {
+                    sk: hexToBuf(sk, 32),
+                    birthIndex,
+                    balance: singleCardBalance,
+                    poolAlias: account(this).getCurrentPool(),
+                };
+
+                console.log("giftCardProps:", giftCardProps);
+
+                const url = await redemptionUrl(giftCardProps, baseUrl, account(this));
+                const svg = qrcode(url);
+                giftCards.push(new GiftCard(alias, cloudId, sk, address, svg, url));
+                if (Number(quantity) > 1) {
+                    this.update(-1, `Generating accounts...[${ Math.round((cardIndex + 1)*100/Number(quantity))}%]`);
+                }
             }
-        } ));
-        const result = await account(this).transferShielded(transferRequests);
+            this.update(-1, `Generating account${Number(quantity) > 1 ? 's' : ''}...[[;green;]OK]`);
 
-        this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { jobId: any; txHash: any; }) => {
-            if (singleTxResult.txHash) {
-                return `[job #${singleTxResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
-            } else {
-                return `[job #${singleTxResult.jobId}]: [[;red;]tx hash was not provided]`;
-            }
-        }).join(`\n     `)}`);
+            let zipUrl = await makeZippedReport(giftCards);
+            this.echo(`Cards generated, [[!;;;;${zipUrl}]this archive] contains QR codes and summary report.\nSending funds ...`);
+            const transferRequests:TransferRequest[] = await Promise.all(giftCards.map(
+                async giftCard =>  {return {
+                    destination: giftCard.address,
+                    amountGwei: await account(this).humanToShielded(cardBalance)
+                }
+            } ));
+            const result = await account(this).transferShielded(transferRequests);
 
-    } catch (error) {
-        this.echo(`Process failed with error: [[;red;]${error.message}]`);
+            this.echo(`Transfer is [[;green;]DONE]:\n\t${result.map((singleTxResult: { job: SequencerJob; txHash: string; }) => {
+                if (singleTxResult.txHash) {
+                    return `[job #${singleTxResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(singleTxResult.txHash)}]${singleTxResult.txHash}]`
+                } else {
+                    return `[job #${singleTxResult.job.toString()}]: [[;red;]tx hash was not provided]`;
+                }
+            }).join(`\n     `)}`);
+
+        } catch (error) {
+            this.echo(`Process failed with error: [[;red;]${error.message}]`);
+        }
+
+        this.resume();
+    } else {
+        this.echo(`[[;red;]Error: Cloud API was not exist for the pool ${account(this).getCurrentPool()}. Please check config]`);
     }
-
-    this.resume();
 
 }
 
@@ -1649,7 +1680,7 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
     const cardBalance = await account(this).humanToShielded(amount);
     const poolAlias = account(this).getCurrentPool();
 
-    this.echo(`[[;green;]You can add extra funds to cover the relayer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
+    this.echo(`[[;green;]You can add extra funds to cover the sequencer fee. Otherwise the user won't receive exactly specified token amount during redemption]`);
     this.resume();
     const val = await this.read(`Specify extra funds for the ${qty > 1 ? 'EACH ' : ''}gift-card or press ENTER to leave it zero: `);
     const extraFundsForFee = await account(this).humanToShielded(val ?? '0');
@@ -1710,9 +1741,9 @@ export async function generateGiftCardLocal(amount: string, quantity: string){
         const results = await account(this).transferShielded(transferRequests);
         this.update(-1 , `Sending funds... [[;green;]OK] ${results.map((singleResult) => {
             if (singleResult.txHash) {
-                return `[job #${singleResult.jobId}]: [[!;;;;${account(this).getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
+                return `[job #${singleResult.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(singleResult.txHash)}]${singleResult.txHash}]`
             } else {
-                return `[job #${singleResult.jobId}]: [[;red;]tx hash was not provided]`;
+                return `[job #${singleResult.job.toString()}]: [[;red;]tx hash was not provided]`;
             }
         }).join(`\n     `)}`);
     } else {
@@ -1778,9 +1809,50 @@ export async function redeemGiftCard(codeOrUrl: string) {
     this.echo(`Redeeming gift card...`);
     const result = await account(this).redeemGiftCard(giftCard);
     if (result.txHash) {
-        this.echo(`Done [job #${result.jobId}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[!;;;;${account(this).getTransactionUrl(result.txHash)}]${result.txHash}]`);
     } else {
-        this.echo(`Done [job #${result.jobId}]: [[;red;]tx hash was not provided]`);
+        this.echo(`Done [job #${result.job.toString()}]: [[;red;]tx hash was not provided]`);
     }
+    this.resume();
+}
+
+export async function sequencerList() {
+    const list = await account(this).SequencerList();
+    this.echo('Available sequencers:');
+    list.forEach((endpoint, idx) => {
+        this.echo(` ${endpoint.isActive ? '[[;green;]>]' : ' '} ${endpoint.isPrioritize ? '[[;yellow;]*]' : ' '} [${idx}] ${[endpoint.isActive ? `[[;white;]${endpoint.url}] (current)` : `${endpoint.url}`]}`);
+    })
+}
+
+export async function prioritizeSequencer(indexOrUrl: string) {
+    const list = await account(this).SequencerList();
+    let idx: number | undefined = undefined;
+    if (indexOrUrl !== undefined && typeof indexOrUrl == 'string' && indexOrUrl.length > 0) {
+        if (!isNaN(Number(indexOrUrl))) {
+            idx = Number(indexOrUrl);
+        } else {
+            idx = list.findIndex(e => e.url === indexOrUrl);
+            if (idx == -1) {
+                this.echo(`[[;red;]Cannot find sequencer with url ${indexOrUrl}]`);
+                return;
+            }
+        }
+    }
+
+    if (idx === undefined) {
+        this.echo(`Removing priority mark...`);
+    } else {
+        this.echo(`Setting sequencer at index ${idx} as a prioritized one...`);
+    }
+
+    this.pause();
+    try {
+        const res = await account(this).SetPrimarySequencer(idx);
+        this.echo(`Current primary sequencer: ${res !== undefined ? `[[;white;]${list[res].url}]` : `not set`}`);
+    } catch(err) {
+        this.resume();
+        throw err;
+    }
+
     this.resume();
 }
