@@ -17,8 +17,6 @@
     	    "poolAddress": "0x1CA8C2B9B20E18e86d5b9a72370fC6c91814c97C",
     	    "tokenAddress": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     	    "relayerUrls": ["https://relayer-optimism.zkbob.com/"],
-    	    "delegatedProverUrls": [],
-    	    "coldStorageConfigPath": "",
             "feeDecimals": 2,
             "depositScheme": "usdc",
             "ddSubgraph": "zkbob-bob-optimism"
@@ -28,12 +26,18 @@
     	    "poolAddress": "0x58320A55bbc5F89E5D0c92108F762Ac0172C5992",
     	    "tokenAddress": "0x4200000000000000000000000000000000000006",
     	    "relayerUrls": ["https://relayer-eth-opt-mvp.zkbob.com/"],
-    	    "delegatedProverUrls": [],
-    	    "coldStorageConfigPath": "",
 	        "isNative": true,
     	    "minTxAmount": 0,
     	    "depositScheme": "permit2",
             "ddSubgraph": "zkbob-eth-optimism"
+        },
+        "USDT-tron": {
+            "chainId": 728126428,
+            "poolAddress": "TXViaNRhEugXpAZApviBqBnbTSKUgejnR9",
+            "tokenAddress": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+            "relayerUrls": ["https://relayer-tron-mpc.zkbob.com/"],
+            "coldStorageConfigPath": "",
+            "depositScheme": "approve"
         }
     },
     "chains": {
@@ -42,6 +46,9 @@
         },
 	    "10": {
             "rpcUrls": ["https://rpc.ankr.com/optimism", "https://mainnet.optimism.io"]
+        },
+        "728126428": {
+            "rpcUrls": ["https://api.trongrid.io"]
         }
     },
     "blockExplorerUrls": {
@@ -52,26 +59,23 @@
 	    "10": {
             "tx": "https://optimistic.etherscan.io/tx/{{hash}}",
             "address": "https://optimistic.etherscan.io/address/{{addr}}"
+        },
+        "728126428": {
+            "tx": "https://tronscan.org/#/transaction/{{hash}}",
+            "address": "https://tronscan.org/#/address/{{addr}}"
         }
     },
     "globalSnarks": {
         "transferParamsUrl": "./assets/transfer_params_prod.bin",
         "transferVkUrl": "./assets/transfer_verification_key_prod.json"
     },
-    "minters": {
-        "USDC-polygon": "",
-        "USDC-optimism": "",
-        "WETH-optimism": ""
-    },
-    "cloudApi": {
-        "USDC-polygon": "",
-	    "USDC-optimism": "",
-        "WETH-optimism": ""
-    },
+    "minters": {},
+    "cloudApi": {},
     "redemptionUrls": {
         "USDC-polygon": "https://app.zkbob.com",
 	    "USDC-optimism": "https://app.zkbob.com",
-        "WETH-optimism": "https://app.zkbob.com"
+        "WETH-optimism": "https://app.zkbob.com",
+        "USDT-tron": "https://tron.zkbob.com"
     },
     "migrations": {
         "USDC-polygon": {
