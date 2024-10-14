@@ -1,6 +1,6 @@
 {
   "name": "zkbob-console",
-  "version": "3.9.0",
+  "version": "4.0.0",
   "license": "MIT",
   "author": "Dmitry Vdovin <voidxnull@gmail.com>",
   "homepage": "https://github.com/zkBob/zkbob-console",
@@ -40,7 +40,7 @@
     "tslib": "^2.3.1",
     "uuid": "^9.0.0",
     "web3": "^1.7.1",
-    "zkbob-client-js": "5.5.0",
+    "zkbob-client-js": "6.0.0",
     "zkbob-support-js": "1.0.1"
   },
   "devDependencies": {

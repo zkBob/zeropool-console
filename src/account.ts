@@ -7,7 +7,7 @@ import { AccountConfig, ClientConfig, ProverMode,
          PoolLimits, TreeState, EphemeralAddress, SyncStat, TreeNode,
          ServiceVersion, accountId, DepositType, SignatureType,
          deriveSpendingKeyZkBob, GiftCardProperties,
-         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit
+         ClientStateCallback, DirectDeposit, ForcedExitState, CommittedForcedExit, FinalizedForcedExit, SequencerEndpoint, SequencerJob
         } from 'zkbob-client-js';
 import bip39 from 'bip39-light';
 import HDWalletProvider from '@truffle/hdwallet-provider';
@@ -208,7 +208,7 @@ export class Account {
         return env.pools[this.getCurrentPool()].poolAddress;
     }
 
-    public getDelegatedProverUrls(): string[] {
+    public getDelegatedProverUrls(): string[] | undefined {
         return env.pools[this.getCurrentPool()].delegatedProverUrls
     }
 
@@ -427,12 +427,16 @@ export class Account {
         return await this.getZpClient().getLocalState(index);
     }
 
-    public async getRelayerTreeState(): Promise<TreeState> {
-        return this.getZpClient().getRelayerState();
+    public async getSequencerTreeState(): Promise<TreeState> {
+        return this.getZpClient().getSequencerState();
     }
 
-    public async getRelayerOptimisticTreeState(): Promise<TreeState> {
-        return this.getZpClient().getRelayerOptimisticState();
+    public async getSequencerOptimisticTreeState(): Promise<TreeState> {
+        return this.getZpClient().getSequencerOptimisticState();
+    }
+
+    public async getSequencerPendingIndex(): Promise<bigint> {
+        return this.getZpClient().getSequencerPendingIndex();
     }
 
     public async getLocalTreeStartIndex(): Promise<bigint | undefined> {
@@ -541,10 +545,10 @@ export class Account {
             return { destination: `dest-${index}`, amountGwei: oneAmount};
         });
 
-        const relayerFee = await this.getZpClient().getRelayerFee();
-        console.info(`Using relayer fee: base = ${txType == TxType.Transfer ? relayerFee.fee.transfer : relayerFee.fee.withdrawal}, perByte = ${relayerFee.oneByteFee}${swapAmount ? `swap = ${relayerFee.nativeConvertFee}` : ''}`);
+        const sequencerFee = await this.getZpClient().getSequencerFee();
+        console.info(`Using sequencer fee: base = ${txType == TxType.Transfer ? sequencerFee.fee.transfer : sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${swapAmount ? `, swap = ${sequencerFee.nativeConvertFee}` : ''}`);
 
-        return await this.getZpClient().getTransactionParts(txType, transfers, relayerFee, swapAmount, false);
+        return await this.getZpClient().getTransactionParts(txType, transfers, sequencerFee, swapAmount, false);
     }
 
     public async getLimits(address: string | undefined): Promise<PoolLimits> {
@@ -564,7 +568,8 @@ export class Account {
     }
 
     public async minFee(txType: TxType): Promise<bigint> {
-        return await this.getZpClient().atomicTxFee(txType);
+        const txFee = await this.getZpClient().atomicTxFee(txType);
+        return txFee.total;
     }
 
     public async estimateFee(amounts: bigint[], txType: TxType, swapAmount: bigint = 0n, updateState: boolean = true): Promise<FeeAmount> {
@@ -587,7 +592,7 @@ export class Account {
         return addrUrl.replace('{{addr}}', addr);
     }
 
-    public async depositShielded(amount: bigint): Promise<{jobId: string, txHash: string}> {
+    public async depositShielded(amount: bigint): Promise<{job: SequencerJob, txHash: string}> {
         let myAddress = await this.getClient().getAddress();
         
         console.log('Waiting while state become ready...');
@@ -597,10 +602,10 @@ export class Account {
             const depositScheme = this.config.pools[this.getCurrentPool()].depositScheme;
 
             const feeEst = await this.getZpClient().feeEstimate([amount], depositScheme == DepositType.Approve ? TxType.Deposit : TxType.BridgeDeposit, 0n, false);
-            const relayerFee = feeEst.relayerFee;
-            console.info(`Using relayer fee: base = ${depositScheme == DepositType.Approve  ? relayerFee.fee.deposit : relayerFee.fee.permittableDeposit}, perByte = ${relayerFee.oneByteFee}`);
+            const sequencerFee = feeEst.sequencerFee;
+            console.info(`Using sequencer fee: base = ${depositScheme == DepositType.Approve  ? sequencerFee.fee.deposit : sequencerFee.fee.permittableDeposit}, perByte = ${sequencerFee.oneByteFee}`);
                         
-            let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.total);
+            let totalNeededAmount = await this.getZpClient().shieldedAmountToWei(amount + feeEst.fee.total);
             if (depositScheme == DepositType.Approve) {
                 // check a token approvement if needed (in case of approve deposit scheme)
                 const depositDestination = this.getPoolAddr();
@@ -624,9 +629,8 @@ export class Account {
             }
 
             console.log('Making deposit...');
-            let jobId;
             const blockNumber = await this.getClient().getBlockNumber().catch(() => undefined);
-            jobId = await this.getZpClient().deposit(amount, async (signingRequest) => {
+            const job = await this.getZpClient().deposit(amount, async (signingRequest) => {
                 switch (signingRequest.type) {
                     case SignatureType.TypedDataV4:
                         return this.getClient().signTypedData(signingRequest.data);
@@ -635,35 +639,34 @@ export class Account {
                     default:
                         throw new Error(`Signing request with unknown type`);
                 }
-            }, myAddress, relayerFee, blockNumber);
+            }, myAddress, sequencerFee, blockNumber);
 
-            console.log('Please wait relayer provide txHash for job %s...', jobId);
+            console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+            return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
         } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+            console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
             throw Error('State is not ready for transact');
         }
     }
 
-    public async depositShieldedEphemeral(amount: bigint, index: number): Promise<{jobId: string, txHash: string}> {
+    public async depositShieldedEphemeral(amount: bigint, index: number): Promise<{job: SequencerJob, txHash: string}> {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const relayerFee = await this.getZpClient().getRelayerFee();
+            const sequencerFee = await this.getZpClient().getSequencerFee();
             const depositScheme = this.config.pools[this.getCurrentPool()].depositScheme;
-            console.info(`Using relayer fee: base = ${depositScheme == DepositType.Approve  ? relayerFee.fee.deposit : relayerFee.fee.permittableDeposit}, perByte = ${relayerFee.oneByteFee}`);
+            console.info(`Using sequencer fee: base = ${depositScheme == DepositType.Approve  ? sequencerFee.fee.deposit : sequencerFee.fee.permittableDeposit}, perByte = ${sequencerFee.oneByteFee}`);
 
             console.log('Making deposit...');
-            let jobId;
-            jobId = await this.getZpClient().depositEphemeral(amount, index, relayerFee);
+            const job = await this.getZpClient().depositEphemeral(amount, index, sequencerFee);
 
-            console.log('Please wait relayer complete the job %s...', jobId);
+            console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-            return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+            return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
         } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+            console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
             throw Error('State is not ready for transact');
         }
@@ -712,41 +715,41 @@ export class Account {
         return await this.getClient().approve(this.getTokenAddr(), spender, amount);
     }
 
-    public async transferShielded(transfers: TransferRequest[]): Promise<{jobId: string, txHash: string}[]> {
+    public async transferShielded(transfers: TransferRequest[]): Promise<{job: SequencerJob, txHash: string}[]> {
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const relayerFee = await this.getZpClient().getRelayerFee();
-            console.info(`Using relayer fee: base = ${relayerFee.fee.transfer}, perByte = ${relayerFee.oneByteFee}`);
+            const sequencerFee = await this.getZpClient().getSequencerFee();
+            console.info(`Using sequencer fee: base = ${sequencerFee.fee.transfer}, perByte = ${sequencerFee.oneByteFee}`);
             
             console.log('Making transfer...');
-            const jobIds: string[] = await this.getZpClient().transferMulti(transfers, relayerFee);
-            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
+            const jobs: SequencerJob[] = await this.getZpClient().transferMulti(transfers, sequencerFee);
+            console.log(`Please wait sequencer provide txHash${jobs.length > 1 ? 'es for jobs' : ' for job'} ${jobs.map((j) => j.id).join(', ')}...`,);
 
-            return await this.getZpClient().waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobs);
         } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+            console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
             throw Error('State is not ready for transact');
         }
     }
 
-    public async withdrawShielded(amount: bigint, external_addr: string, nativeAmount: bigint = 0n): Promise<{jobId: string, txHash: string}[]> {
+    public async withdrawShielded(amount: bigint, external_addr: string, nativeAmount: bigint = 0n): Promise<{job: SequencerJob, txHash: string}[]> {
         let address = external_addr ?? await this.getClient().getAddress();
 
         console.log('Waiting while state become ready...');
         const ready = await this.getZpClient().waitReadyToTransact();
         if (ready) {
-            const relayerFee = await this.getZpClient().getRelayerFee();
-            console.info(`Using relayer fee: base = ${relayerFee.fee.withdrawal}, perByte = ${relayerFee.oneByteFee}${nativeAmount ? `swap = ${relayerFee.nativeConvertFee}` : ''}`);
+            const sequencerFee = await this.getZpClient().getSequencerFee();
+            console.info(`Using sequencer fee: base = ${sequencerFee.fee.withdrawal}, perByte = ${sequencerFee.oneByteFee}${nativeAmount ? `, swap = ${sequencerFee.nativeConvertFee}` : ''}`);
 
             console.log('Making withdraw...');
-            const jobIds: string[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, relayerFee);
-            console.log('Please wait relayer provide txHash%s %s...', jobIds.length > 1 ? 'es for jobs' : ' for job', jobIds.join(', '));
+            const jobs: SequencerJob[] = await this.getZpClient().withdrawMulti(address, amount, nativeAmount, sequencerFee);
+            console.log(`Please wait sequencer provide txHash${jobs.length > 1 ? 'es for jobs' : ' for job'} ${jobs.map((j) => j.id).join(', ')}...`,);
 
-            return await this.getZpClient().waitJobsTxHashes(jobIds);
+            return await this.getZpClient().waitJobsTxHashes(jobs);
         } else {
-            console.log('Sorry, I cannot wait anymore. Please ask for relayer 😂');
+            console.log('Sorry, I cannot wait anymore. Please ask for sequencer 😂');
 
             throw Error('State is not ready for transact');
         }
@@ -799,16 +802,17 @@ export class Account {
         return await this.getZpClient().giftCardBalance(giftCard);
     }
 
-    public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{jobId: string, txHash: string}> {
-        const proverMode = this.config.pools[this.getCurrentPool()].delegatedProverUrls.length > 0 ? 
+    public async redeemGiftCard(giftCard: GiftCardProperties): Promise<{job: SequencerJob, txHash: string}> {
+        const provers = this.config.pools[this.getCurrentPool()].delegatedProverUrls;
+        const proverMode = provers && provers.length > 0 ? 
             ProverMode.DelegatedWithFallback : 
             ProverMode.Local;
 
         console.log('Redeeming gift-card...');
-        const jobId: string = await this.getZpClient().redeemGiftCard(giftCard, proverMode);
-        console.log(`Please wait relayer provide txHash for job ${jobId}...`);
+        const job: SequencerJob = await this.getZpClient().redeemGiftCard(giftCard, proverMode);
+        console.log(`Please wait sequencer ${job.seqIdx} provide txHash for job ${job.id}...`);
 
-        return {jobId, txHash: (await this.getZpClient().waitJobTxHash(jobId))};
+        return {job, txHash: (await this.getZpClient().waitJobTxHash(job))};
     }
 
     public async codeForGiftCard(giftCard: GiftCardProperties): Promise<string> {
@@ -835,15 +839,23 @@ export class Account {
         return this.getZpClient().getLibraryVersion();
     }
 
-    public async relayerVersion(): Promise<ServiceVersion> {
-        return await this.getZpClient().getRelayerVersion();
+    public async sequencerVersion(): Promise<ServiceVersion> {
+        return await this.getZpClient().getSequencerVersion();
     }
 
-    public async proverVersion(): Promise<ServiceVersion> {
-        return await this.getZpClient().getProverVersion();
+    public async delegatedProverVersion(): Promise<ServiceVersion> {
+        return await this.getZpClient().getDelegatedProverVersion();
     }
 
     public async getTokenSeller() : Promise<string> {
         return await this.getZpClient().tokenSellerContract();
+    }
+
+    public async SequencerList() : Promise<SequencerEndpoint[]> {
+        return this.getZpClient().sequencerEndpoints();
+    }
+
+    public async SetPrimarySequencer(index: number | undefined): Promise<number | undefined> {
+        return this.getZpClient().prioritizeSequencerEndpoint(index);
     }
 }
